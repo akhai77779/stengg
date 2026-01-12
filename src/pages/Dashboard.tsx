@@ -20,6 +20,7 @@ import { DashboardProducts } from '@/components/dashboard/DashboardProducts';
 import { DashboardCharity } from '@/components/dashboard/DashboardCharity';
 import { DashboardUsers } from '@/components/dashboard/DashboardUsers';
 import { DashboardBanners } from '@/components/dashboard/DashboardBanners';
+import { DashboardTransactions } from '@/components/dashboard/DashboardTransactions';
 import { Marquee } from '@/components/dashboard/Marquee';
 import { AnimatedBorderCard } from '@/components/dashboard/AnimatedBorderCard';
 
@@ -146,7 +147,7 @@ export default function Dashboard() {
 
         {/* Management Tabs */}
         <Tabs defaultValue="news" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
+          <TabsList className="bg-muted/50 p-1 flex-wrap h-auto">
             <TabsTrigger value="banners" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Hero Banners
             </TabsTrigger>
@@ -158,6 +159,9 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger value="charity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Từ thiện
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Giao dịch
             </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Người dùng
@@ -178,6 +182,10 @@ export default function Dashboard() {
 
           <TabsContent value="charity">
             <DashboardCharity />
+          </TabsContent>
+
+          <TabsContent value="transactions">
+            <DashboardTransactions />
           </TabsContent>
 
           <TabsContent value="users">

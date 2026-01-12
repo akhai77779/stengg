@@ -7,14 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TransactionHistory } from '@/components/profile/TransactionHistory';
 import { 
   Wallet, 
-  TrendingUp, 
   ArrowDownToLine, 
   ArrowUpFromLine, 
   CreditCard, 
   Headphones,
-  User,
   ShieldCheck,
   BadgeCheck,
   Settings,
@@ -34,6 +33,8 @@ interface Profile {
   avatar_url: string | null;
   department: string | null;
   position: string | null;
+  balance: number | null;
+  total_income: number | null;
 }
 
 export default function Profile() {
@@ -43,11 +44,7 @@ export default function Profile() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Mock data for demo
-  const balance = 47638.56;
-  const todayTradeIncome = 0;
-  const todayCharityIncome = 0;
-  const charityProfit = 0;
+  const balance = profile?.balance || 0;
   const uid = user?.id?.slice(0, 5) || '00000';
 
   useEffect(() => {
@@ -59,6 +56,27 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      
+      // Subscribe to realtime balance updates
+      const channel = supabase
+        .channel('profile-balance')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${user.id}`,
+          },
+          () => {
+            fetchProfile();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
@@ -113,8 +131,8 @@ export default function Profile() {
   }
 
   const quickActions = [
-    { icon: ArrowDownToLine, label: 'Nạp tiền', color: 'text-green-400', href: '#' },
-    { icon: ArrowUpFromLine, label: 'Rút tiền', color: 'text-orange-400', href: '#' },
+    { icon: ArrowDownToLine, label: 'Nạp tiền', color: 'text-green-400', href: '/deposit' },
+    { icon: ArrowUpFromLine, label: 'Rút tiền', color: 'text-orange-400', href: '/withdraw' },
     { icon: CreditCard, label: 'Chi tiết Ví', color: 'text-blue-400', href: '#' },
     { icon: Headphones, label: 'CSKH', color: 'text-purple-400', href: '#' },
   ];
@@ -172,27 +190,6 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mb-1">Số dư có sẵn (USD)</p>
                 <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
               </div>
-              
-              {/* Today Income */}
-              <div className="space-y-3 mb-4">
-                <p className="text-sm text-muted-foreground font-medium">Thu nhập hôm nay</p>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Giao dịch sản phẩm (USD)</p>
-                    <p className="text-lg font-bold text-foreground">{todayTradeIncome}</p>
-                  </div>
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Tổ chức từ thiện (USD)</p>
-                    <p className="text-lg font-bold text-foreground">{todayCharityIncome}</p>
-                  </div>
-                </div>
-                
-                <div className="bg-muted/30 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Lợi nhuận thu được từ từ thiện (USD)</p>
-                  <p className="text-lg font-bold text-foreground">{charityProfit}</p>
-                </div>
-              </div>
 
               {/* Quick Actions */}
               <div className="grid grid-cols-4 gap-2">
@@ -211,6 +208,11 @@ export default function Profile() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Transaction History */}
+          <div className="mb-6">
+            <TransactionHistory />
+          </div>
 
           {/* Account Section */}
           <div className="mb-6">
