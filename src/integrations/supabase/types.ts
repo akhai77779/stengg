@@ -214,30 +214,78 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          balance: number | null
           created_at: string
           department: string | null
           full_name: string | null
           id: string
           position: string | null
+          total_income: number | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          balance?: number | null
           created_at?: string
           department?: string | null
           full_name?: string | null
           id: string
           position?: string | null
+          total_income?: number | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          balance?: number | null
           created_at?: string
           department?: string | null
           full_name?: string | null
           id?: string
           position?: string | null
+          total_income?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          network: string | null
+          notes: string | null
+          status: string
+          tx_hash: string | null
+          type: string
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          network?: string | null
+          notes?: string | null
+          status?: string
+          tx_hash?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          network?: string | null
+          notes?: string | null
+          status?: string
+          tx_hash?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }
