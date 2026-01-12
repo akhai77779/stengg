@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Layout } from "@/components/layout/Layout";
+import { TradeDialog } from "@/components/product/TradeDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   id: string;
@@ -44,10 +47,14 @@ const mockTransactions = [
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<{ time: string; price: number }[]>([]);
   const [timeframe, setTimeframe] = useState("24H");
+  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
 
   useEffect(() => {
     fetchProduct();
@@ -249,16 +256,53 @@ const ProductDetail = () => {
         {/* Trade Buttons */}
         <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50">
           <div className="flex gap-3 max-w-md mx-auto">
-            <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+            <Button 
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                if (!user) {
+                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+                  navigate('/auth');
+                  return;
+                }
+                setTradeType('buy');
+                setTradeDialogOpen(true);
+              }}
+            >
               <TrendingUp className="h-4 w-4 mr-2" />
               Mua
             </Button>
-            <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white">
+            <Button 
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (!user) {
+                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+                  navigate('/auth');
+                  return;
+                }
+                setTradeType('sell');
+                setTradeDialogOpen(true);
+              }}
+            >
               <TrendingDown className="h-4 w-4 mr-2" />
               Bán
             </Button>
           </div>
         </div>
+
+        {/* Trade Dialog */}
+        {product && (
+          <TradeDialog
+            isOpen={tradeDialogOpen}
+            onClose={() => setTradeDialogOpen(false)}
+            tradeType={tradeType}
+            product={{
+              id: product.id,
+              name: product.name,
+              price: product.price,
+            }}
+            onSuccess={fetchProduct}
+          />
+        )}
       </div>
     </Layout>
   );
