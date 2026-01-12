@@ -22,6 +22,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useState } from 'react';
+import stLogo from '@/assets/st-logo.png';
 
 const navItems = [
   { label: 'Trang chủ', href: '/', icon: Home },
@@ -49,13 +50,8 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">ST</span>
-            </div>
-            <span className="text-xl font-bold text-gradient hidden sm:block">
-              ST Engineering
-            </span>
+          <Link to="/" className="flex items-center">
+            <img src={stLogo} alt="ST Engineering" className="h-8 sm:h-10" />
           </Link>
 
           {/* Desktop Navigation */}
