@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Loader2, Image } from 'lucide-react';
@@ -192,15 +193,11 @@ export function DashboardBanners() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">URL Hình ảnh *</Label>
-                <Input
-                  id="imageUrl"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+              <ImageUpload
+                value={imageUrl}
+                onChange={setImageUrl}
+                folder="banners"
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="linkUrl">URL Liên kết</Label>
