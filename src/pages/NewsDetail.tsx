@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Calendar, Eye, ArrowLeft, User, Loader2 } from 'lucide-react';
+import { Calendar, Eye, ArrowLeft, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
 type NewsCategory = Database['public']['Enums']['news_category'];
@@ -23,10 +23,6 @@ interface NewsItem {
   views: number;
   created_at: string;
   author_id: string | null;
-}
-
-interface Profile {
-  full_name: string | null;
 }
 
 const categoryLabels: Record<NewsCategory, string> = {
@@ -48,7 +44,6 @@ const categoryColors: Record<NewsCategory, string> = {
 export default function NewsDetail() {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<NewsItem | null>(null);
-  const [author, setAuthor] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
@@ -89,16 +84,6 @@ export default function NewsDetail() {
         .from('news')
         .update({ views: data.views + 1 })
         .eq('id', id);
-
-      if (data.author_id) {
-        const { data: authorData } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', data.author_id)
-          .maybeSingle();
-        
-        setAuthor(authorData);
-      }
     }
 
     setIsLoading(false);
@@ -186,12 +171,6 @@ export default function NewsDetail() {
             <Eye className="w-4 h-4" />
             {news.views + 1} lượt xem
           </span>
-          {author && (
-            <span className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              {author.full_name || 'Ẩn danh'}
-            </span>
-          )}
         </div>
 
         {news.summary && (
