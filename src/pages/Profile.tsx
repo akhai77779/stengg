@@ -1,15 +1,32 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Mail, Building, Briefcase, Loader2, Save } from 'lucide-react';
+import { 
+  Wallet, 
+  TrendingUp, 
+  ArrowDownToLine, 
+  ArrowUpFromLine, 
+  CreditCard, 
+  Headphones,
+  User,
+  ShieldCheck,
+  BadgeCheck,
+  Settings,
+  Globe,
+  UserPlus,
+  RefreshCw,
+  LogOut,
+  Loader2,
+  Copy,
+  ChevronRight
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Profile {
   id: string;
@@ -22,13 +39,16 @@ interface Profile {
 export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [department, setDepartment] = useState('');
-  const [position, setPosition] = useState('');
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, signOut, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Mock data for demo
+  const balance = 47638.56;
+  const todayTradeIncome = 0;
+  const todayCharityIncome = 0;
+  const charityProfit = 0;
+  const uid = user?.id?.slice(0, 5) || '00000';
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -53,42 +73,21 @@ export default function Profile() {
       console.error('Error fetching profile:', error);
     } else if (data) {
       setProfile(data);
-      setFullName(data.full_name || '');
-      setDepartment(data.department || '');
-      setPosition(data.position || '');
     }
     setIsLoading(false);
   };
 
-  const handleSave = async () => {
-    if (!user) return;
-
-    setIsSaving(true);
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        full_name: fullName,
-        department,
-        position,
-      });
-
-    setIsSaving(false);
-
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể cập nhật hồ sơ. Vui lòng thử lại.',
-      });
-      return;
-    }
-
+  const copyUID = () => {
+    navigator.clipboard.writeText(uid);
     toast({
-      title: 'Thành công',
-      description: 'Hồ sơ của bạn đã được cập nhật.',
+      title: 'Đã sao chép',
+      description: 'UID đã được sao chép vào clipboard',
     });
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   const getInitials = (name: string | null, email: string) => {
@@ -96,6 +95,13 @@ export default function Profile() {
       return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     }
     return email.slice(0, 2).toUpperCase();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   if (authLoading || isLoading || !user) {
@@ -106,96 +112,174 @@ export default function Profile() {
     );
   }
 
+  const quickActions = [
+    { icon: ArrowDownToLine, label: 'Nạp tiền', color: 'text-green-400', href: '#' },
+    { icon: ArrowUpFromLine, label: 'Rút tiền', color: 'text-orange-400', href: '#' },
+    { icon: CreditCard, label: 'Chi tiết Ví', color: 'text-blue-400', href: '#' },
+    { icon: Headphones, label: 'CSKH', color: 'text-purple-400', href: '#' },
+  ];
+
+  const accountSettings = [
+    { icon: Wallet, label: 'Tài sản', href: '#', badge: null },
+    { icon: ShieldCheck, label: 'Xác thực danh tính', href: '#', badge: 'Đã xác thực', badgeColor: 'text-green-400' },
+    { icon: BadgeCheck, label: 'Xác thực danh tính', href: '#', badge: 'Đã xác thực', badgeColor: 'text-green-400' },
+  ];
+
+  const systemSettings = [
+    { icon: Settings, label: 'Cài đặt chung', href: '#', value: null },
+    { icon: Globe, label: 'Đa ngôn ngữ', href: '#', value: 'Tiếng Việt' },
+    { icon: UserPlus, label: 'Mời bạn bè', href: '#', value: null },
+    { icon: RefreshCw, label: 'Chuyển đổi tài khoản', href: '#', value: null },
+  ];
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-8">
-          <span className="text-gradient">Hồ sơ cá nhân</span>
-        </h1>
-
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20 border-4 border-primary/50">
-                <AvatarImage src={profile?.avatar_url || ''} />
-                <AvatarFallback className="bg-muted text-foreground text-2xl">
-                  {getInitials(fullName, user.email || '')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>{fullName || 'Chưa cập nhật'}</CardTitle>
-                <CardDescription className="flex items-center gap-1">
-                  <Mail className="w-4 h-4" />
-                  {user.email}
-                </CardDescription>
+      <div className="min-h-screen pb-20 md:pb-8">
+        <div className="container mx-auto px-4 py-6 max-w-lg">
+          
+          {/* User Card */}
+          <Card className="bg-card border-border mb-6 overflow-hidden">
+            <div className="relative h-20 bg-gradient-to-r from-primary/20 to-secondary/20" />
+            <CardContent className="relative pt-0 pb-6 px-4">
+              <div className="flex items-end gap-4 -mt-10">
+                <Avatar className="w-20 h-20 border-4 border-card shadow-lg">
+                  <AvatarImage src={profile?.avatar_url || ''} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-xl font-bold">
+                    {getInitials(profile?.full_name || null, user.email || '')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 pb-2">
+                  <h2 className="text-lg font-bold text-foreground">
+                    {profile?.full_name || user.email?.split('@')[0] || 'Người dùng'}
+                  </h2>
+                  <button 
+                    onClick={copyUID}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <span>UID: {uid}</span>
+                    <Copy className="w-3 h-3" />
+                    <span className="text-primary">sao chép</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Full Name */}
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Họ và tên</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="fullName"
-                  placeholder="Nguyễn Văn A"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Department */}
-            <div className="space-y-2">
-              <Label htmlFor="department">Phòng ban</Label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="department"
-                  placeholder="Phòng Công nghệ"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Balance Card */}
+          <Card className="bg-card border-border mb-6">
+            <CardContent className="p-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-muted-foreground mb-1">Số dư có sẵn (USD)</p>
+                <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
               </div>
-            </div>
-
-            {/* Position */}
-            <div className="space-y-2">
-              <Label htmlFor="position">Chức vụ</Label>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="position"
-                  placeholder="Senior Engineer"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  className="pl-10"
-                />
+              
+              {/* Today Income */}
+              <div className="space-y-3 mb-4">
+                <p className="text-sm text-muted-foreground font-medium">Thu nhập hôm nay</p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Giao dịch sản phẩm (USD)</p>
+                    <p className="text-lg font-bold text-foreground">{todayTradeIncome}</p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Tổ chức từ thiện (USD)</p>
+                    <p className="text-lg font-bold text-foreground">{todayCharityIncome}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Lợi nhuận thu được từ từ thiện (USD)</p>
+                  <p className="text-lg font-bold text-foreground">{charityProfit}</p>
+                </div>
               </div>
-            </div>
 
-            <Button 
-              onClick={handleSave} 
-              className="w-full bg-gradient-primary hover:opacity-90"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Đang lưu...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Lưu thay đổi
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+              {/* Quick Actions */}
+              <div className="grid grid-cols-4 gap-2">
+                {quickActions.map((action) => (
+                  <Link 
+                    key={action.label} 
+                    to={action.href}
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className={cn('p-2 rounded-full bg-card', action.color)}>
+                      <action.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Account Section */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Tài khoản</h3>
+            <Card className="bg-card border-border">
+              <CardContent className="p-0 divide-y divide-border">
+                {accountSettings.map((item) => (
+                  <Link 
+                    key={item.label} 
+                    to={item.href}
+                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-sm text-foreground">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.badge && (
+                        <span className={cn('text-xs', item.badgeColor)}>{item.badge}</span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* System Section */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Hệ thống</h3>
+            <Card className="bg-card border-border">
+              <CardContent className="p-0 divide-y divide-border">
+                {systemSettings.map((item) => (
+                  <Link 
+                    key={item.label} 
+                    to={item.href}
+                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-sm text-foreground">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.value && (
+                        <span className="text-xs text-muted-foreground">{item.value}</span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                ))}
+                
+                {/* Sign Out */}
+                <button 
+                  onClick={handleSignOut}
+                  className="flex items-center gap-3 p-4 w-full hover:bg-muted/30 transition-colors text-destructive"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm">Đăng xuất</span>
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Security Notice */}
+          <p className="text-xs text-center text-muted-foreground px-4">
+            Vui lòng không tiết lộ mật khẩu, mã OTP của bạn cho bất kỳ ai (bao gồm cả nhân viên ST Engineering)
+          </p>
+        </div>
       </div>
     </Layout>
   );
