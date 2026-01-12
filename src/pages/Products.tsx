@@ -137,7 +137,8 @@ export default function Products() {
                 return (
                   <Card 
                     key={product.id} 
-                    className="bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                    className="bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/products/${product.id}`)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
