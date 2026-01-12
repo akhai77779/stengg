@@ -176,8 +176,10 @@ export type Database = {
           image_url: string | null
           name: string
           price: number | null
+          price_change: number | null
           status: Database["public"]["Enums"]["product_status"]
           updated_at: string
+          volume: string | null
         }
         Insert: {
           category?: string | null
@@ -188,8 +190,10 @@ export type Database = {
           image_url?: string | null
           name: string
           price?: number | null
+          price_change?: number | null
           status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
+          volume?: string | null
         }
         Update: {
           category?: string | null
@@ -200,8 +204,10 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number | null
+          price_change?: number | null
           status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
+          volume?: string | null
         }
         Relationships: []
       }

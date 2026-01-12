@@ -20,6 +20,8 @@ import { DashboardProducts } from '@/components/dashboard/DashboardProducts';
 import { DashboardCharity } from '@/components/dashboard/DashboardCharity';
 import { DashboardUsers } from '@/components/dashboard/DashboardUsers';
 import { DashboardBanners } from '@/components/dashboard/DashboardBanners';
+import { Marquee } from '@/components/dashboard/Marquee';
+import { AnimatedBorderCard } from '@/components/dashboard/AnimatedBorderCard';
 
 interface Stats {
   totalUsers: number;
@@ -104,6 +106,11 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
+        {/* Marquee Notification */}
+        <div className="mb-6">
+          <Marquee message="Chào mừng bạn đến với hệ thống quản trị ST Engineering. Dịch vụ khách hàng trực tuyến 09:00-22:00. Liên hệ hỗ trợ nếu cần giúp đỡ!" />
+        </div>
+
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
             <BarChart3 className="w-6 h-6 text-primary-foreground" />
@@ -116,22 +123,24 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards with Animated Border */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                    <stat.icon className="w-5 h-5" />
+          {statCards.map((stat, index) => (
+            <AnimatedBorderCard key={stat.label}>
+              <Card className="bg-card border-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
+                      <stat.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground">{stat.label}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </AnimatedBorderCard>
           ))}
         </div>
 
