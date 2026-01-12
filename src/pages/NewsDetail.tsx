@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { NewsComments } from '@/components/news/NewsComments';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -70,7 +71,6 @@ export default function NewsDetail() {
 
     setIsLoading(true);
 
-    // Fetch news item
     const { data, error } = await supabase
       .from('news')
       .select('*')
@@ -85,13 +85,11 @@ export default function NewsDetail() {
     } else {
       setNews(data);
 
-      // Increment view count
       await supabase
         .from('news')
         .update({ views: data.views + 1 })
         .eq('id', id);
 
-      // Fetch author info
       if (data.author_id) {
         const { data: authorData } = await supabase
           .from('profiles')
@@ -151,8 +149,7 @@ export default function NewsDetail() {
 
   return (
     <Layout>
-      <article className="container mx-auto px-4 py-8">
-        {/* Back button */}
+      <article className="container mx-auto px-4 py-8 max-w-4xl">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/news" className="flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
@@ -160,7 +157,6 @@ export default function NewsDetail() {
           </Link>
         </Button>
 
-        {/* Hero image */}
         <div className="relative h-64 md:h-96 rounded-xl overflow-hidden mb-8">
           <img
             src={news.image_url || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=600&fit=crop'}
@@ -181,7 +177,6 @@ export default function NewsDetail() {
           </div>
         </div>
 
-        {/* Meta info */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8 pb-8 border-b border-border">
           <span className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -199,7 +194,6 @@ export default function NewsDetail() {
           )}
         </div>
 
-        {/* Summary */}
         {news.summary && (
           <div className="bg-card border border-border rounded-lg p-6 mb-8">
             <p className="text-lg text-muted-foreground italic">
@@ -208,7 +202,6 @@ export default function NewsDetail() {
           </div>
         )}
 
-        {/* Content */}
         <div className="prose prose-invert max-w-none">
           {news.content.split('\n').map((paragraph, index) => (
             <p key={index} className="text-foreground leading-relaxed mb-4">
@@ -217,7 +210,8 @@ export default function NewsDetail() {
           ))}
         </div>
 
-        {/* Footer */}
+        <NewsComments newsId={news.id} />
+
         <div className="mt-12 pt-8 border-t border-border">
           <Button asChild>
             <Link to="/news">
