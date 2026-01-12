@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Linkedin, Youtube } from 'lucide-react';
+import stLogo from '@/assets/st-logo.png';
 
 export function Footer() {
   return (
@@ -8,12 +9,9 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">ST</span>
-              </div>
-              <span className="text-xl font-bold text-gradient">ST Engineering</span>
-            </div>
+            <Link to="/" className="block">
+              <img src={stLogo} alt="ST Engineering" className="h-10" />
+            </Link>
             <p className="text-muted-foreground text-sm">
               Cổng thông tin nội bộ ST Engineering - Nơi kết nối, chia sẻ và phát triển cùng nhau.
             </p>
