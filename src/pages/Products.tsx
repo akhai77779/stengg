@@ -4,8 +4,48 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { TrendingUp, TrendingDown, Activity, Loader2 } from 'lucide-react';
+import { 
+  TrendingUp, TrendingDown, Activity, Loader2,
+  Plane, Cpu, Car, Ship, Shield, Building2, 
+  GraduationCap, Briefcase, Satellite, FlaskConical
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const getCategoryIcon = (name: string, category: string | null) => {
+  const iconClass = "w-10 h-10 p-2 rounded-lg";
+  
+  if (name.includes('Aerospace') || category === 'Aerospace') {
+    return <Plane className={cn(iconClass, "bg-blue-500/20 text-blue-400")} />;
+  }
+  if (name.includes('Electronics') || category === 'Electronics') {
+    return <Cpu className={cn(iconClass, "bg-purple-500/20 text-purple-400")} />;
+  }
+  if (name.includes('Land') || category === 'Land Systems') {
+    return <Car className={cn(iconClass, "bg-amber-500/20 text-amber-400")} />;
+  }
+  if (name.includes('Marine') || category === 'Marine') {
+    return <Ship className={cn(iconClass, "bg-cyan-500/20 text-cyan-400")} />;
+  }
+  if (name.includes('Defence') || category === 'Defence') {
+    return <Shield className={cn(iconClass, "bg-red-500/20 text-red-400")} />;
+  }
+  if (name.includes('Smart City') || category === 'Smart City') {
+    return <Building2 className={cn(iconClass, "bg-emerald-500/20 text-emerald-400")} />;
+  }
+  if (name.includes('Training') || category === 'Training') {
+    return <GraduationCap className={cn(iconClass, "bg-orange-500/20 text-orange-400")} />;
+  }
+  if (name.includes('Commercial') || category === 'Commercial') {
+    return <Briefcase className={cn(iconClass, "bg-indigo-500/20 text-indigo-400")} />;
+  }
+  if (name.includes('iDirect') || category === 'iDirect') {
+    return <Satellite className={cn(iconClass, "bg-pink-500/20 text-pink-400")} />;
+  }
+  if (name.includes('Research') || category === 'Research') {
+    return <FlaskConical className={cn(iconClass, "bg-teal-500/20 text-teal-400")} />;
+  }
+  return <Activity className={cn(iconClass, "bg-primary/20 text-primary")} />;
+};
 
 interface Product {
   id: string;
@@ -141,7 +181,10 @@ export default function Products() {
                     onClick={() => navigate(`/products/${product.id}`)}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        {/* Product Icon */}
+                        {getCategoryIcon(product.name, product.category)}
+                        
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground text-sm md:text-base line-clamp-1 mb-1">
