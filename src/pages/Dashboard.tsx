@@ -25,6 +25,7 @@ import { DashboardUsers } from '@/components/dashboard/DashboardUsers';
 import { DashboardBanners } from '@/components/dashboard/DashboardBanners';
 import { DashboardTransactions } from '@/components/dashboard/DashboardTransactions';
 import { DashboardAuditLogs } from '@/components/dashboard/DashboardAuditLogs';
+import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { Marquee } from '@/components/dashboard/Marquee';
 import { AnimatedBorderCard } from '@/components/dashboard/AnimatedBorderCard';
 
@@ -151,8 +152,12 @@ export default function Dashboard() {
         </div>
 
         {/* Management Tabs */}
-        <Tabs defaultValue="news" className="space-y-6">
+        <Tabs defaultValue="stats" className="space-y-6">
           <TabsList className="bg-muted/50 p-1 flex-wrap h-auto">
+            <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4 mr-1" />
+              Thống kê
+            </TabsTrigger>
             <TabsTrigger value="banners" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Hero Banners
             </TabsTrigger>
@@ -181,6 +186,10 @@ export default function Dashboard() {
               Người dùng
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats">
+            <DashboardStats />
+          </TabsContent>
 
           <TabsContent value="banners">
             <DashboardBanners />
