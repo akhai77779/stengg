@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageCurrencySelector } from '@/components/settings/LanguageCurrencySelector';
 import { 
   Home, 
   Newspaper, 
@@ -24,17 +26,18 @@ import {
 import { useState } from 'react';
 import stLogo from '@/assets/st-logo.png';
 
-const navItems = [
-  { label: 'Trang chủ', href: '/', icon: Home },
-  { label: 'Tin tức', href: '/news', icon: Newspaper },
-  { label: 'Sản phẩm', href: '/products', icon: Package },
-  { label: 'Từ thiện', href: '/charity', icon: Heart },
-];
-
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = [
+    { label: t('nav.home'), href: '/', icon: Home },
+    { label: t('nav.news'), href: '/news', icon: Newspaper },
+    { label: t('nav.products'), href: '/products', icon: Package },
+    { label: t('nav.charity'), href: '/charity', icon: Heart },
+  ];
 
   const handleSignOut = async () => {
     await signOut();
@@ -68,8 +71,9 @@ export function Header() {
             ))}
           </nav>
 
-          {/* User Menu */}
-          <div className="flex items-center gap-4">
+          {/* Language/Currency Selector + User Menu */}
+          <div className="flex items-center gap-2">
+            <LanguageCurrencySelector />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -102,14 +106,14 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
                       <User className="w-4 h-4" />
-                      Hồ sơ cá nhân
+                      {t('nav.profile')}
                     </Link>
                   </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
                         <Settings className="w-4 h-4" />
-                        Dashboard Admin
+                        {t('nav.dashboard')}
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -119,13 +123,13 @@ export function Header() {
                     className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="w-4 h-4" />
-                    Đăng xuất
+                    {t('nav.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Button asChild className="bg-gradient-primary hover:opacity-90">
-                <Link to="/auth">Đăng nhập</Link>
+                <Link to="/auth">{t('nav.login')}</Link>
               </Button>
             )}
 

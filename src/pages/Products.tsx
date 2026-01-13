@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   TrendingUp, TrendingDown, Activity, Loader2,
@@ -63,6 +65,8 @@ export default function Products() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -99,13 +103,8 @@ export default function Products() {
   };
 
   const formatPrice = (price: number | null) => {
-    if (price === null || price === undefined) return '0M';
-    if (price >= 1000000) {
-      return `${(price / 1000000).toFixed(2)}M`;
-    } else if (price >= 1000) {
-      return `${(price / 1000).toFixed(2)}K`;
-    }
-    return price.toFixed(2);
+    if (price === null || price === undefined) return formatCurrency(0);
+    return formatCurrency(price);
   };
 
   const formatVolume = (volume: string | null) => {
@@ -141,7 +140,7 @@ export default function Products() {
         {/* Header */}
         <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-16 z-10">
           <div className="container mx-auto px-4 py-4">
-            <h1 className="text-xl font-bold text-gradient mb-2">Sản phẩm</h1>
+            <h1 className="text-xl font-bold text-gradient mb-2">{t('products.title')}</h1>
             
             {/* Stock ticker info */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
