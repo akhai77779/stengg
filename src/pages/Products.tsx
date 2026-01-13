@@ -180,19 +180,23 @@ export default function Products() {
                     className="bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer"
                     onClick={() => navigate(`/products/${product.id}`)}
                   >
+                    {/* Product Image - Full Width */}
+                    {product.image_url ? (
+                      <div className="w-full h-32 md:h-40 overflow-hidden">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-32 md:h-40 bg-muted/30 flex items-center justify-center">
+                        {getCategoryIcon(product.name, product.category)}
+                      </div>
+                    )}
+                    
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
-                        {/* Product Image */}
-                        {product.image_url ? (
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                          />
-                        ) : (
-                          getCategoryIcon(product.name, product.category)
-                        )}
-                        
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground text-sm md:text-base line-clamp-1 mb-1">
