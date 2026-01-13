@@ -312,12 +312,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_withdrawal_request: {
+        Args: {
+          _amount: number
+          _network: string
+          _user_id: string
+          _wallet_address: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      is_valid_wallet_address: {
+        Args: { _address: string; _network: string }
+        Returns: boolean
+      }
+      process_trade: {
+        Args: {
+          _amount: number
+          _product_id: string
+          _trade_type: string
+          _user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

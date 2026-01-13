@@ -46,6 +46,21 @@ const Withdraw = () => {
     }
   };
 
+  // Enhanced client-side validation (server validates again)
+  const isValidWalletAddress = (address: string, net: string): boolean => {
+    if (!address || !net) return false;
+    
+    if (net === 'trc20') {
+      // TRC20: starts with T, 34 chars, base58
+      return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+    }
+    if (net === 'bep20' || net === 'erc20') {
+      // ERC20/BEP20: 0x + 40 hex chars
+      return /^0x[0-9a-fA-F]{40}$/.test(address);
+    }
+    return false;
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập để rút tiền");
@@ -60,13 +75,16 @@ const Withdraw = () => {
       return;
     }
 
-    if (withdrawAmount > balance) {
-      toast.error("Số dư không đủ");
+    if (withdrawAmount < 10) {
+      toast.error("Số tiền rút tối thiểu là 10 USDT");
       return;
     }
 
-    if (withdrawAmount < 10) {
-      toast.error("Số tiền rút tối thiểu là 10 USDT");
+    const fee = withdrawAmount * 0.01;
+    const totalDeduction = withdrawAmount + fee;
+
+    if (totalDeduction > balance) {
+      toast.error("Số dư không đủ (bao gồm phí 1%)");
       return;
     }
 
@@ -75,38 +93,45 @@ const Withdraw = () => {
       return;
     }
 
-    // Basic wallet address validation
-    if (network === "trc20" && !walletAddress.startsWith("T")) {
-      toast.error("Địa chỉ ví TRC20 không hợp lệ");
-      return;
-    }
-
-    if ((network === "bep20" || network === "erc20") && !walletAddress.startsWith("0x")) {
-      toast.error("Địa chỉ ví không hợp lệ");
+    // Enhanced client-side validation
+    if (!isValidWalletAddress(walletAddress.trim(), network)) {
+      if (network === "trc20") {
+        toast.error("Địa chỉ ví TRC20 không hợp lệ (phải bắt đầu bằng T và có 34 ký tự)");
+      } else {
+        toast.error("Địa chỉ ví không hợp lệ (phải bắt đầu bằng 0x và có 42 ký tự)");
+      }
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.from("transactions").insert({
-      user_id: user.id,
-      type: "withdrawal",
-      amount: withdrawAmount,
-      network: network,
-      wallet_address: walletAddress.trim(),
-      status: "pending",
-    });
+    try {
+      // Use secure server-side RPC function for withdrawal validation
+      const { data, error } = await supabase.rpc('create_withdrawal_request', {
+        _user_id: user.id,
+        _amount: withdrawAmount,
+        _network: network,
+        _wallet_address: walletAddress.trim(),
+      });
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (error) {
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        toast.error(result.error || "Có lỗi xảy ra. Vui lòng thử lại");
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Yêu cầu rút tiền đã được gửi thành công!");
+      navigate("/profile");
+    } catch (error) {
+      console.error('Withdrawal error:', error);
       toast.error("Có lỗi xảy ra. Vui lòng thử lại");
-      console.error(error);
-      return;
     }
 
-    toast.success("Yêu cầu rút tiền đã được gửi thành công!");
-    navigate("/profile");
+    setLoading(false);
   };
 
   const quickAmounts = [50, 100, 500, 1000];
@@ -217,13 +242,13 @@ const Withdraw = () => {
               <span>{amount || "0"} USDT</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Phí rút</span>
-              <span>1 USDT</span>
+              <span className="text-muted-foreground">Phí rút (1%)</span>
+              <span>{amount ? (parseFloat(amount) * 0.01).toFixed(2) : "0"} USDT</span>
             </div>
             <div className="flex justify-between text-sm font-medium pt-2 border-t border-border/50">
               <span>Thực nhận</span>
               <span className="text-primary">
-                {amount ? Math.max(0, parseFloat(amount) - 1).toFixed(2) : "0"} USDT
+                {amount ? (parseFloat(amount) * 0.99).toFixed(2) : "0"} USDT
               </span>
             </div>
           </CardContent>
