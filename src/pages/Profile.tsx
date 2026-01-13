@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
 import { 
@@ -42,6 +44,8 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const { user, signOut, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
+  const { formatCurrency, currency } = useCurrency();
   const navigate = useNavigate();
 
   const balance = profile?.balance || 0;
@@ -115,11 +119,10 @@ export default function Profile() {
     return email.slice(0, 2).toUpperCase();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
+  const languageNames: Record<string, string> = {
+    vi: 'Tiếng Việt',
+    en: 'English',
+    zh: '中文',
   };
 
   if (authLoading || isLoading || !user) {
@@ -131,23 +134,23 @@ export default function Profile() {
   }
 
   const quickActions = [
-    { icon: ArrowDownToLine, label: 'Nạp tiền', color: 'text-green-400', href: '/deposit' },
-    { icon: ArrowUpFromLine, label: 'Rút tiền', color: 'text-orange-400', href: '/withdraw' },
-    { icon: CreditCard, label: 'Chi tiết Ví', color: 'text-blue-400', href: '#' },
+    { icon: ArrowDownToLine, label: t('transaction.deposit'), color: 'text-green-400', href: '/deposit' },
+    { icon: ArrowUpFromLine, label: t('transaction.withdraw'), color: 'text-orange-400', href: '/withdraw' },
+    { icon: CreditCard, label: t('profile.balance'), color: 'text-blue-400', href: '#' },
     { icon: Headphones, label: 'CSKH', color: 'text-purple-400', href: '#' },
   ];
 
   const accountSettings = [
-    { icon: Wallet, label: 'Tài sản', href: '#', badge: null },
-    { icon: ShieldCheck, label: 'Xác thực danh tính', href: '#', badge: 'Đã xác thực', badgeColor: 'text-green-400' },
-    { icon: BadgeCheck, label: 'Xác thực danh tính', href: '#', badge: 'Đã xác thực', badgeColor: 'text-green-400' },
+    { icon: Wallet, label: t('profile.balance'), href: '#', badge: null },
+    { icon: ShieldCheck, label: t('common.status'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
+    { icon: BadgeCheck, label: t('common.status'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
   ];
 
   const systemSettings = [
-    { icon: Settings, label: 'Cài đặt chung', href: '#', value: null },
-    { icon: Globe, label: 'Đa ngôn ngữ', href: '#', value: 'Tiếng Việt' },
-    { icon: UserPlus, label: 'Mời bạn bè', href: '#', value: null },
-    { icon: RefreshCw, label: 'Chuyển đổi tài khoản', href: '#', value: null },
+    { icon: Settings, label: t('common.settings') || 'Settings', href: '#', value: null },
+    { icon: Globe, label: t('settings.language'), href: '#', value: languageNames[language] },
+    { icon: UserPlus, label: t('common.add'), href: '#', value: null },
+    { icon: RefreshCw, label: t('common.status'), href: '#', value: null },
   ];
 
   return (
@@ -187,7 +190,7 @@ export default function Profile() {
           <Card className="bg-card border-border mb-6">
             <CardContent className="p-4">
               <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground mb-1">Số dư có sẵn (USD)</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('profile.balance')} ({currency})</p>
                 <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
               </div>
 
@@ -216,7 +219,7 @@ export default function Profile() {
 
           {/* Account Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Tài khoản</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('nav.profile')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
                 {accountSettings.map((item) => (
@@ -243,7 +246,7 @@ export default function Profile() {
 
           {/* System Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">Hệ thống</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('settings.language')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
                 {systemSettings.map((item) => (
@@ -271,7 +274,7 @@ export default function Profile() {
                   className="flex items-center gap-3 p-4 w-full hover:bg-muted/30 transition-colors text-destructive"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span className="text-sm">Đăng xuất</span>
+                  <span className="text-sm">{t('nav.logout')}</span>
                 </button>
               </CardContent>
             </Card>

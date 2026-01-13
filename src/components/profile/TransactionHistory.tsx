@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { Loader2, ArrowDownToLine, ArrowUpFromLine, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Transaction {
@@ -33,6 +35,14 @@ export function TransactionHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
+
+  const statusLabels: Record<string, string> = {
+    pending: t('transaction.pending'),
+    approved: t('transaction.approved'),
+    rejected: t('transaction.rejected'),
+  };
 
   useEffect(() => {
     if (user) {
@@ -78,13 +88,6 @@ export function TransactionHistory() {
     setIsLoading(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN');
   };
@@ -107,13 +110,13 @@ export function TransactionHistory() {
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'deposit':
-        return 'Nạp tiền';
+        return t('transaction.deposit');
       case 'withdraw':
-        return 'Rút tiền';
+        return t('transaction.withdraw');
       case 'buy':
-        return 'Mua';
+        return t('transaction.buy');
       case 'sell':
-        return 'Bán';
+        return t('transaction.sell');
       default:
         return type;
     }
@@ -135,7 +138,7 @@ export function TransactionHistory() {
   const TransactionList = ({ items }: { items: Transaction[] }) => (
     <div className="divide-y divide-border">
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6 text-sm">Chưa có giao dịch nào</p>
+        <p className="text-muted-foreground text-center py-6 text-sm">{t('transaction.noTransactions')}</p>
       ) : (
         items.map((tx) => (
           <div key={tx.id} className="flex items-center justify-between py-3">
@@ -147,7 +150,7 @@ export function TransactionHistory() {
                 <p className="font-medium text-sm">{getTypeLabel(tx.type)}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</p>
                 {tx.network && (
-                  <p className="text-xs text-muted-foreground">Mạng: {tx.network}</p>
+                  <p className="text-xs text-muted-foreground">{t('transaction.network')}: {tx.network}</p>
                 )}
               </div>
             </div>
@@ -168,16 +171,16 @@ export function TransactionHistory() {
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Lịch sử giao dịch</CardTitle>
+        <CardTitle className="text-base">{t('profile.transactionHistory')}</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="deposit-withdraw" className="w-full">
           <TabsList className="w-full bg-muted/50 mb-4">
             <TabsTrigger value="deposit-withdraw" className="flex-1 text-xs">
-              Nạp/Rút tiền
+              {t('profile.depositWithdraw')}
             </TabsTrigger>
             <TabsTrigger value="trade" className="flex-1 text-xs">
-              Mua/Bán
+              {t('profile.trade')}
             </TabsTrigger>
           </TabsList>
           
