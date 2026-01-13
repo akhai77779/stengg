@@ -177,16 +177,16 @@ export default function Products() {
                 return (
                   <Card 
                     key={product.id} 
-                    className="bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer"
+                    className="group bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer"
                     onClick={() => navigate(`/products/${product.id}`)}
                   >
-                    {/* Product Image - Full Width */}
+                    {/* Product Image - Full Width with Hover Zoom */}
                     {product.image_url ? (
                       <div className="w-full h-32 md:h-40 overflow-hidden">
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
                       </div>
                     ) : (
