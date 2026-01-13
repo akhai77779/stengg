@@ -247,6 +247,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -312,6 +333,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          _action_type: string
+          _max_requests: number
+          _user_id: string
+          _window_seconds: number
+        }
+        Returns: boolean
+      }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       create_withdrawal_request: {
         Args: {
           _amount: number
