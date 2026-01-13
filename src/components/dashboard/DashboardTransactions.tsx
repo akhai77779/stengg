@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Loader2, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
-
 interface Transaction {
   id: string;
   user_id: string;
@@ -53,7 +53,7 @@ export function DashboardTransactions() {
   const [adminNotes, setAdminNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-
+  const { user } = useAuth();
   useEffect(() => {
     fetchTransactions();
   }, []);
@@ -96,7 +96,7 @@ export function DashboardTransactions() {
   };
 
   const handleApprove = async () => {
-    if (!selectedTransaction) return;
+    if (!selectedTransaction || !user) return;
     setIsProcessing(true);
 
     try {
@@ -112,35 +112,75 @@ export function DashboardTransactions() {
 
       if (txError) throw txError;
 
+      // Get current balance
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', selectedTransaction.user_id)
+        .single();
+
+      const currentBalance = profile?.balance || 0;
+      let newBalance = currentBalance;
+
       // Update user balance
       if (selectedTransaction.type === 'deposit') {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('balance')
-          .eq('id', selectedTransaction.user_id)
-          .single();
-
+        newBalance = currentBalance + selectedTransaction.amount;
         await supabase
           .from('profiles')
           .update({ 
-            balance: (profile?.balance || 0) + selectedTransaction.amount,
+            balance: newBalance,
             updated_at: new Date().toISOString()
           })
           .eq('id', selectedTransaction.user_id);
+
+        // Log deposit approval for audit
+        await supabase.from('audit_logs').insert({
+          user_id: selectedTransaction.user_id,
+          action: 'deposit_approved',
+          entity_type: 'transaction',
+          entity_id: selectedTransaction.id,
+          details: {
+            admin_id: user.id,
+            amount: selectedTransaction.amount,
+            network: selectedTransaction.network,
+            tx_hash: selectedTransaction.tx_hash,
+            balance_before: currentBalance,
+            balance_after: newBalance,
+            admin_notes: adminNotes
+          }
+        });
       } else if (selectedTransaction.type === 'withdraw') {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('balance')
-          .eq('id', selectedTransaction.user_id)
-          .single();
-
+        // For withdrawals, deduct amount + fee (fee was already noted)
+        const fee = selectedTransaction.amount * 0.01;
+        const totalDeduction = selectedTransaction.amount + fee;
+        newBalance = currentBalance - totalDeduction;
+        
         await supabase
           .from('profiles')
           .update({ 
-            balance: (profile?.balance || 0) - selectedTransaction.amount,
+            balance: newBalance,
             updated_at: new Date().toISOString()
           })
           .eq('id', selectedTransaction.user_id);
+
+        // Log withdrawal approval for audit
+        await supabase.from('audit_logs').insert({
+          user_id: selectedTransaction.user_id,
+          action: 'withdrawal_approved',
+          entity_type: 'transaction',
+          entity_id: selectedTransaction.id,
+          details: {
+            admin_id: user.id,
+            amount: selectedTransaction.amount,
+            fee: fee,
+            total_deduction: totalDeduction,
+            network: selectedTransaction.network,
+            wallet_address: selectedTransaction.wallet_address,
+            balance_before: currentBalance,
+            balance_after: newBalance,
+            admin_notes: adminNotes
+          }
+        });
       }
 
       toast({
@@ -161,7 +201,7 @@ export function DashboardTransactions() {
   };
 
   const handleReject = async () => {
-    if (!selectedTransaction) return;
+    if (!selectedTransaction || !user) return;
     setIsProcessing(true);
 
     try {
@@ -176,7 +216,24 @@ export function DashboardTransactions() {
 
       if (error) throw error;
 
-      // If it was a withdraw that we're rejecting, we don't need to refund since balance wasn't deducted yet
+      // Log rejection for audit
+      const auditAction = selectedTransaction.type === 'deposit' ? 'deposit_rejected' : 'withdrawal_rejected';
+      await supabase.from('audit_logs').insert({
+        user_id: selectedTransaction.user_id,
+        action: auditAction,
+        entity_type: 'transaction',
+        entity_id: selectedTransaction.id,
+        details: {
+          admin_id: user.id,
+          amount: selectedTransaction.amount,
+          network: selectedTransaction.network,
+          wallet_address: selectedTransaction.wallet_address,
+          tx_hash: selectedTransaction.tx_hash,
+          admin_notes: adminNotes,
+          reason: 'Rejected by admin'
+        }
+      });
+
       toast({
         title: 'Thành công',
         description: 'Giao dịch đã bị từ chối',
