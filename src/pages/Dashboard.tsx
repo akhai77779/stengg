@@ -21,6 +21,7 @@ import { DashboardCharity } from '@/components/dashboard/DashboardCharity';
 import { DashboardUsers } from '@/components/dashboard/DashboardUsers';
 import { DashboardBanners } from '@/components/dashboard/DashboardBanners';
 import { DashboardTransactions } from '@/components/dashboard/DashboardTransactions';
+import { DashboardAuditLogs } from '@/components/dashboard/DashboardAuditLogs';
 import { Marquee } from '@/components/dashboard/Marquee';
 import { AnimatedBorderCard } from '@/components/dashboard/AnimatedBorderCard';
 
@@ -163,6 +164,9 @@ export default function Dashboard() {
             <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Giao dịch
             </TabsTrigger>
+            <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Audit Logs
+            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Người dùng
             </TabsTrigger>
@@ -186,6 +190,10 @@ export default function Dashboard() {
 
           <TabsContent value="transactions">
             <DashboardTransactions />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <DashboardAuditLogs />
           </TabsContent>
 
           <TabsContent value="users">
