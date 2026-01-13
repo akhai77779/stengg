@@ -182,8 +182,16 @@ export default function Products() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
-                        {/* Product Icon */}
-                        {getCategoryIcon(product.name, product.category)}
+                        {/* Product Image */}
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          getCategoryIcon(product.name, product.category)
+                        )}
                         
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
