@@ -67,6 +67,7 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
       return;
     }
 
+    // Client-side validation for UX (server validates again)
     if (tradeType === 'buy' && total > balance) {
       toast({
         title: 'Số dư không đủ',
@@ -79,34 +80,27 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
     setIsLoading(true);
 
     try {
-      // Calculate new balance
-      const newBalance = tradeType === 'buy' 
-        ? balance - total 
-        : balance + total;
+      // Use secure server-side RPC function for atomic trade processing
+      const { data, error } = await supabase.rpc('process_trade', {
+        _user_id: user.id,
+        _product_id: product.id,
+        _amount: parseFloat(amount),
+        _trade_type: tradeType,
+      });
 
-      // Create transaction
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: tradeType,
-          amount: total,
-          status: 'approved', // Trade transactions are instant
-          notes: `${tradeType === 'buy' ? 'Mua' : 'Bán'} ${amount} ${product.name} @ ${formatCurrency(price)}`,
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; total?: number; new_balance?: number };
+
+      if (!result.success) {
+        toast({
+          title: 'Lỗi',
+          description: result.error || 'Không thể thực hiện giao dịch',
+          variant: 'destructive',
         });
-
-      if (txError) throw txError;
-
-      // Update balance
-      const { error: balanceError } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (balanceError) throw balanceError;
+        setIsLoading(false);
+        return;
+      }
 
       toast({
         title: 'Thành công',
