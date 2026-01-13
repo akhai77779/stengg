@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Search, Filter, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Loader2, Search, Filter, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { Json } from '@/integrations/supabase/types';
+import { exportToCSV, exportToPDF } from '@/lib/exportAuditLogs';
 
 interface AuditLog {
   id: string;
@@ -185,10 +187,30 @@ export function DashboardAuditLogs() {
               <Filter className="w-5 h-5" />
               Nhật ký Kiểm tra (Audit Logs)
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={fetchLogs}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Làm mới
-            </Button>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Xuất báo cáo
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportToCSV(filteredLogs)}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Xuất CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportToPDF(filteredLogs)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Xuất PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={fetchLogs}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Làm mới
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

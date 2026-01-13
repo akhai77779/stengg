@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
@@ -13,7 +15,8 @@ import {
   Eye, 
   TrendingUp,
   Loader2,
-  BarChart3
+  BarChart3,
+  Bell
 } from 'lucide-react';
 import { DashboardNews } from '@/components/dashboard/DashboardNews';
 import { DashboardProducts } from '@/components/dashboard/DashboardProducts';
@@ -43,6 +46,7 @@ export default function Dashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { pendingCount } = useAdminNotifications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -161,8 +165,14 @@ export default function Dashboard() {
             <TabsTrigger value="charity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Từ thiện
             </TabsTrigger>
-            <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
+              <Bell className="w-4 h-4 mr-1" />
               Giao dịch
+              {pendingCount > 0 && (
+                <Badge variant="destructive" className="ml-2 h-5 min-w-5 px-1.5 text-xs animate-pulse">
+                  {pendingCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Audit Logs
