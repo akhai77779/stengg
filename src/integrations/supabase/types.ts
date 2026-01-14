@@ -226,6 +226,50 @@ export type Database = {
         }
         Relationships: []
       }
+      price_history: {
+        Row: {
+          close_price: number
+          created_at: string
+          high_price: number
+          id: string
+          low_price: number
+          open_price: number
+          product_id: string
+          recorded_at: string
+          volume: number | null
+        }
+        Insert: {
+          close_price: number
+          created_at?: string
+          high_price: number
+          id?: string
+          low_price: number
+          open_price: number
+          product_id: string
+          recorded_at?: string
+          volume?: number | null
+        }
+        Update: {
+          close_price?: number
+          created_at?: string
+          high_price?: number
+          id?: string
+          low_price?: number
+          open_price?: number
+          product_id?: string
+          recorded_at?: string
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
