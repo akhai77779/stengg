@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Layout } from "@/components/layout/Layout";
 import { TradeDialog } from "@/components/product/TradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
+import { format } from "date-fns";
 
 interface Product {
   id: string;
@@ -21,28 +23,10 @@ interface Product {
   description: string | null;
 }
 
-// Mock data for chart
-const generateChartData = (basePrice: number) => {
-  const data = [];
-  let price = basePrice;
-  for (let i = 0; i < 24; i++) {
-    price = price * (1 + (Math.random() - 0.5) * 0.02);
-    data.push({
-      time: `${i}:00`,
-      price: Number(price.toFixed(2)),
-    });
-  }
-  return data;
-};
-
-// Mock transaction history
-const mockTransactions = [
-  { id: 1, type: "buy", price: 67543.25, amount: 0.05, time: "14:32:15", total: 3377.16 },
-  { id: 2, type: "sell", price: 67520.00, amount: 0.12, time: "14:30:22", total: 8102.40 },
-  { id: 3, type: "buy", price: 67555.80, amount: 0.08, time: "14:28:45", total: 5404.46 },
-  { id: 4, type: "sell", price: 67510.50, amount: 0.15, time: "14:25:10", total: 10126.58 },
-  { id: 5, type: "buy", price: 67530.25, amount: 0.03, time: "14:22:33", total: 2025.91 },
-];
+interface LineChartData {
+  time: string;
+  price: number;
+}
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -51,14 +35,23 @@ const ProductDetail = () => {
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState<{ time: string; price: number }[]>([]);
+  const [chartData, setChartData] = useState<LineChartData[]>([]);
+  const [candleData, setCandleData] = useState<OHLCData[]>([]);
   const [timeframe, setTimeframe] = useState("24H");
+  const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
+  const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchPriceHistory(timeframe);
+    }
+  }, [id, timeframe]);
 
   const fetchProduct = async () => {
     if (!id) return;
@@ -71,9 +64,55 @@ const ProductDetail = () => {
 
     if (data) {
       setProduct(data);
-      setChartData(generateChartData(data.price || 100));
     }
     setLoading(false);
+  };
+
+  const fetchPriceHistory = async (tf: string) => {
+    if (!id) return;
+    setPriceHistoryLoading(true);
+
+    // Calculate time interval based on timeframe
+    const intervals: Record<string, number> = {
+      '1H': 60,         // 1 hour in minutes
+      '24H': 1440,      // 24 hours in minutes
+      '7D': 10080,      // 7 days in minutes
+      '30D': 43200,     // 30 days in minutes
+    };
+    
+    const fromDate = new Date(Date.now() - intervals[tf] * 60000);
+
+    const { data, error } = await supabase
+      .from('price_history')
+      .select('*')
+      .eq('product_id', id)
+      .gte('recorded_at', fromDate.toISOString())
+      .order('recorded_at', { ascending: true });
+
+    if (data && data.length > 0) {
+      // Format for candlestick chart
+      const candles: OHLCData[] = data.map(d => ({
+        time: format(new Date(d.recorded_at), 'yyyy-MM-dd HH:mm'),
+        open: Number(d.open_price),
+        high: Number(d.high_price),
+        low: Number(d.low_price),
+        close: Number(d.close_price),
+      }));
+      setCandleData(candles);
+
+      // Format for line chart
+      const lines: LineChartData[] = data.map(d => ({
+        time: format(new Date(d.recorded_at), tf === '1H' ? 'HH:mm' : 'MM/dd HH:mm'),
+        price: Number(d.close_price),
+      }));
+      setChartData(lines);
+    } else {
+      // Fallback to mock data if no price history
+      setCandleData([]);
+      setChartData([]);
+    }
+    
+    setPriceHistoryLoading(false);
   };
 
   const formatPrice = (price: number | null) => {
@@ -144,7 +183,9 @@ const ProductDetail = () => {
         {/* Chart */}
         <Card className="bg-card/50 border-border/50">
           <CardContent className="p-4">
+            {/* Timeframe and Chart Type Controls */}
             <div className="flex gap-2 mb-4">
+              {/* Timeframe buttons */}
               {["1H", "24H", "7D", "30D"].map((tf) => (
                 <Button
                   key={tf}
@@ -156,37 +197,67 @@ const ProductDetail = () => {
                   {tf}
                 </Button>
               ))}
+              
+              {/* Chart type toggle */}
+              <div className="flex gap-1 ml-2 border-l border-border pl-2">
+                <Button
+                  size="sm"
+                  variant={chartType === 'candle' ? 'default' : 'outline'}
+                  onClick={() => setChartType('candle')}
+                  className="px-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={chartType === 'line' ? 'default' : 'outline'}
+                  onClick={() => setChartType('line')}
+                  className="px-2"
+                >
+                  <LineIcon className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <XAxis 
-                    dataKey="time" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    hide 
-                    domain={['dataMin - 100', 'dataMax + 100']}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            
+            {/* Chart */}
+            <div className="h-72">
+              {priceHistoryLoading ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : chartType === 'candle' ? (
+                <CandlestickChart data={candleData} height={280} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis 
+                      dataKey="time" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      hide 
+                      domain={['dataMin - 100', 'dataMax + 100']}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -200,28 +271,8 @@ const ProductDetail = () => {
           
           <TabsContent value="history" className="mt-4">
             <Card className="bg-card/50 border-border/50">
-              <CardContent className="p-0">
-                <div className="grid grid-cols-5 gap-2 p-3 text-xs text-muted-foreground border-b border-border/50">
-                  <span>Loại</span>
-                  <span>Giá</span>
-                  <span>SL</span>
-                  <span>Tổng</span>
-                  <span>Thời gian</span>
-                </div>
-                {mockTransactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="grid grid-cols-5 gap-2 p-3 text-xs border-b border-border/30 last:border-0"
-                  >
-                    <span className={tx.type === "buy" ? "text-green-500" : "text-red-500"}>
-                      {tx.type === "buy" ? "Mua" : "Bán"}
-                    </span>
-                    <span className="text-foreground">${tx.price.toLocaleString()}</span>
-                    <span className="text-muted-foreground">{tx.amount}</span>
-                    <span className="text-foreground">${tx.total.toLocaleString()}</span>
-                    <span className="text-muted-foreground">{tx.time}</span>
-                  </div>
-                ))}
+              <CardContent className="p-4 text-center text-muted-foreground">
+                <p className="text-sm">Chưa có giao dịch nào cho sản phẩm này</p>
               </CardContent>
             </Card>
           </TabsContent>
