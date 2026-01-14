@@ -1,10 +1,10 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries } from 'lightweight-charts';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, UTCTimestamp } from 'lightweight-charts';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 export interface OHLCData {
-  time: string;
+  time: string; // ISO date string that will be converted to UTC timestamp
   open: number;
   high: number;
   low: number;
@@ -128,9 +128,9 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         wickDownColor: '#ef4444',
       });
 
-      // Convert data to proper format
-      const formattedData: CandlestickData[] = data.map((d) => ({
-        time: d.time as any,
+      // Convert data to proper format - use Unix timestamp (seconds)
+      const formattedData: CandlestickData<UTCTimestamp>[] = data.map((d) => ({
+        time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
         open: d.open,
         high: d.high,
         low: d.low,
