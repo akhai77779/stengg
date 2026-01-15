@@ -24,7 +24,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useState } from 'react';
-import stLogo from '@/assets/st-logo.png';
+import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
@@ -54,7 +54,7 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img src={stLogo} alt="ST Engineering" className="h-8 sm:h-10" />
+            <img src={stEngineeringLogo} alt="ST Engineering" className="h-8 sm:h-10" />
           </Link>
 
           {/* Desktop Navigation */}
