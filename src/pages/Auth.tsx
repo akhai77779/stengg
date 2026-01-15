@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
+import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 
 const emailSchema = z.string().email('Email không hợp lệ');
 const passwordSchema = z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự');
@@ -170,9 +171,11 @@ export default function Auth() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4 glow">
-            <span className="text-primary-foreground font-bold text-2xl">ST</span>
-          </div>
+          <img 
+            src={stEngineeringLogo} 
+            alt="ST Engineering" 
+            className="h-12 mx-auto mb-4"
+          />
           <h1 className="text-2xl font-bold text-gradient">ST Engineering Portal</h1>
           <p className="text-muted-foreground mt-2">Cổng thông tin nội bộ</p>
         </div>
