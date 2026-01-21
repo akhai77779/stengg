@@ -12,7 +12,7 @@ export default function GuestHome() {
             alt="Digital Innovation"
             className="w-full h-full object-cover opacity-60"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a] via-[#0a0e1a]/60 to-transparent"></div>
+          <div className="absolute inset-0 hero-overlay"></div>
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
           <h1 className="text-5xl md:text-7xl lg:text-8xl mb-4 font-light tracking-tight">

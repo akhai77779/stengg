@@ -454,11 +454,10 @@ export default function Auth() {
             </>
           )}
 
-          {/* Promo Card */}
           <div className="mt-8 rounded-2xl overflow-hidden border border-gray-800 bg-[#0f1426]">
             <div className="relative">
-              <div className="absolute -top-12 -left-12 h-28 w-28 rounded-full bg-teal-400/40 blur-2xl"></div>
-              <div className="absolute -bottom-16 -right-10 h-32 w-32 rounded-full bg-blue-400/35 blur-2xl"></div>
+              <div className="absolute -top-12 -left-12 h-28 w-28 rounded-full bg-teal-400/40 promo-blob"></div>
+              <div className="absolute -bottom-16 -right-10 h-32 w-32 rounded-full bg-blue-400/35 promo-blob"></div>
               <img
                 src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80"
                 alt="Smart City"
