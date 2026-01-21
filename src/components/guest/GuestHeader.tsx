@@ -16,7 +16,7 @@ export function GuestHeader() {
               <a href="#" className="hover:text-white">Support</a>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/auth" className="hover:text-white">Login</Link>
+              <Link to="/login" className="hover:text-white">Login</Link>
               <select 
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}

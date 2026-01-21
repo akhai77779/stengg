@@ -24,7 +24,7 @@ export default function GuestHome() {
             Pushing the next generation of innovation
           </p>
           <Link
-            to="/auth"
+            to="/login"
             className="inline-block px-6 py-3 border border-white text-white hover:bg-white hover:text-[#0a0e1a] transition-all duration-300 text-sm tracking-wide"
           >
             Login
