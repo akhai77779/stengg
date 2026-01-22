@@ -1,4 +1,4 @@
-import { Globe, DollarSign } from 'lucide-react';
+import type React from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,11 @@ const currencies: { code: Currency; name: string; symbol: string }[] = [
   { code: 'VND', name: 'Việt Nam Đồng', symbol: '₫' },
 ];
 
-export function LanguageCurrencySelector() {
+type Props = {
+  showCurrency?: boolean;
+};
+
+export function LanguageCurrencySelector({ showCurrency = true }: Props) {
   const { language, setLanguage, t } = useLanguage();
   const { currency, setCurrency, exchangeRates } = useCurrency();
 
@@ -61,34 +65,36 @@ export function LanguageCurrencySelector() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Currency Selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 px-2 text-xs font-medium">
-            {currentCurrency?.code}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
-            {t('settings.currency')}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {currencies.map((curr) => (
-            <DropdownMenuItem
-              key={curr.code}
-              onClick={() => setCurrency(curr.code)}
-              className={currency === curr.code ? 'bg-primary/10' : ''}
-            >
-              <span className="mr-2 font-bold">{curr.symbol}</span>
-              {curr.name}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <div className="px-2 py-1.5 text-xs text-muted-foreground">
-            {t('settings.exchangeRate')}: 1 USD = {exchangeRates.usd_to_vnd.toLocaleString()} VND
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Currency Selector (optional) */}
+      {showCurrency && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs font-medium">
+              {currentCurrency?.code}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              {t('settings.currency')}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {currencies.map((curr) => (
+              <DropdownMenuItem
+                key={curr.code}
+                onClick={() => setCurrency(curr.code)}
+                className={currency === curr.code ? 'bg-primary/10' : ''}
+              >
+                <span className="mr-2 font-bold">{curr.symbol}</span>
+                {curr.name}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              {t('settings.exchangeRate')}: 1 USD = {exchangeRates.usd_to_vnd.toLocaleString()} VND
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }

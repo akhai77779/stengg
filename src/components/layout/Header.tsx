@@ -70,7 +70,7 @@ export function Header() {
 
           {/* Language/Currency Selector + User Menu */}
           <div className="flex items-center gap-2">
-            <LanguageCurrencySelector />
+            <LanguageCurrencySelector showCurrency={false} />
             {/* Mobile: keep header minimal (bottom nav already exists) */}
             <SupportMenuButton />
 
