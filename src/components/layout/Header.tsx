@@ -111,7 +111,7 @@ export function Header() {
                   </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
                         <Settings className="w-4 h-4" />
                         {t('nav.dashboard')}
                       </Link>
