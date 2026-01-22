@@ -110,11 +110,16 @@ export default function Login() {
               <select 
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}
-                className="bg-transparent border border-gray-700 text-gray-200 text-xs rounded px-2 py-1"
+                className="bg-[#1a1f2e] border border-gray-700 text-gray-200 text-xs rounded px-2 py-1"
               >
-                <option value="vi">🇻🇳 Tiếng Việt</option>
-                <option value="en">🇬🇧 English</option>
-                <option value="zh">🇨🇳 中文</option>
+                <option value="vi" className="bg-[#1a1f2e]">🇻🇳 Tiếng Việt</option>
+                <option value="en" className="bg-[#1a1f2e]">🇬🇧 English</option>
+                <option value="zh" className="bg-[#1a1f2e]">🇨🇳 中文</option>
+                <option value="th" className="bg-[#1a1f2e]">🇹🇭 ไทย</option>
+                <option value="ja" className="bg-[#1a1f2e]">🇯🇵 日本語</option>
+                <option value="ko" className="bg-[#1a1f2e]">🇰🇷 한국어</option>
+                <option value="id" className="bg-[#1a1f2e]">🇮🇩 Indonesia</option>
+                <option value="ms" className="bg-[#1a1f2e]">🇲🇾 Melayu</option>
               </select>
             </div>
           </div>
