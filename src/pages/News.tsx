@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { vi, enUS, zhCN, th, ja, ko, id as idLocale, ms, type Locale } from 'date-fns/locale';
 import { Calendar, Eye, Search, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
@@ -24,14 +25,6 @@ interface News {
   views: number;
   created_at: string;
 }
-
-const categoryLabels: Record<NewsCategory, string> = {
-  company: 'Công ty',
-  product: 'Sản phẩm',
-  event: 'Sự kiện',
-  announcement: 'Thông báo',
-  charity: 'Từ thiện',
-};
 
 const categoryColors: Record<NewsCategory, string> = {
   company: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
@@ -49,7 +42,27 @@ export default function News() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory | 'all'>('all');
   const { user, isLoading: authLoading } = useAuth();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
+
+  const dateLocales: Record<string, Locale> = {
+    vi: vi,
+    en: enUS,
+    zh: zhCN,
+    th: th,
+    ja: ja,
+    ko: ko,
+    id: idLocale,
+    ms: ms,
+  };
+
+  const categoryLabels: Record<NewsCategory, string> = {
+    company: t('news.category.company'),
+    product: t('news.category.product'),
+    event: t('news.category.event'),
+    announcement: t('news.category.announcement'),
+    charity: t('news.category.charity'),
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,10 +116,10 @@ export default function News() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-gradient">Tin tức</span>
+            <span className="text-gradient">{t('news.title')}</span>
           </h1>
           <p className="text-muted-foreground">
-            Cập nhật thông tin mới nhất từ ST Engineering
+            {t('news.subtitle')}
           </p>
         </div>
 
@@ -115,7 +128,7 @@ export default function News() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm tin tức..."
+              placeholder={t('news.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -127,7 +140,7 @@ export default function News() {
               onClick={() => setSelectedCategory('all')}
               className={selectedCategory === 'all' ? 'bg-gradient-primary' : ''}
             >
-              Tất cả
+              {t('common.all')}
             </Button>
             {categories.map((cat) => (
               <Button
@@ -149,7 +162,7 @@ export default function News() {
           </div>
         ) : filteredNews.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Không tìm thấy tin tức nào.</p>
+            <p className="text-muted-foreground">{t('news.noNews')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -185,11 +198,11 @@ export default function News() {
                   <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: vi })}
+                      {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })}
                     </span>
                     <span className="flex items-center gap-1">
                       <Eye className="w-3 h-3" />
-                      {item.views}
+                      {item.views} {t('news.views')}
                     </span>
                   </CardFooter>
                 </Card>
