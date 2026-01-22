@@ -22,7 +22,7 @@ import {
   LogOut,
   Shield
 } from 'lucide-react';
-import stEngineeringLogo from '@/assets/st-engineering-logo.png';
+import stLogoWhite from '@/assets/st-logo-white-footer.png';
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
@@ -51,15 +51,27 @@ export function Header() {
     <header
       className={
         isHome
-          ? 'fixed top-0 left-0 right-0 z-50 glass border-b border-border/50'
+          ? 'fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-transparent'
           : 'hidden md:block fixed top-0 left-0 right-0 z-50 glass border-b border-border/50'
       }
     >
+      {isHome && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/80 via-background/35 to-transparent backdrop-blur-md"
+        />
+      )}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="relative flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img src={stEngineeringLogo} alt="ST Engineering" className="h-8 sm:h-10" />
+            <img
+              src={stLogoWhite}
+              alt="ST Engineering"
+              className="h-7 sm:h-8 w-auto drop-shadow-[0_0_18px_hsl(var(--primary)/0.25)]"
+              loading="eager"
+              decoding="async"
+            />
           </Link>
 
           {/* Desktop Navigation */}
