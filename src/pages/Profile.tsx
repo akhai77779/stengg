@@ -169,7 +169,7 @@ export default function Profile() {
   ];
 
   return (
-    <Layout>
+    <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8">
         <div className="container mx-auto px-4 py-6 max-w-lg">
           
