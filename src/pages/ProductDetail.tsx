@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Layout } from "@/components/layout/Layout";
-import { TradeDialog } from "@/components/product/TradeDialog";
+import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
+import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
@@ -17,6 +18,7 @@ import { format } from "date-fns";
 interface Product {
   id: string;
   name: string;
+  symbol?: string | null;
   price: number | null;
   volume: string | null;
   price_change: number | null;
@@ -40,8 +42,7 @@ const ProductDetail = () => {
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
   const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
-  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
-  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
+  const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [paging, setPaging] = useState(false);
@@ -371,51 +372,44 @@ const ProductDetail = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Trade Buttons */}
+        {/* Active Option Trade Display */}
+        {user && product && (
+          <ActiveOptionTrade 
+            productId={product.id} 
+            currentPrice={product.price}
+            onSettled={fetchProduct}
+          />
+        )}
+
+        {/* Trade Button */}
         <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50">
-          <div className="flex gap-3 max-w-md mx-auto">
+          <div className="max-w-md mx-auto">
             <Button 
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold"
               onClick={() => {
                 if (!user) {
                   toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
-                  navigate('/auth');
+                  navigate('/login');
                   return;
                 }
-                setTradeType('buy');
-                setTradeDialogOpen(true);
+                setOptionsSheetOpen(true);
               }}
             >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Mua
-            </Button>
-            <Button 
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => {
-                if (!user) {
-                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
-                  navigate('/auth');
-                  return;
-                }
-                setTradeType('sell');
-                setTradeDialogOpen(true);
-              }}
-            >
-              <TrendingDown className="h-4 w-4 mr-2" />
-              Bán
+              <TrendingUp className="h-5 w-5 mr-2" />
+              Mua nó ngay bây giờ
             </Button>
           </div>
         </div>
 
-        {/* Trade Dialog */}
+        {/* Options Trade Sheet */}
         {product && (
-          <TradeDialog
-            isOpen={tradeDialogOpen}
-            onClose={() => setTradeDialogOpen(false)}
-            tradeType={tradeType}
+          <OptionsTradeSheet
+            isOpen={optionsSheetOpen}
+            onClose={() => setOptionsSheetOpen(false)}
             product={{
               id: product.id,
               name: product.name,
+              symbol: product.symbol,
               price: product.price,
             }}
             onSuccess={fetchProduct}

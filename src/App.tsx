@@ -29,6 +29,7 @@ import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminOptionTrades from "./pages/admin/AdminOptionTrades";
 
 const queryClient = new QueryClient();
 
@@ -62,7 +63,8 @@ const App = () => (
                   <Route path="transactions" element={<AdminTransactions />} />
                   <Route path="audit-logs" element={<AdminAuditLogs />} />
                   <Route path="users" element={<AdminUsers />} />
-                <Route path="settings" element={<AdminSettings />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                  <Route path="option-trades" element={<AdminOptionTrades />} />
                 </Route>
                 <Route path="/deposit" element={<Deposit />} />
                 <Route path="/withdraw" element={<Withdraw />} />

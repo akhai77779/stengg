@@ -226,6 +226,77 @@ export type Database = {
         }
         Relationships: []
       }
+      option_trades: {
+        Row: {
+          admin_result: string | null
+          amount: number
+          created_at: string
+          direction: string
+          duration_seconds: number
+          entry_price: number
+          exit_price: number | null
+          expires_at: string | null
+          fee_rate: number
+          id: string
+          product_id: string
+          profit_loss: number | null
+          profit_rate: number
+          settled_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_result?: string | null
+          amount: number
+          created_at?: string
+          direction: string
+          duration_seconds: number
+          entry_price: number
+          exit_price?: number | null
+          expires_at?: string | null
+          fee_rate?: number
+          id?: string
+          product_id: string
+          profit_loss?: number | null
+          profit_rate?: number
+          settled_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_result?: string | null
+          amount?: number
+          created_at?: string
+          direction?: string
+          duration_seconds?: number
+          entry_price?: number
+          exit_price?: number | null
+          expires_at?: string | null
+          fee_rate?: number
+          id?: string
+          product_id?: string
+          profit_loss?: number | null
+          profit_rate?: number
+          settled_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "option_trades_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_history: {
         Row: {
           close_price: number
@@ -511,6 +582,18 @@ export type Database = {
         Args: { _address: string; _network: string }
         Returns: boolean
       }
+      process_option_trade: {
+        Args: {
+          _amount: number
+          _direction: string
+          _duration_seconds: number
+          _fee_rate: number
+          _product_id: string
+          _profit_rate: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       process_trade: {
         Args: {
           _amount: number
@@ -518,6 +601,10 @@ export type Database = {
           _trade_type: string
           _user_id: string
         }
+        Returns: Json
+      }
+      settle_option_trade: {
+        Args: { _exit_price: number; _trade_id: string }
         Returns: Json
       }
     }
