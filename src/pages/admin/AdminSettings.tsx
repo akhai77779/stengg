@@ -12,9 +12,17 @@ type SettingsState = {
   usdToVnd: string;
   withdrawalFeePercent: string;
   bannersEnabled: boolean;
+  supportEnabled: boolean;
+  liveChatUrl: string;
 };
 
-const KEYS = ["exchange_rates", "withdrawal_fee", "banners_enabled"] as const;
+const KEYS = [
+  "exchange_rates",
+  "withdrawal_fee",
+  "banners_enabled",
+  "support_enabled",
+  "live_chat_url",
+] as const;
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +31,8 @@ export default function AdminSettings() {
     usdToVnd: "25000",
     withdrawalFeePercent: "1",
     bannersEnabled: true,
+    supportEnabled: true,
+    liveChatUrl: "https://tawk.to/chat",
   });
 
   const parsed = useMemo(() => {
@@ -61,6 +71,12 @@ export default function AdminSettings() {
         const bannersEnabled = map.get("banners_enabled") as
           | { enabled?: boolean }
           | undefined;
+        const supportEnabled = map.get("support_enabled") as
+          | { enabled?: boolean }
+          | undefined;
+        const liveChatUrl = map.get("live_chat_url") as
+          | { url?: string }
+          | undefined;
 
         if (!mounted) return;
         setState((s) => ({
@@ -68,6 +84,8 @@ export default function AdminSettings() {
           usdToVnd: String(exchangeRates?.usd_to_vnd ?? 25000),
           withdrawalFeePercent: String(withdrawalFee?.percent ?? 1),
           bannersEnabled: Boolean(bannersEnabled?.enabled ?? true),
+          supportEnabled: Boolean(supportEnabled?.enabled ?? true),
+          liveChatUrl: String(liveChatUrl?.url ?? "https://tawk.to/chat"),
         }));
       } catch (e) {
         console.error(e);
@@ -99,6 +117,8 @@ export default function AdminSettings() {
         { key: "exchange_rates", value: { usd_to_vnd: parsed.usdToVndNum } },
         { key: "withdrawal_fee", value: { percent: parsed.feeNum } },
         { key: "banners_enabled", value: { enabled: state.bannersEnabled } },
+        { key: "support_enabled", value: { enabled: state.supportEnabled } },
+        { key: "live_chat_url", value: { url: state.liveChatUrl.trim() } },
       ];
 
       const { error } = await supabase
@@ -141,6 +161,40 @@ export default function AdminSettings() {
             <p className="text-xs text-muted-foreground">
               Dùng cho hiển thị/qui đổi tiền tệ trong ứng dụng.
             </p>
+          </div>
+
+          <Separator />
+
+          <div className="grid gap-3">
+            <Label htmlFor="liveChatUrl">Link live chat</Label>
+            <Input
+              id="liveChatUrl"
+              inputMode="url"
+              value={state.liveChatUrl}
+              disabled={loading}
+              onChange={(e) => setState((s) => ({ ...s, liveChatUrl: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Dùng cho nút CSKH trên mobile.
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Bật/tắt CSKH (mobile)</div>
+              <div className="text-xs text-muted-foreground">
+                Khi tắt, icon CSKH sẽ bị ẩn trên mobile.
+              </div>
+            </div>
+            <Switch
+              checked={state.supportEnabled}
+              disabled={loading}
+              onCheckedChange={(checked) =>
+                setState((s) => ({ ...s, supportEnabled: checked }))
+              }
+            />
           </div>
 
           <Separator />
