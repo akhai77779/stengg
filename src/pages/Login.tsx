@@ -11,7 +11,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('email');
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [rememberMe, setRememberMe] = useState(false);
   
   const { user, signIn } = useAuth();
