@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -162,10 +163,9 @@ export default function Profile() {
   ];
 
   const systemSettings = [
-    { icon: Settings, label: t('common.settings'), href: '#', value: null },
-    { icon: Globe, label: t('settings.language'), href: '#', value: languageNames[language] },
-    { icon: UserPlus, label: t('profile.invite'), href: '#', value: null },
-    { icon: RefreshCw, label: t('profile.sync'), href: '#', value: null },
+    { icon: Settings, label: t('common.settings'), href: '#', value: null, isLink: true },
+    { icon: UserPlus, label: t('profile.invite'), href: '#', value: null, isLink: true },
+    { icon: RefreshCw, label: t('profile.sync'), href: '#', value: null, isLink: true },
   ];
 
   return (
@@ -278,6 +278,15 @@ export default function Profile() {
             <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.system')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
+              {/* Language Selector */}
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <Globe className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{t('settings.language')}</span>
+                  </div>
+                  <LanguageSelect />
+                </div>
+                
                 {systemSettings.map((item) => (
                   <Link 
                     key={item.label} 
