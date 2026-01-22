@@ -25,23 +25,28 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-500/20 text-red-500',
 };
 
-const statusLabels: Record<string, string> = {
-  pending: 'Đang xử lý',
-  approved: 'Hoàn thành',
-  rejected: 'Từ chối',
-};
-
 export function TransactionHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { formatCurrency } = useCurrency();
 
   const statusLabels: Record<string, string> = {
     pending: t('transaction.pending'),
     approved: t('transaction.approved'),
     rejected: t('transaction.rejected'),
+  };
+
+  const dateLocales: Record<string, string> = {
+    vi: 'vi-VN',
+    en: 'en-US',
+    zh: 'zh-CN',
+    th: 'th-TH',
+    ja: 'ja-JP',
+    ko: 'ko-KR',
+    id: 'id-ID',
+    ms: 'ms-MY',
   };
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export function TransactionHistory() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN');
+    return new Date(dateString).toLocaleString(dateLocales[language] || 'vi-VN');
   };
 
   const getIcon = (type: string) => {
@@ -122,8 +127,8 @@ export function TransactionHistory() {
     }
   };
 
-  const depositWithdrawTransactions = transactions.filter(t => t.type === 'deposit' || t.type === 'withdraw');
-  const tradeTransactions = transactions.filter(t => t.type === 'buy' || t.type === 'sell');
+  const depositWithdrawTransactions = transactions.filter(tx => tx.type === 'deposit' || tx.type === 'withdraw');
+  const tradeTransactions = transactions.filter(tx => tx.type === 'buy' || tx.type === 'sell');
 
   if (isLoading) {
     return (
