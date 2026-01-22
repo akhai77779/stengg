@@ -7,43 +7,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const EXTERNAL_KLINE_API_URL = "https://admin.stenggg.com/api/app/option/getKline";
+
 type Timeframe = "1m" | "30m" | "1h" | "1d";
 
-type OhlcRow = {
-  recorded_at: string;
-  open_price: string | number;
-  high_price: string | number;
-  low_price: string | number;
-  close_price: string | number;
-};
+interface KlineItem {
+  time?: number;
+  open?: number | string;
+  high?: number | string;
+  low?: number | string;
+  close?: number | string;
+  vol?: number | string;
+  // Alternative field names
+  t?: number;
+  o?: number | string;
+  h?: number | string;
+  l?: number | string;
+  c?: number | string;
+  v?: number | string;
+}
 
-type Bucket = {
-  bucketStartSec: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-};
+interface KlineApiResponse {
+  code?: number;
+  message?: string;
+  data?: KlineItem[] | {
+    list?: KlineItem[];
+  };
+}
+
+function timeframeToPeriod(tf: Timeframe): string {
+  switch (tf) {
+    case "1m": return "1min";
+    case "30m": return "30min";
+    case "1h": return "1hour";
+    case "1d": return "1day";
+    default: return "1hour";
+  }
+}
 
 function timeframeToSeconds(tf: Timeframe): number {
   switch (tf) {
-    case "1m":
-      return 60;
-    case "30m":
-      return 30 * 60;
-    case "1h":
-      return 60 * 60;
-    case "1d":
-      return 24 * 60 * 60;
+    case "1m": return 60;
+    case "30m": return 30 * 60;
+    case "1h": return 60 * 60;
+    case "1d": return 24 * 60 * 60;
   }
 }
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
-}
-
-function toSec(iso: string): number {
-  return Math.floor(new Date(iso).getTime() / 1000);
 }
 
 Deno.serve(async (req) => {
@@ -107,92 +119,103 @@ Deno.serve(async (req) => {
       });
     }
 
-    const bucketSec = timeframeToSeconds(timeframe);
     const limit = clamp(Math.floor(limitRaw), 50, 500);
 
-    let endDate = cursor ? new Date(cursor) : new Date();
-    if (Number.isNaN(endDate.getTime())) {
-      return new Response(JSON.stringify({ error: "Invalid cursor" }), {
-        status: 400,
+    // Fetch product to get symbol
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("name, symbol")
+      .eq("id", productId)
+      .maybeSingle();
+
+    if (productError || !product) {
+      console.error("Product not found:", productError);
+      return new Response(JSON.stringify({ error: "Product not found" }), {
+        status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // If the dataset is historical (no recent rows), default to the latest available point
-    // so the chart still renders.
-    if (!cursor) {
-      const { data: latest, error: latestErr } = await supabase
-        .from("price_history")
-        .select("recorded_at")
-        .eq("product_id", productId)
-        .order("recorded_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (latestErr) {
-        console.error("latest price_history query error", latestErr);
-      }
-      if (latest?.recorded_at) {
-        endDate = new Date(latest.recorded_at);
-      }
-    }
-
-    // Fetch enough raw rows to aggregate into `limit` buckets.
-    // We over-fetch to handle sparse data (e.g., hourly samples for 1m buckets).
-    const startDate = new Date(endDate.getTime() - bucketSec * limit * 1000);
-    const fromIso = startDate.toISOString();
-    const toIso = endDate.toISOString();
-
-    const { data: rows, error: rowsError } = await supabase
-      .from("price_history")
-      .select("recorded_at,open_price,high_price,low_price,close_price")
-      .eq("product_id", productId)
-      .gte("recorded_at", fromIso)
-      .lte("recorded_at", toIso)
-      .order("recorded_at", { ascending: true })
-      .limit(5000);
-
-    if (rowsError) {
-      console.error("price_history query error", rowsError);
-      return new Response(JSON.stringify({ error: "Failed to load price history" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const buckets = new Map<number, Bucket>();
-    for (const r of (rows ?? []) as OhlcRow[]) {
-      const tSec = toSec(r.recorded_at);
-      const bucketStartSec = Math.floor(tSec / bucketSec) * bucketSec;
-      const open = Number(r.open_price);
-      const high = Number(r.high_price);
-      const low = Number(r.low_price);
-      const close = Number(r.close_price);
-
-      const existing = buckets.get(bucketStartSec);
-      if (!existing) {
-        buckets.set(bucketStartSec, { bucketStartSec, open, high, low, close });
+    // Use symbol if available, otherwise try to derive from name
+    let symbol = product.symbol;
+    if (!symbol) {
+      // Try common patterns: "Bitcoin" -> "BTC/USDT", "Wing-in-Ground" -> "WIG/USDT"
+      const name = product.name || "";
+      if (name.toLowerCase().includes("wing") || name.toLowerCase().includes("wig")) {
+        symbol = "WIG/USDT";
       } else {
-        existing.high = Math.max(existing.high, high);
-        existing.low = Math.min(existing.low, low);
-        existing.close = close;
+        // Default fallback - use first 3-4 chars of name
+        symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase() + "/USDT";
       }
     }
 
-    const candles = Array.from(buckets.values())
-      .sort((a, b) => a.bucketStartSec - b.bucketStartSec)
-      .slice(-limit)
-      .map((b) => ({
-        time: new Date(b.bucketStartSec * 1000).toISOString(),
-        open: b.open,
-        high: b.high,
-        low: b.low,
-        close: b.close,
-      }));
+    // Calculate time range
+    const bucketSec = timeframeToSeconds(timeframe);
+    const now = Math.floor(Date.now() / 1000);
+    const toTimestamp = cursor ? Math.floor(new Date(cursor).getTime() / 1000) : now;
+    const fromTimestamp = toTimestamp - (bucketSec * limit);
 
-    const nextCursor = startDate.toISOString();
+    // Build external API URL
+    const period = timeframeToPeriod(timeframe);
+    const encodedSymbol = encodeURIComponent(symbol);
+    const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=${period}&size=${limit}&from=${fromTimestamp}&to=${toTimestamp}&zip=0`;
 
-    return new Response(JSON.stringify({ candles, nextCursor }), {
+    console.log(`Fetching kline data from: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "ST-Engineering-Chart/1.0",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`External API error: ${response.status}`);
+      return new Response(JSON.stringify({ error: "Failed to fetch chart data", status: response.status }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const apiData: KlineApiResponse = await response.json();
+    console.log("API response code:", apiData.code);
+
+    // Extract kline data - handle different response formats
+    let klineList: KlineItem[] = [];
+    if (Array.isArray(apiData.data)) {
+      klineList = apiData.data;
+    } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
+      klineList = apiData.data.list;
+    }
+
+    console.log(`Received ${klineList.length} kline items`);
+
+    // Convert to candle format
+    const candles = klineList.map((item) => {
+      // Handle different field naming conventions
+      const time = item.time ?? item.t ?? 0;
+      const open = Number(item.open ?? item.o ?? 0);
+      const high = Number(item.high ?? item.h ?? 0);
+      const low = Number(item.low ?? item.l ?? 0);
+      const close = Number(item.close ?? item.c ?? 0);
+
+      return {
+        time: new Date(time * 1000).toISOString(),
+        open,
+        high,
+        low,
+        close,
+      };
+    }).filter(c => c.open > 0 || c.close > 0) // Filter out invalid candles
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    // Calculate next cursor for pagination
+    const nextCursor = candles.length > 0 
+      ? new Date(fromTimestamp * 1000).toISOString()
+      : null;
+
+    return new Response(JSON.stringify({ candles, nextCursor, symbol }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

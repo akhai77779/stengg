@@ -203,6 +203,9 @@ Deno.serve(async (req) => {
         const productName = o.fullname || o.base_coin_name || o.pair_name || `Product ${i + 1}`;
         const price = parseFloat(String(o.price || 0)) || 0;
         const priceChange = o.increase ?? 0;
+        // Build symbol for getKline API (e.g., "WIG/USDT")
+        const pairName = o.pair_name || "";
+        const symbol = pairName.includes("/") ? pairName : (pairName ? `${pairName}/USDT` : null);
 
         const productData = {
           name: productName,
@@ -213,6 +216,7 @@ Deno.serve(async (req) => {
           volume: "0",
           price_change: priceChange,
           status: o.status === 1 ? "available" : "unavailable",
+          symbol: symbol,
         };
 
         if (!productData.name) {
@@ -238,6 +242,7 @@ Deno.serve(async (req) => {
               price: productData.price,
               price_change: productData.price_change,
               status: productData.status,
+              symbol: productData.symbol,
             })
             .eq("id", existing.id);
 
