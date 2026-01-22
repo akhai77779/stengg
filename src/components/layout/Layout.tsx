@@ -6,9 +6,10 @@ import { BottomNavigation } from './BottomNavigation';
 
 interface LayoutProps {
   children: ReactNode;
+  hideFooter?: boolean;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, hideFooter = false }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
 
@@ -18,7 +19,7 @@ export function Layout({ children }: LayoutProps) {
       <main className={isHome ? 'flex-1 pt-16 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
         {children}
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
       <BottomNavigation />
     </div>
   );
