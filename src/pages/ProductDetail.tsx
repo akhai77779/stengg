@@ -55,6 +55,25 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
+  // Auto-refresh for short timeframes so candles stay up-to-date.
+  // - 1m: poll every 1s
+  // - 30m: poll every 30s
+  useEffect(() => {
+    if (!id) return;
+    if (timeframe !== "1m" && timeframe !== "30m") return;
+
+    const intervalMs = timeframe === "1m" ? 1000 : 30_000;
+    const handle = window.setInterval(() => {
+      // Avoid background polling when tab is hidden.
+      if (document.visibilityState === "hidden") return;
+      // Avoid stacking requests.
+      if (priceHistoryLoading || paging) return;
+      fetchPriceHistory(timeframe);
+    }, intervalMs);
+
+    return () => window.clearInterval(handle);
+  }, [id, timeframe, priceHistoryLoading, paging]);
+
   const fetchProduct = async () => {
     if (!id) return;
     
