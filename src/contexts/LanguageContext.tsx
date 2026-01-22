@@ -6,6 +6,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  isTransitioning: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -1636,10 +1637,22 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('language');
     return (saved as Language) || 'vi';
   });
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('language', lang);
+    if (lang === language) return;
+    
+    setIsTransitioning(true);
+    
+    // Brief fade out, then change language, then fade in
+    setTimeout(() => {
+      setLanguageState(lang);
+      localStorage.setItem('language', lang);
+      
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 50);
+    }, 150);
   };
 
   const t = (key: string): string => {
@@ -1651,8 +1664,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
+    <LanguageContext.Provider value={{ language, setLanguage, t, isTransitioning }}>
+      <div 
+        className={`transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+      >
+        {children}
+      </div>
     </LanguageContext.Provider>
   );
 }
