@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const EXTERNAL_API_URL = "https://admin.stenggg.com/api/app/indexList";
 const EXTERNAL_NEWS_API_URL = "https://admin.stenggg.com/api/app/getNews";
+const EXTERNAL_COIN_LIST_API_URL = "https://admin.stenggg.com/api/app/option/getBetCoinList";
+const EXTERNAL_OPTION_TIME_API_URL = "https://admin.stenggg.com/api/app/option/getOptionTime";
 
 // Actual API structure based on response
 interface OptionItem {
@@ -72,6 +74,44 @@ interface NewsApiResponse {
     list?: NoticeItem[];
     total?: number;
   };
+}
+
+interface BetCoinItem {
+  pair_id?: number;
+  pair_name?: string;
+  symbol?: string;
+  base_coin_name?: string;
+  fullname?: string;
+  introduction?: string;
+  coin_icon?: string;
+  price?: string | number;
+  increase?: number;
+  increaseStr?: string;
+  status?: number;
+  sort?: number;
+  high?: string | number;
+  low?: string | number;
+  vol?: string | number;
+}
+
+interface BetCoinListResponse {
+  code?: number;
+  message?: string;
+  data?: BetCoinItem[];
+}
+
+interface OptionTimeItem {
+  id?: number;
+  name?: string;
+  seconds?: number;
+  status?: number;
+  sort?: number;
+}
+
+interface OptionTimeResponse {
+  code?: number;
+  message?: string;
+  data?: OptionTimeItem[];
 }
 
 Deno.serve(async (req) => {
@@ -378,6 +418,128 @@ Deno.serve(async (req) => {
       }
     } catch (newsErr) {
       console.error("Error fetching from getNews API:", newsErr);
+    }
+
+    // Fetch products from getBetCoinList API
+    console.log("Fetching products from:", EXTERNAL_COIN_LIST_API_URL);
+    try {
+      const coinListResponse = await fetch(EXTERNAL_COIN_LIST_API_URL, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Sync/1.0",
+        },
+      });
+
+      if (coinListResponse.ok) {
+        const coinListData: BetCoinListResponse = await coinListResponse.json();
+        const coinList = coinListData.data || [];
+        console.log(`Found ${coinList.length} products from getBetCoinList API`);
+
+        for (let i = 0; i < coinList.length; i++) {
+          const coin = coinList[i];
+          try {
+            const productName = coin.fullname || coin.base_coin_name || coin.pair_name || `Coin ${i + 1}`;
+            const price = parseFloat(String(coin.price || 0)) || 0;
+            const priceChange = coin.increase ?? 0;
+            const volume = String(coin.vol || "0");
+
+            const productData = {
+              name: productName,
+              description: coin.introduction || null,
+              image_url: coin.coin_icon || null,
+              category: "crypto",
+              price: price,
+              volume: volume,
+              price_change: priceChange,
+              status: coin.status === 1 ? "available" : "unavailable",
+            };
+
+            if (!productData.name) {
+              continue;
+            }
+
+            // Check if product with same name exists
+            const { data: existing } = await supabase
+              .from("products")
+              .select("id")
+              .eq("name", productData.name)
+              .maybeSingle();
+
+            if (existing) {
+              const { error } = await supabase
+                .from("products")
+                .update({
+                  description: productData.description,
+                  image_url: productData.image_url,
+                  price: productData.price,
+                  volume: productData.volume,
+                  price_change: productData.price_change,
+                  status: productData.status,
+                })
+                .eq("id", existing.id);
+
+              if (error) {
+                console.error(`Error updating product from coinList ${productData.name}:`, error.message);
+                results.products.errors++;
+              } else {
+                console.log(`Updated product from coinList: ${productData.name}`);
+                results.products.synced++;
+              }
+            } else {
+              const { error } = await supabase
+                .from("products")
+                .insert(productData);
+
+              if (error) {
+                console.error(`Error inserting product from coinList ${productData.name}:`, error.message);
+                results.products.errors++;
+              } else {
+                console.log(`Inserted product from coinList: ${productData.name}`);
+                results.products.synced++;
+              }
+            }
+          } catch (err) {
+            console.error(`Error processing coinList item ${i}:`, err);
+            results.products.errors++;
+          }
+        }
+      } else {
+        console.warn(`getBetCoinList API returned ${coinListResponse.status}`);
+      }
+    } catch (coinErr) {
+      console.error("Error fetching from getBetCoinList API:", coinErr);
+    }
+
+    // Fetch option times from getOptionTime API and save to app_settings
+    console.log("Fetching option times from:", EXTERNAL_OPTION_TIME_API_URL);
+    try {
+      const optionTimeResponse = await fetch(EXTERNAL_OPTION_TIME_API_URL, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Sync/1.0",
+        },
+      });
+
+      if (optionTimeResponse.ok) {
+        const optionTimeData: OptionTimeResponse = await optionTimeResponse.json();
+        const optionTimes = optionTimeData.data || [];
+        console.log(`Found ${optionTimes.length} option times`);
+
+        // Save option times to app_settings
+        await supabase
+          .from("app_settings")
+          .upsert({
+            key: "option_times",
+            value: { times: optionTimes },
+          }, { onConflict: "key" });
+        console.log("Saved option times to app_settings");
+      } else {
+        console.warn(`getOptionTime API returned ${optionTimeResponse.status}`);
+      }
+    } catch (optionErr) {
+      console.error("Error fetching from getOptionTime API:", optionErr);
     }
 
     // Save kefu_link to app_settings if available
