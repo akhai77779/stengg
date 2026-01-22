@@ -20,6 +20,7 @@ import {
   Users,
   Menu,
   Settings,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -42,6 +43,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
       { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
       { to: "/admin/products", label: t('admin.products'), icon: Package },
+      { to: "/admin/option-trades", label: "Option Trades", icon: Clock },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
       { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
