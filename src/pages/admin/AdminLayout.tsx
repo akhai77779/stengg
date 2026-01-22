@@ -19,6 +19,7 @@ import {
   ClipboardList,
   Users,
   Menu,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       { to: "/admin/transactions", label: "Giao dịch", icon: CreditCard },
       { to: "/admin/audit-logs", label: "Audit logs", icon: ClipboardList },
       { to: "/admin/users", label: "Người dùng", icon: Users },
+      { to: "/admin/settings", label: "Cấu hình", icon: Settings },
     ],
     []
   );
