@@ -13,7 +13,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-  const [registerMethod, setRegisterMethod] = useState<'phone' | 'email'>('email');
+  const [registerMethod, setRegisterMethod] = useState<'phone' | 'email'>('phone');
   
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
