@@ -1,1 +1,7 @@
 project_id = "avqutkamqeblqirtckir"
+
+[functions.ohlc]
+verify_jwt = false
+
+[functions.sync-external-data]
+verify_jwt = false
