@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageCurrencySelector } from '@/components/settings/LanguageCurrencySelector';
+import { SupportMenuButton } from '@/components/layout/SupportMenuButton';
 import { 
   Home, 
   Newspaper, 
@@ -19,18 +20,14 @@ import {
   User, 
   Settings, 
   LogOut,
-  Menu,
-  X,
   Shield
 } from 'lucide-react';
-import { useState } from 'react';
 import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { label: t('nav.home'), href: '/', icon: Home },
@@ -74,93 +71,72 @@ export function Header() {
           {/* Language/Currency Selector + User Menu */}
           <div className="flex items-center gap-2">
             <LanguageCurrencySelector />
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10 border-2 border-primary/50">
-                      <AvatarImage src="" />
-                      <AvatarFallback className="bg-muted text-foreground">
-                        {getInitials(user.email || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 glass" align="end">
-                  <div className="flex items-center gap-2 p-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-muted text-foreground text-xs">
-                        {getInitials(user.email || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{user.email}</span>
-                      {isAdmin && (
-                        <span className="text-xs text-primary flex items-center gap-1">
-                          <Shield className="w-3 h-3" /> Admin
-                        </span>
-                      )}
+            {/* Mobile: keep header minimal (bottom nav already exists) */}
+            <SupportMenuButton />
+
+            {/* Desktop: user menu/login */}
+            <div className="hidden md:block">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10 border-2 border-primary/50">
+                        <AvatarImage src="" />
+                        <AvatarFallback className="bg-muted text-foreground">
+                          {getInitials(user.email || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56 glass" align="end">
+                    <div className="flex items-center gap-2 p-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-muted text-foreground text-xs">
+                          {getInitials(user.email || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{user.email}</span>
+                        {isAdmin && (
+                          <span className="text-xs text-primary flex items-center gap-1">
+                            <Shield className="w-3 h-3" /> Admin
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
-                      <User className="w-4 h-4" />
-                      {t('nav.profile')}
-                    </Link>
-                  </DropdownMenuItem>
-                  {isAdmin && (
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
-                        <Settings className="w-4 h-4" />
-                        {t('nav.dashboard')}
+                      <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                        <User className="w-4 h-4" />
+                        {t('nav.profile')}
                       </Link>
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleSignOut}
-                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    {t('nav.logout')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button asChild className="bg-gradient-primary hover:opacity-90">
-                <Link to="/auth">{t('nav.login')}</Link>
-              </Button>
-            )}
-
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                          <Settings className="w-4 h-4" />
+                          {t('nav.dashboard')}
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {t('nav.logout')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild className="bg-gradient-primary hover:opacity-90">
+                  <Link to="/auth">{t('nav.login')}</Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t border-border/50 animate-fade-in">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
       </div>
     </header>
   );
