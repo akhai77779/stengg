@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { RefreshCw, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 type SettingsState = {
   usdToVnd: string;
@@ -27,6 +28,15 @@ const KEYS = [
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean;
+    results?: {
+      banners: { synced: number; errors: number; skipped: number };
+      products: { synced: number; errors: number; skipped: number };
+      news: { synced: number; errors: number; skipped: number };
+    };
+  } | null>(null);
   const [state, setState] = useState<SettingsState>({
     usdToVnd: "25000",
     withdrawalFeePercent: "1",
@@ -132,6 +142,38 @@ export default function AdminSettings() {
       toast.error("Lưu cấu hình thất bại. Vui lòng thử lại.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const syncExternalData = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-external-data");
+      
+      if (error) {
+        console.error("Sync error:", error);
+        toast.error("Đồng bộ thất bại: " + error.message);
+        setSyncResult({ success: false });
+        return;
+      }
+
+      if (data?.success) {
+        toast.success("Đồng bộ dữ liệu thành công!");
+        setSyncResult({
+          success: true,
+          results: data.results,
+        });
+      } else {
+        toast.error("Đồng bộ thất bại: " + (data?.error || "Unknown error"));
+        setSyncResult({ success: false });
+      }
+    } catch (e) {
+      console.error("Sync error:", e);
+      toast.error("Đồng bộ thất bại. Vui lòng thử lại.");
+      setSyncResult({ success: false });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -242,6 +284,93 @@ export default function AdminSettings() {
               {saving ? "Đang lưu..." : "Lưu cấu hình"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Sync External Data Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" />
+            Đồng bộ dữ liệu
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Đồng bộ dữ liệu từ API bên ngoài (products, news, banners, option times).
+          </p>
+
+          <Button
+            onClick={syncExternalData}
+            disabled={syncing}
+            variant="outline"
+            className="gap-2"
+          >
+            {syncing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Đang đồng bộ...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Đồng bộ ngay
+              </>
+            )}
+          </Button>
+
+          {syncResult && (
+            <div className={`p-4 rounded-lg border ${syncResult.success ? 'bg-green-500/10 border-green-500/30' : 'bg-destructive/10 border-destructive/30'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                {syncResult.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-destructive" />
+                )}
+                <span className={`font-medium ${syncResult.success ? 'text-green-500' : 'text-destructive'}`}>
+                  {syncResult.success ? 'Đồng bộ thành công!' : 'Đồng bộ thất bại'}
+                </span>
+              </div>
+
+              {syncResult.results && (
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <div className="font-medium">Products</div>
+                    <div className="text-muted-foreground">
+                      ✓ {syncResult.results.products.synced} synced
+                    </div>
+                    {syncResult.results.products.errors > 0 && (
+                      <div className="text-destructive">
+                        ✗ {syncResult.results.products.errors} errors
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium">News</div>
+                    <div className="text-muted-foreground">
+                      ✓ {syncResult.results.news.synced} synced
+                    </div>
+                    {syncResult.results.news.errors > 0 && (
+                      <div className="text-destructive">
+                        ✗ {syncResult.results.news.errors} errors
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium">Banners</div>
+                    <div className="text-muted-foreground">
+                      ✓ {syncResult.results.banners.synced} synced
+                    </div>
+                    {syncResult.results.banners.errors > 0 && (
+                      <div className="text-destructive">
+                        ✗ {syncResult.results.banners.errors} errors
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
