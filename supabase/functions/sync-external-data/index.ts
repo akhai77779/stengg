@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const EXTERNAL_API_URL = "https://admin.stenggg.com/api/app/indexList";
+const EXTERNAL_NEWS_API_URL = "https://admin.stenggg.com/api/app/getNews";
 
 // Actual API structure based on response
 interface OptionItem {
@@ -61,6 +62,15 @@ interface ExternalApiResponse {
     wilsonlink?: {
       kefu_link?: string;
     };
+  };
+}
+
+interface NewsApiResponse {
+  code?: number;
+  message?: string;
+  data?: {
+    list?: NoticeItem[];
+    total?: number;
   };
 }
 
@@ -283,6 +293,91 @@ Deno.serve(async (req) => {
         console.error(`Error processing news ${i}:`, err);
         results.news.errors++;
       }
+    }
+
+    // Fetch additional news from getNews API
+    console.log("Fetching additional news from:", EXTERNAL_NEWS_API_URL);
+    try {
+      const newsResponse = await fetch(EXTERNAL_NEWS_API_URL, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Sync/1.0",
+        },
+      });
+
+      if (newsResponse.ok) {
+        const newsApiData: NewsApiResponse = await newsResponse.json();
+        const newsList = newsApiData.data?.list || [];
+        console.log(`Found ${newsList.length} additional news from getNews API`);
+
+        for (let i = 0; i < newsList.length; i++) {
+          const n = newsList[i];
+          try {
+            const newsData = {
+              title: n.title || `News ${i + 1}`,
+              content: n.body || n.excerpt || "",
+              summary: n.excerpt || null,
+              image_url: n.full_cover || n.cover || null,
+              category: n.category_name || "company",
+              views: n.view_count || 0,
+              is_featured: n.is_recommend === 1,
+            };
+
+            if (!newsData.title || !newsData.content) {
+              console.log(`Skipping getNews item ${i}: missing title or content`);
+              continue;
+            }
+
+            // Check if news with same title exists
+            const { data: existing } = await supabase
+              .from("news")
+              .select("id")
+              .eq("title", newsData.title)
+              .maybeSingle();
+
+            if (existing) {
+              const { error } = await supabase
+                .from("news")
+                .update({
+                  content: newsData.content,
+                  summary: newsData.summary,
+                  image_url: newsData.image_url,
+                  views: newsData.views,
+                  is_featured: newsData.is_featured,
+                })
+                .eq("id", existing.id);
+
+              if (error) {
+                console.error(`Error updating news from getNews ${newsData.title}:`, error.message);
+                results.news.errors++;
+              } else {
+                console.log(`Updated news from getNews: ${newsData.title}`);
+                results.news.synced++;
+              }
+            } else {
+              const { error } = await supabase
+                .from("news")
+                .insert(newsData);
+
+              if (error) {
+                console.error(`Error inserting news from getNews ${newsData.title}:`, error.message);
+                results.news.errors++;
+              } else {
+                console.log(`Inserted news from getNews: ${newsData.title}`);
+                results.news.synced++;
+              }
+            }
+          } catch (err) {
+            console.error(`Error processing getNews item ${i}:`, err);
+            results.news.errors++;
+          }
+        }
+      } else {
+        console.warn(`getNews API returned ${newsResponse.status}`);
+      }
+    } catch (newsErr) {
+      console.error("Error fetching from getNews API:", newsErr);
     }
 
     // Save kefu_link to app_settings if available
