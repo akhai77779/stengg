@@ -11,13 +11,11 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
-  const isProductDetail = location.pathname.startsWith('/products/');
-  const isOverlayHeader = isHome || isProductDetail;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className={isOverlayHeader ? 'flex-1 pt-16 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
+      <main className={isHome ? 'flex-1 pt-16 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
         {children}
       </main>
       <Footer />
