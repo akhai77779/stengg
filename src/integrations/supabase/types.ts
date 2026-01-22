@@ -270,6 +270,38 @@ export type Database = {
           },
         ]
       }
+      product_price_controls: {
+        Row: {
+          created_at: string
+          direction: string
+          product_id: string
+          strength: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          product_id: string
+          strength?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          product_id?: string
+          strength?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_price_controls_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
