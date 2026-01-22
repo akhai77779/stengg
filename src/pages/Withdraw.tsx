@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Wallet, AlertCircle, Minus } from "lucide-react";
+import { ArrowLeft, Wallet, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,8 @@ const networks = [
 const Withdraw = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const [network, setNetwork] = useState(networks[0].id);
   const [amount, setAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
@@ -63,7 +67,7 @@ const Withdraw = () => {
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để rút tiền");
+      toast.error(t('withdraw.loginRequired'));
       navigate("/auth");
       return;
     }
@@ -71,12 +75,12 @@ const Withdraw = () => {
     const withdrawAmount = parseFloat(amount);
 
     if (!amount || withdrawAmount <= 0) {
-      toast.error("Vui lòng nhập số tiền hợp lệ");
+      toast.error(t('withdraw.invalidAmount'));
       return;
     }
 
     if (withdrawAmount < 10) {
-      toast.error("Số tiền rút tối thiểu là 10 USDT");
+      toast.error(t('withdraw.minAmount'));
       return;
     }
 
@@ -84,21 +88,21 @@ const Withdraw = () => {
     const totalDeduction = withdrawAmount + fee;
 
     if (totalDeduction > balance) {
-      toast.error("Số dư không đủ (bao gồm phí 1%)");
+      toast.error(t('withdraw.insufficientBalance'));
       return;
     }
 
     if (!walletAddress.trim()) {
-      toast.error("Vui lòng nhập địa chỉ ví nhận");
+      toast.error(t('withdraw.walletRequired'));
       return;
     }
 
     // Enhanced client-side validation
     if (!isValidWalletAddress(walletAddress.trim(), network)) {
       if (network === "trc20") {
-        toast.error("Địa chỉ ví TRC20 không hợp lệ (phải bắt đầu bằng T và có 34 ký tự)");
+        toast.error(t('withdraw.invalidTRC20'));
       } else {
-        toast.error("Địa chỉ ví không hợp lệ (phải bắt đầu bằng 0x và có 42 ký tự)");
+        toast.error(t('withdraw.invalidERC20'));
       }
       return;
     }
@@ -119,16 +123,16 @@ const Withdraw = () => {
       const result = data as { success: boolean; error?: string };
 
       if (!result.success) {
-        toast.error(result.error || "Có lỗi xảy ra. Vui lòng thử lại");
+        toast.error(result.error || t('common.error'));
         setLoading(false);
         return;
       }
 
-      toast.success("Yêu cầu rút tiền đã được gửi thành công!");
+      toast.success(t('withdraw.success'));
       navigate("/profile");
     } catch (error) {
       console.error('Withdrawal error:', error);
-      toast.error("Có lỗi xảy ra. Vui lòng thử lại");
+      toast.error(t('common.error'));
     }
 
     setLoading(false);
@@ -144,7 +148,7 @@ const Withdraw = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">Rút tiền</h1>
+          <h1 className="text-xl font-bold">{t('withdraw.title')}</h1>
         </div>
 
         {/* Balance Card */}
@@ -152,7 +156,7 @@ const Withdraw = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Số dư khả dụng</p>
+                <p className="text-sm text-muted-foreground">{t('withdraw.availableBalance')}</p>
                 <p className="text-2xl font-bold text-primary">${balance.toFixed(2)}</p>
               </div>
               <Wallet className="h-10 w-10 text-primary/50" />
@@ -165,7 +169,7 @@ const Withdraw = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Wallet className="h-4 w-4 text-primary" />
-              Chọn mạng lưới
+              {t('withdraw.selectNetwork')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -187,23 +191,23 @@ const Withdraw = () => {
         {/* Withdrawal Info */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Thông tin rút tiền</CardTitle>
+            <CardTitle className="text-base">{t('withdraw.info')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Địa chỉ ví nhận</Label>
+              <Label>{t('withdraw.walletAddress')}</Label>
               <Input
-                placeholder="Nhập địa chỉ ví của bạn"
+                placeholder={t('withdraw.walletPlaceholder')}
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className="bg-muted/50 font-mono text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label>Số tiền rút (USDT)</Label>
+              <Label>{t('withdraw.amount')}</Label>
               <Input
                 type="number"
-                placeholder="Tối thiểu 10 USDT"
+                placeholder={t('withdraw.amountPlaceholder')}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="bg-muted/50"
@@ -227,7 +231,7 @@ const Withdraw = () => {
                   onClick={() => setAmount(balance.toString())}
                   className="text-xs"
                 >
-                  Tất cả
+                  {t('common.all')}
                 </Button>
               </div>
             </div>
@@ -238,15 +242,15 @@ const Withdraw = () => {
         <Card className="bg-card/50 border-border/50">
           <CardContent className="p-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Số tiền rút</span>
+              <span className="text-muted-foreground">{t('withdraw.withdrawAmount')}</span>
               <span>{amount || "0"} USDT</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Phí rút (1%)</span>
+              <span className="text-muted-foreground">{t('withdraw.fee')}</span>
               <span>{amount ? (parseFloat(amount) * 0.01).toFixed(2) : "0"} USDT</span>
             </div>
             <div className="flex justify-between text-sm font-medium pt-2 border-t border-border/50">
-              <span>Thực nhận</span>
+              <span>{t('withdraw.actualReceive')}</span>
               <span className="text-primary">
                 {amount ? (parseFloat(amount) * 0.99).toFixed(2) : "0"} USDT
               </span>
@@ -258,9 +262,9 @@ const Withdraw = () => {
         <div className="flex items-start gap-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
           <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5" />
           <div className="text-xs text-yellow-500 space-y-1">
-            <p>• Thời gian xử lý: 1-24 giờ làm việc</p>
-            <p>• Kiểm tra kỹ địa chỉ ví trước khi rút</p>
-            <p>• Rút sai mạng sẽ mất tiền vĩnh viễn</p>
+            <p>• {t('withdraw.warning1')}</p>
+            <p>• {t('withdraw.warning2')}</p>
+            <p>• {t('withdraw.warning3')}</p>
           </div>
         </div>
 
@@ -270,7 +274,7 @@ const Withdraw = () => {
           disabled={loading}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
         >
-          {loading ? "Đang xử lý..." : "Xác nhận rút tiền"}
+          {loading ? t('common.processing') : t('withdraw.confirm')}
         </Button>
       </div>
     </Layout>

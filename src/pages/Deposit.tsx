@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Copy, Check, Wallet, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ const networks = [
 const Deposit = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [network, setNetwork] = useState(networks[0].id);
   const [amount, setAmount] = useState("");
   const [txHash, setTxHash] = useState("");
@@ -32,25 +34,25 @@ const Deposit = () => {
     if (selectedNetwork) {
       navigator.clipboard.writeText(selectedNetwork.address);
       setCopied(true);
-      toast.success("Đã sao chép địa chỉ ví");
+      toast.success(t('deposit.addressCopied'));
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để nạp tiền");
+      toast.error(t('deposit.loginRequired'));
       navigate("/auth");
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      toast.error("Vui lòng nhập số tiền hợp lệ");
+      toast.error(t('deposit.invalidAmount'));
       return;
     }
 
     if (!txHash.trim()) {
-      toast.error("Vui lòng nhập mã giao dịch");
+      toast.error(t('deposit.txHashRequired'));
       return;
     }
 
@@ -69,12 +71,12 @@ const Deposit = () => {
     setLoading(false);
 
     if (error) {
-      toast.error("Có lỗi xảy ra. Vui lòng thử lại");
+      toast.error(t('common.error'));
       console.error(error);
       return;
     }
 
-    toast.success("Yêu cầu nạp tiền đã được gửi thành công!");
+    toast.success(t('deposit.success'));
     navigate("/profile");
   };
 
@@ -86,7 +88,7 @@ const Deposit = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">Nạp tiền</h1>
+          <h1 className="text-xl font-bold">{t('deposit.title')}</h1>
         </div>
 
         {/* Network Selection */}
@@ -94,7 +96,7 @@ const Deposit = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Wallet className="h-4 w-4 text-primary" />
-              Chọn mạng lưới
+              {t('deposit.selectNetwork')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -116,7 +118,7 @@ const Deposit = () => {
         {/* Wallet Address */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Địa chỉ ví nhận</CardTitle>
+            <CardTitle className="text-base">{t('deposit.walletAddress')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
@@ -130,7 +132,7 @@ const Deposit = () => {
             <div className="flex items-start gap-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
               <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5" />
               <p className="text-xs text-yellow-500">
-                Chỉ gửi USDT qua mạng {selectedNetwork?.name}. Gửi sai mạng sẽ mất tiền.
+                {t('deposit.warning').replace('{network}', selectedNetwork?.name || '')}
               </p>
             </div>
           </CardContent>
@@ -139,23 +141,23 @@ const Deposit = () => {
         {/* Amount & TX Hash */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Thông tin giao dịch</CardTitle>
+            <CardTitle className="text-base">{t('deposit.transactionInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Số tiền nạp (USDT)</Label>
+              <Label>{t('deposit.amount')}</Label>
               <Input
                 type="number"
-                placeholder="Nhập số tiền"
+                placeholder={t('deposit.amountPlaceholder')}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="bg-muted/50"
               />
             </div>
             <div className="space-y-2">
-              <Label>Mã giao dịch (TX Hash)</Label>
+              <Label>{t('deposit.txHash')}</Label>
               <Input
-                placeholder="Nhập mã giao dịch sau khi chuyển"
+                placeholder={t('deposit.txHashPlaceholder')}
                 value={txHash}
                 onChange={(e) => setTxHash(e.target.value)}
                 className="bg-muted/50"
@@ -170,7 +172,7 @@ const Deposit = () => {
           disabled={loading}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
         >
-          {loading ? "Đang xử lý..." : "Xác nhận nạp tiền"}
+          {loading ? t('common.processing') : t('deposit.confirm')}
         </Button>
       </div>
     </Layout>

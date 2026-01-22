@@ -65,7 +65,7 @@ export default function Products() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
   const { user, isLoading: authLoading } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
 
@@ -117,14 +117,26 @@ export default function Products() {
     return change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
   };
 
-  const currentDate = new Date().toLocaleString('vi-VN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  const getLocalizedDate = () => {
+    const locales: Record<string, string> = {
+      vi: 'vi-VN',
+      en: 'en-US',
+      zh: 'zh-CN',
+      th: 'th-TH',
+      ja: 'ja-JP',
+      ko: 'ko-KR',
+      id: 'id-ID',
+      ms: 'ms-MY',
+    };
+    return new Date().toLocaleString(locales[language] || 'vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
 
   if (authLoading || !user) {
     return (
@@ -149,10 +161,10 @@ export default function Products() {
             </div>
             
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span>Ngày: {currentDate}</span>
+              <span>{t('common.date')}: {getLocalizedDate()}</span>
               <span className="flex items-center gap-1">
                 <Activity className="w-4 h-4 text-primary" />
-                Số lượng giao dịch: {totalVolume.toLocaleString()}
+                {t('products.transactions')}: {totalVolume.toLocaleString()}
               </span>
             </div>
           </div>
@@ -166,7 +178,7 @@ export default function Products() {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Không có sản phẩm nào.</p>
+              <p className="text-muted-foreground">{t('products.noProducts')}</p>
             </div>
           ) : (
             <div className="grid gap-3">

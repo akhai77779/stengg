@@ -51,6 +51,17 @@ export default function Profile() {
   const balance = profile?.balance || 0;
   const uid = user?.id?.slice(0, 5) || '00000';
 
+  const languageNames: Record<string, string> = {
+    vi: 'Tiếng Việt',
+    en: 'English',
+    zh: '中文',
+    th: 'ไทย',
+    ja: '日本語',
+    ko: '한국어',
+    id: 'Bahasa Indonesia',
+    ms: 'Bahasa Melayu',
+  };
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -102,8 +113,8 @@ export default function Profile() {
   const copyUID = () => {
     navigator.clipboard.writeText(uid);
     toast({
-      title: 'Đã sao chép',
-      description: 'UID đã được sao chép vào clipboard',
+      title: t('common.copied'),
+      description: t('profile.uidCopied'),
     });
   };
 
@@ -119,12 +130,6 @@ export default function Profile() {
     return email.slice(0, 2).toUpperCase();
   };
 
-  const languageNames: Record<string, string> = {
-    vi: 'Tiếng Việt',
-    en: 'English',
-    zh: '中文',
-  };
-
   if (authLoading || isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -137,20 +142,20 @@ export default function Profile() {
     { icon: ArrowDownToLine, label: t('transaction.deposit'), color: 'text-green-400', href: '/deposit' },
     { icon: ArrowUpFromLine, label: t('transaction.withdraw'), color: 'text-orange-400', href: '/withdraw' },
     { icon: CreditCard, label: t('profile.balance'), color: 'text-blue-400', href: '#' },
-    { icon: Headphones, label: 'CSKH', color: 'text-purple-400', href: '#' },
+    { icon: Headphones, label: t('profile.customerService'), color: 'text-purple-400', href: '#' },
   ];
 
   const accountSettings = [
     { icon: Wallet, label: t('profile.balance'), href: '#', badge: null },
-    { icon: ShieldCheck, label: t('common.status'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
-    { icon: BadgeCheck, label: t('common.status'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
+    { icon: ShieldCheck, label: t('profile.security'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
+    { icon: BadgeCheck, label: t('profile.verification'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
   ];
 
   const systemSettings = [
-    { icon: Settings, label: t('common.settings') || 'Settings', href: '#', value: null },
+    { icon: Settings, label: t('common.settings'), href: '#', value: null },
     { icon: Globe, label: t('settings.language'), href: '#', value: languageNames[language] },
-    { icon: UserPlus, label: t('common.add'), href: '#', value: null },
-    { icon: RefreshCw, label: t('common.status'), href: '#', value: null },
+    { icon: UserPlus, label: t('profile.invite'), href: '#', value: null },
+    { icon: RefreshCw, label: t('profile.sync'), href: '#', value: null },
   ];
 
   return (
@@ -171,7 +176,7 @@ export default function Profile() {
                 </Avatar>
                 <div className="flex-1 pb-2">
                   <h2 className="text-lg font-bold text-foreground">
-                    {profile?.full_name || user.email?.split('@')[0] || 'Người dùng'}
+                    {profile?.full_name || user.email?.split('@')[0] || t('profile.defaultUser')}
                   </h2>
                   <button 
                     onClick={copyUID}
@@ -179,7 +184,7 @@ export default function Profile() {
                   >
                     <span>UID: {uid}</span>
                     <Copy className="w-3 h-3" />
-                    <span className="text-primary">sao chép</span>
+                    <span className="text-primary">{t('common.copy')}</span>
                   </button>
                 </div>
               </div>
@@ -219,7 +224,7 @@ export default function Profile() {
 
           {/* Account Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('nav.profile')}</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.account')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
                 {accountSettings.map((item) => (
@@ -246,7 +251,7 @@ export default function Profile() {
 
           {/* System Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('settings.language')}</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.system')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
                 {systemSettings.map((item) => (
@@ -282,7 +287,7 @@ export default function Profile() {
 
           {/* Security Notice */}
           <p className="text-xs text-center text-muted-foreground px-4">
-            Vui lòng không tiết lộ mật khẩu, mã OTP của bạn cho bất kỳ ai (bao gồm cả nhân viên ST Engineering)
+            {t('profile.securityNotice')}
           </p>
         </div>
       </div>

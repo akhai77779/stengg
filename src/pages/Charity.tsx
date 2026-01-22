@@ -5,9 +5,11 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { vi, enUS, zhCN, th, ja, ko, id as idLocale, ms, type Locale } from 'date-fns/locale';
 import { Calendar, Target, Heart, Loader2 } from 'lucide-react';
 
 interface CharityProgram {
@@ -26,7 +28,20 @@ export default function Charity() {
   const [programs, setPrograms] = useState<CharityProgram[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user, isLoading: authLoading } = useAuth();
+  const { t, language } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
+
+  const dateLocales: Record<string, Locale> = {
+    vi: vi,
+    en: enUS,
+    zh: zhCN,
+    th: th,
+    ja: ja,
+    ko: ko,
+    id: idLocale,
+    ms: ms,
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,14 +69,6 @@ export default function Charity() {
     setIsLoading(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const getProgress = (current: number, target: number) => {
     if (target === 0) return 0;
     return Math.min((current / target) * 100, 100);
@@ -71,8 +78,8 @@ export default function Charity() {
   const placeholderPrograms: CharityProgram[] = [
     {
       id: '1',
-      title: 'Vì trẻ em vùng cao',
-      description: 'Chương trình hỗ trợ giáo dục cho trẻ em vùng cao, cung cấp sách vở, đồ dùng học tập và xây dựng điểm trường.',
+      title: t('charity.programTitle1') || 'Vì trẻ em vùng cao',
+      description: t('charity.programDesc1') || 'Chương trình hỗ trợ giáo dục cho trẻ em vùng cao, cung cấp sách vở, đồ dùng học tập và xây dựng điểm trường.',
       image_url: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=400&h=300&fit=crop',
       target_amount: 500000000,
       current_amount: 325000000,
@@ -82,8 +89,8 @@ export default function Charity() {
     },
     {
       id: '2',
-      title: 'Mùa đông ấm áp',
-      description: 'Quyên góp áo ấm, chăn và nhu yếu phẩm cho người dân vùng lạnh trong mùa đông.',
+      title: t('charity.programTitle2') || 'Mùa đông ấm áp',
+      description: t('charity.programDesc2') || 'Quyên góp áo ấm, chăn và nhu yếu phẩm cho người dân vùng lạnh trong mùa đông.',
       image_url: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=400&h=300&fit=crop',
       target_amount: 200000000,
       current_amount: 180000000,
@@ -93,8 +100,8 @@ export default function Charity() {
     },
     {
       id: '3',
-      title: 'Nước sạch cho cộng đồng',
-      description: 'Xây dựng hệ thống lọc nước và giếng khoan cho các vùng khan hiếm nước sạch.',
+      title: t('charity.programTitle3') || 'Nước sạch cho cộng đồng',
+      description: t('charity.programDesc3') || 'Xây dựng hệ thống lọc nước và giếng khoan cho các vùng khan hiếm nước sạch.',
       image_url: 'https://images.unsplash.com/photo-1541544537156-7627a7a4aa1c?w=400&h=300&fit=crop',
       target_amount: 800000000,
       current_amount: 420000000,
@@ -123,11 +130,10 @@ export default function Charity() {
             <Heart className="w-8 h-8 text-pink-400" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-gradient">Hoạt động từ thiện</span>
+            <span className="text-gradient">{t('charity.title')}</span>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            ST Engineering luôn đồng hành cùng cộng đồng thông qua các chương trình từ thiện ý nghĩa.
-            Cùng chung tay góp phần xây dựng xã hội tốt đẹp hơn.
+            {t('charity.description')}
           </p>
         </div>
 
@@ -137,19 +143,19 @@ export default function Charity() {
             <div className="text-3xl font-bold text-primary mb-2">
               {displayPrograms.filter(p => p.is_active).length}
             </div>
-            <div className="text-muted-foreground">Chương trình đang hoạt động</div>
+            <div className="text-muted-foreground">{t('charity.activePrograms')}</div>
           </Card>
           <Card className="bg-card border-border text-center p-6">
             <div className="text-3xl font-bold text-secondary mb-2">
               {formatCurrency(displayPrograms.reduce((sum, p) => sum + p.current_amount, 0))}
             </div>
-            <div className="text-muted-foreground">Tổng số tiền quyên góp</div>
+            <div className="text-muted-foreground">{t('charity.totalDonations')}</div>
           </Card>
           <Card className="bg-card border-border text-center p-6">
             <div className="text-3xl font-bold text-pink-400 mb-2">
               1,234+
             </div>
-            <div className="text-muted-foreground">Người được hỗ trợ</div>
+            <div className="text-muted-foreground">{t('charity.peopleHelped')}</div>
           </Card>
         </div>
 
@@ -180,7 +186,7 @@ export default function Charity() {
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {program.is_active ? 'Đang diễn ra' : 'Đã kết thúc'}
+                    {program.is_active ? t('charity.ongoing') : t('charity.ended')}
                   </Badge>
                 </div>
 
@@ -197,7 +203,7 @@ export default function Charity() {
                   {/* Progress */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tiến độ</span>
+                      <span className="text-muted-foreground">{t('charity.progress')}</span>
                       <span className="text-primary font-medium">
                         {getProgress(program.current_amount, program.target_amount).toFixed(0)}%
                       </span>
@@ -210,7 +216,7 @@ export default function Charity() {
                       <span>{formatCurrency(program.current_amount)}</span>
                       <span className="flex items-center gap-1">
                         <Target className="w-3 h-3" />
-                        {formatCurrency(program.target_amount)}
+                        {t('charity.target')}: {formatCurrency(program.target_amount)}
                       </span>
                     </div>
                   </div>
@@ -220,7 +226,7 @@ export default function Charity() {
                   {program.start_date && program.end_date && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(program.start_date), 'dd/MM/yyyy', { locale: vi })} - {format(new Date(program.end_date), 'dd/MM/yyyy', { locale: vi })}
+                      {format(new Date(program.start_date), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })} - {format(new Date(program.end_date), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })}
                     </span>
                   )}
                 </CardFooter>
