@@ -13,6 +13,7 @@ type Timeframe = "1m" | "30m" | "1h" | "1d";
 
 interface KlineItem {
   time?: number;
+  ts?: number; // API uses 'ts' for timestamp
   open?: number | string;
   high?: number | string;
   low?: number | string;
@@ -30,8 +31,10 @@ interface KlineItem {
 interface KlineApiResponse {
   code?: number;
   message?: string;
+  // API structure: { data: { data: KlineItem[], ch: string, ts: number } }
   data?: KlineItem[] | {
     list?: KlineItem[];
+    data?: KlineItem[]; // Nested data.data structure
   };
 }
 
@@ -182,19 +185,28 @@ Deno.serve(async (req) => {
     console.log("API response code:", apiData.code);
 
     // Extract kline data - handle different response formats
+    // API returns: { data: { data: [...], ch: "...", ts: ... } }
     let klineList: KlineItem[] = [];
     if (Array.isArray(apiData.data)) {
       klineList = apiData.data;
-    } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
-      klineList = apiData.data.list;
+    } else if (apiData.data && typeof apiData.data === 'object') {
+      // Check for nested data.data structure
+      if ('data' in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
+        klineList = (apiData.data as { data: KlineItem[] }).data;
+      } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
+        klineList = apiData.data.list;
+      }
     }
 
     console.log(`Received ${klineList.length} kline items`);
+    if (klineList.length > 0) {
+      console.log('Sample kline item:', JSON.stringify(klineList[0]));
+    }
 
     // Convert to candle format
     const candles = klineList.map((item) => {
-      // Handle different field naming conventions
-      const time = item.time ?? item.t ?? 0;
+      // Handle different field naming conventions - API uses 'ts' for timestamp
+      const time = item.ts ?? item.time ?? item.t ?? 0;
       const open = Number(item.open ?? item.o ?? 0);
       const high = Number(item.high ?? item.h ?? 0);
       const low = Number(item.low ?? item.l ?? 0);
