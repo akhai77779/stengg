@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage, Language } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
@@ -18,7 +19,7 @@ export default function Register() {
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
 
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -116,20 +117,7 @@ export default function Register() {
               <ChevronLeft className="h-4 w-4" />
             </button>
             <h1 className="text-base font-medium">{t('auth.register')}</h1>
-            <select 
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as Language)}
-              className="bg-[#1a1f2e] border border-gray-700 text-gray-200 text-xs rounded px-2 py-1"
-            >
-              <option value="vi" className="bg-[#1a1f2e]">🇻🇳 Tiếng Việt</option>
-              <option value="en" className="bg-[#1a1f2e]">🇬🇧 English</option>
-              <option value="zh" className="bg-[#1a1f2e]">🇨🇳 中文</option>
-              <option value="th" className="bg-[#1a1f2e]">🇹🇭 ไทย</option>
-              <option value="ja" className="bg-[#1a1f2e]">🇯🇵 日本語</option>
-              <option value="ko" className="bg-[#1a1f2e]">🇰🇷 한국어</option>
-              <option value="id" className="bg-[#1a1f2e]">🇮🇩 Indonesia</option>
-              <option value="ms" className="bg-[#1a1f2e]">🇲🇾 Melayu</option>
-            </select>
+            <LanguageSelect />
           </div>
 
           {/* Register method tabs */}
