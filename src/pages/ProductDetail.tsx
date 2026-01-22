@@ -37,11 +37,13 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<LineChartData[]>([]);
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
-  const [timeframe, setTimeframe] = useState("24H");
+  const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [paging, setPaging] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -68,51 +70,93 @@ const ProductDetail = () => {
     setLoading(false);
   };
 
-  const fetchPriceHistory = async (tf: string) => {
+  const fetchPriceHistory = async (tf: "1m" | "30m" | "1h" | "1d") => {
     if (!id) return;
     setPriceHistoryLoading(true);
+    setNextCursor(null);
 
-    // Calculate time interval based on timeframe
-    const intervals: Record<string, number> = {
-      '1H': 60,         // 1 hour in minutes
-      '24H': 1440,      // 24 hours in minutes
-      '7D': 10080,      // 7 days in minutes
-      '30D': 43200,     // 30 days in minutes
-    };
-    
-    const fromDate = new Date(Date.now() - intervals[tf] * 60000);
+    const { data, error } = await supabase.functions.invoke("ohlc", {
+      body: {
+        productId: id,
+        timeframe: tf,
+        limit: 200,
+      },
+    });
 
-    const { data, error } = await supabase
-      .from('price_history')
-      .select('*')
-      .eq('product_id', id)
-      .gte('recorded_at', fromDate.toISOString())
-      .order('recorded_at', { ascending: true });
+    if (error) {
+      console.error("ohlc invoke error", error);
+      setCandleData([]);
+      setChartData([]);
+      setPriceHistoryLoading(false);
+      return;
+    }
 
-    if (data && data.length > 0) {
-      // Format for candlestick chart
-      const candles: OHLCData[] = data.map(d => ({
-        time: format(new Date(d.recorded_at), 'yyyy-MM-dd HH:mm'),
-        open: Number(d.open_price),
-        high: Number(d.high_price),
-        low: Number(d.low_price),
-        close: Number(d.close_price),
-      }));
+    const candles = (data?.candles ?? []) as OHLCData[];
+    setNextCursor((data?.nextCursor as string | undefined) ?? null);
+    if (candles.length > 0) {
       setCandleData(candles);
 
-      // Format for line chart
-      const lines: LineChartData[] = data.map(d => ({
-        time: format(new Date(d.recorded_at), tf === '1H' ? 'HH:mm' : 'MM/dd HH:mm'),
-        price: Number(d.close_price),
-      }));
-      setChartData(lines);
+      const timeFmt = tf === "1m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
+      setChartData(
+        candles.map((d) => ({
+          time: format(new Date(d.time), timeFmt),
+          price: Number(d.close),
+        })),
+      );
     } else {
-      // Fallback to mock data if no price history
       setCandleData([]);
       setChartData([]);
     }
     
     setPriceHistoryLoading(false);
+  };
+
+  const loadMoreHistory = async () => {
+    if (!id || !nextCursor) return;
+    setPaging(true);
+
+    const { data, error } = await supabase.functions.invoke("ohlc", {
+      body: {
+        productId: id,
+        timeframe,
+        limit: 200,
+        cursor: nextCursor,
+      },
+    });
+
+    if (error) {
+      console.error("ohlc paging invoke error", error);
+      setPaging(false);
+      return;
+    }
+
+    const candles = (data?.candles ?? []) as OHLCData[];
+    const newCursor = (data?.nextCursor as string | undefined) ?? null;
+    setNextCursor(newCursor);
+
+    if (candles.length > 0) {
+      const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+
+      // Prepend older candles, de-dupe by exact time, then rebuild line-series labels from merged candles.
+      setCandleData((prev) => {
+        const map = new Map<string, OHLCData>();
+        for (const c of [...candles, ...prev]) map.set(c.time, c);
+        const merged = Array.from(map.values()).sort(
+          (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+        );
+
+        setChartData(
+          merged.map((d) => ({
+            time: format(new Date(d.time), timeFmt),
+            price: Number(d.close),
+          })),
+        );
+
+        return merged;
+      });
+    }
+
+    setPaging(false);
   };
 
   const formatPrice = (price: number | null) => {
@@ -186,7 +230,7 @@ const ProductDetail = () => {
             {/* Timeframe and Chart Type Controls */}
             <div className="flex gap-2 mb-4">
               {/* Timeframe buttons */}
-              {["1H", "24H", "7D", "30D"].map((tf) => (
+              {(["1m", "30m", "1h", "1d"] as const).map((tf) => (
                 <Button
                   key={tf}
                   variant={timeframe === tf ? "default" : "outline"}
@@ -259,6 +303,19 @@ const ProductDetail = () => {
                 </ResponsiveContainer>
               )}
             </div>
+
+            {chartType === "candle" && (
+              <div className="mt-3 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!nextCursor || paging}
+                  onClick={loadMoreHistory}
+                >
+                  {paging ? "Đang tải..." : nextCursor ? "Tải thêm" : "Hết dữ liệu"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
