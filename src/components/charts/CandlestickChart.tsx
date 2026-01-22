@@ -1,7 +1,9 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, UTCTimestamp } from 'lightweight-charts';
+import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData } from 'lightweight-charts';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
+import { calculateMA, calculateEMA } from '@/lib/indicators';
 
 export interface OHLCData {
   time: string; // ISO date string that will be converted to UTC timestamp
@@ -14,6 +16,7 @@ export interface OHLCData {
 interface CandlestickChartProps {
   data: OHLCData[];
   height?: number;
+  indicatorConfig?: IndicatorConfig;
 }
 
 export interface CandlestickChartRef {
@@ -23,9 +26,20 @@ export interface CandlestickChartRef {
 }
 
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
-  ({ data, height = 280 }, ref) => {
+  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
+    
+    // Calculate indicators
+    const maData = useMemo(() => {
+      if (!indicatorConfig.ma.enabled) return [];
+      return calculateMA(data, indicatorConfig.ma.period);
+    }, [data, indicatorConfig.ma.enabled, indicatorConfig.ma.period]);
+    
+    const emaData = useMemo(() => {
+      if (!indicatorConfig.ema.enabled) return [];
+      return calculateEMA(data, indicatorConfig.ema.period);
+    }, [data, indicatorConfig.ema.enabled, indicatorConfig.ema.period]);
 
     useImperativeHandle(ref, () => ({
       zoomIn: handleZoomIn,
@@ -138,6 +152,37 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       }));
 
       candleSeries.setData(formattedData);
+      
+      // Add MA line if enabled
+      if (indicatorConfig.ma.enabled && maData.length > 0) {
+        const maSeries = chart.addSeries(LineSeries, {
+          color: indicatorConfig.ma.color,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        const maFormatted: LineData<UTCTimestamp>[] = maData.map((d) => ({
+          time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
+          value: d.value,
+        }));
+        maSeries.setData(maFormatted);
+      }
+      
+      // Add EMA line if enabled
+      if (indicatorConfig.ema.enabled && emaData.length > 0) {
+        const emaSeries = chart.addSeries(LineSeries, {
+          color: indicatorConfig.ema.color,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        const emaFormatted: LineData<UTCTimestamp>[] = emaData.map((d) => ({
+          time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
+          value: d.value,
+        }));
+        emaSeries.setData(emaFormatted);
+      }
+      
       chart.timeScale().fitContent();
       chartRef.current = chart;
 
@@ -156,7 +201,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         chart.remove();
         chartRef.current = null;
       };
-    }, [data, height]);
+    }, [data, height, indicatorConfig, maData, emaData]);
 
     if (data.length === 0) {
       return (
