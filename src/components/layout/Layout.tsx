@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
-import { LiveChatButton } from './LiveChatButton';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,7 +16,6 @@ export function Layout({ children }: LayoutProps) {
       </main>
       <Footer />
       <BottomNavigation />
-      <LiveChatButton />
     </div>
   );
 }
