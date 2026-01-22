@@ -358,6 +358,9 @@ export type Database = {
           position: string | null
           total_income: number | null
           updated_at: string
+          wallet_address_bep20: string | null
+          wallet_address_erc20: string | null
+          wallet_address_trc20: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -369,6 +372,9 @@ export type Database = {
           position?: string | null
           total_income?: number | null
           updated_at?: string
+          wallet_address_bep20?: string | null
+          wallet_address_erc20?: string | null
+          wallet_address_trc20?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -380,6 +386,9 @@ export type Database = {
           position?: string | null
           total_income?: number | null
           updated_at?: string
+          wallet_address_bep20?: string | null
+          wallet_address_erc20?: string | null
+          wallet_address_trc20?: string | null
         }
         Relationships: []
       }
