@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
+import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { 
   Wallet, 
   ArrowDownToLine, 
@@ -47,8 +48,17 @@ export default function Profile() {
   const { t, language } = useLanguage();
   const { formatCurrency, currency } = useCurrency();
   const navigate = useNavigate();
+  
+  // Fetch external balance from API
+  const { 
+    balance: externalBalance, 
+    frozen: frozenBalance,
+    isLoading: externalLoading, 
+    refetch: refetchExternalBalance 
+  } = useExternalBalance(user?.id);
 
-  const balance = profile?.balance || 0;
+  // Use external balance if available, otherwise fall back to local profile balance
+  const balance = externalBalance ?? profile?.balance ?? 0;
   const uid = user?.id?.slice(0, 5) || '00000';
 
   const languageNames: Record<string, string> = {
@@ -196,7 +206,21 @@ export default function Profile() {
             <CardContent className="p-4">
               <div className="text-center mb-4">
                 <p className="text-sm text-muted-foreground mb-1">{t('profile.balance')} ({currency})</p>
-                <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
+                {externalLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    <span className="text-muted-foreground">Loading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
+                    {frozenBalance !== null && frozenBalance > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Frozen: {formatCurrency(frozenBalance)}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Quick Actions */}

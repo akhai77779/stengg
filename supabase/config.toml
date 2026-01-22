@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-external-data]
 verify_jwt = false
+
+[functions.fetch-fund-account]
+verify_jwt = false
