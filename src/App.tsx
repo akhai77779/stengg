@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -19,6 +19,15 @@ import Dashboard from "./pages/Dashboard";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminBanners from "./pages/admin/AdminBanners";
+import AdminNews from "./pages/admin/AdminNews";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCharity from "./pages/admin/AdminCharity";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +51,17 @@ const App = () => (
                 <Route path="/charity" element={<Charity />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<AdminOverview />} />
+                  <Route path="banners" element={<AdminBanners />} />
+                  <Route path="news" element={<AdminNews />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="charity" element={<AdminCharity />} />
+                  <Route path="transactions" element={<AdminTransactions />} />
+                  <Route path="audit-logs" element={<AdminAuditLogs />} />
+                  <Route path="users" element={<AdminUsers />} />
+                </Route>
                 <Route path="/deposit" element={<Deposit />} />
                 <Route path="/withdraw" element={<Withdraw />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
