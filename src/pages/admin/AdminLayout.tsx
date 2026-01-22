@@ -22,6 +22,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
@@ -33,27 +34,28 @@ type AdminNavItem = {
 function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const items: AdminNavItem[] = useMemo(
     () => [
-      { to: "/admin/overview", label: "Tổng quan", icon: BarChart3 },
-      { to: "/admin/banners", label: "Banners", icon: ImageIcon },
-      { to: "/admin/news", label: "Tin tức", icon: Newspaper },
-      { to: "/admin/products", label: "Sản phẩm", icon: Package },
-      { to: "/admin/charity", label: "Từ thiện", icon: Heart },
-      { to: "/admin/transactions", label: "Giao dịch", icon: CreditCard },
-      { to: "/admin/audit-logs", label: "Audit logs", icon: ClipboardList },
-      { to: "/admin/users", label: "Người dùng", icon: Users },
-      { to: "/admin/settings", label: "Cấu hình", icon: Settings },
+      { to: "/admin/overview", label: t('admin.overview'), icon: BarChart3 },
+      { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
+      { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
+      { to: "/admin/products", label: t('admin.products'), icon: Package },
+      { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
+      { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard },
+      { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
+      { to: "/admin/users", label: t('admin.users'), icon: Users },
+      { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
     ],
-    []
+    [t]
   );
 
   return (
     <aside className="h-full">
       <div className="p-4">
         <div className="text-sm font-semibold tracking-wide text-muted-foreground">
-          Quản trị
+          {t('admin.title')}
         </div>
       </div>
       <div className="px-2 pb-4">

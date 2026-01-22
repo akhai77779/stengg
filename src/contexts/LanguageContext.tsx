@@ -48,6 +48,29 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.logout': 'Đăng xuất',
     'nav.login': 'Đăng nhập',
     
+    // Admin
+    'admin.title': 'Quản trị',
+    'admin.overview': 'Tổng quan',
+    'admin.banners': 'Banners',
+    'admin.news': 'Tin tức',
+    'admin.products': 'Sản phẩm',
+    'admin.charity': 'Từ thiện',
+    'admin.transactions': 'Giao dịch',
+    'admin.auditLogs': 'Audit logs',
+    'admin.users': 'Người dùng',
+    'admin.settings': 'Cấu hình',
+    'admin.syncData': 'Đồng bộ dữ liệu',
+    'admin.syncDescription': 'Đồng bộ dữ liệu từ API bên ngoài (products, news, banners, option times).',
+    'admin.syncNow': 'Đồng bộ ngay',
+    'admin.syncing': 'Đang đồng bộ...',
+    'admin.syncSuccess': 'Đồng bộ thành công',
+    'admin.syncFailed': 'Đồng bộ thất bại',
+    'admin.bannerToggle': 'Bật/tắt banner toàn site',
+    'admin.bannerToggleDesc': 'Hiện tại chỉ lưu cấu hình (chưa ẩn/hiện banner tự động).',
+    'admin.saving': 'Đang lưu...',
+    'admin.saveConfig': 'Lưu cấu hình',
+    'admin.category': 'Danh mục',
+    
     // Auth
     'auth.login': 'Đăng nhập',
     'auth.register': 'Đăng ký',
@@ -232,6 +255,7 @@ const translations: Record<Language, Record<string, string>> = {
     'news.searchPlaceholder': 'Tìm kiếm tin tức...',
     'news.noResults': 'Không tìm thấy tin tức nào.',
     'news.updateFrom': 'Cập nhật thông tin mới nhất từ ST Engineering',
+    'news.viewMore': 'Xem thêm tin tức khác',
     
     // Products
     'products.noProducts': 'Không có sản phẩm nào.',
@@ -298,6 +322,29 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.dashboard': 'Dashboard',
     'nav.logout': 'Logout',
     'nav.login': 'Login',
+    
+    // Admin
+    'admin.title': 'Administration',
+    'admin.overview': 'Overview',
+    'admin.banners': 'Banners',
+    'admin.news': 'News',
+    'admin.products': 'Products',
+    'admin.charity': 'Charity',
+    'admin.transactions': 'Transactions',
+    'admin.auditLogs': 'Audit Logs',
+    'admin.users': 'Users',
+    'admin.settings': 'Settings',
+    'admin.syncData': 'Sync Data',
+    'admin.syncDescription': 'Sync data from external API (products, news, banners, option times).',
+    'admin.syncNow': 'Sync Now',
+    'admin.syncing': 'Syncing...',
+    'admin.syncSuccess': 'Sync successful',
+    'admin.syncFailed': 'Sync failed',
+    'admin.bannerToggle': 'Enable/disable site-wide banners',
+    'admin.bannerToggleDesc': 'Currently only saves configuration (does not auto-hide/show banners).',
+    'admin.saving': 'Saving...',
+    'admin.saveConfig': 'Save Configuration',
+    'admin.category': 'Category',
     
     // Auth
     'auth.login': 'Login',
@@ -483,6 +530,7 @@ const translations: Record<Language, Record<string, string>> = {
     'news.searchPlaceholder': 'Search news...',
     'news.noResults': 'No news found.',
     'news.updateFrom': 'Latest updates from ST Engineering',
+    'news.viewMore': 'View more news',
     
     // Products
     'products.noProducts': 'No products available.',
@@ -549,6 +597,32 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.dashboard': '管理后台',
     'nav.logout': '退出登录',
     'nav.login': '登录',
+    
+    // Admin
+    'admin.title': '管理',
+    'admin.overview': '概览',
+    'admin.banners': '横幅',
+    'admin.news': '新闻',
+    'admin.products': '产品',
+    'admin.charity': '慈善',
+    'admin.transactions': '交易',
+    'admin.auditLogs': '审计日志',
+    'admin.users': '用户',
+    'admin.settings': '设置',
+    'admin.syncData': '同步数据',
+    'admin.syncDescription': '从外部API同步数据（产品、新闻、横幅、选项时间）。',
+    'admin.syncNow': '立即同步',
+    'admin.syncing': '同步中...',
+    'admin.syncSuccess': '同步成功',
+    'admin.syncFailed': '同步失败',
+    'admin.bannerToggle': '启用/禁用全站横幅',
+    'admin.bannerToggleDesc': '目前仅保存配置（不自动隐藏/显示横幅）。',
+    'admin.saving': '保存中...',
+    'admin.saveConfig': '保存配置',
+    'admin.category': '分类',
+    
+    // News
+    'news.viewMore': '查看更多新闻',
     
     // Auth
     'auth.login': '登录',
