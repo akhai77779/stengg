@@ -110,12 +110,31 @@ Deno.serve(async (req) => {
     const bucketSec = timeframeToSeconds(timeframe);
     const limit = clamp(Math.floor(limitRaw), 50, 500);
 
-    const endDate = cursor ? new Date(cursor) : new Date();
+    let endDate = cursor ? new Date(cursor) : new Date();
     if (Number.isNaN(endDate.getTime())) {
       return new Response(JSON.stringify({ error: "Invalid cursor" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // If the dataset is historical (no recent rows), default to the latest available point
+    // so the chart still renders.
+    if (!cursor) {
+      const { data: latest, error: latestErr } = await supabase
+        .from("price_history")
+        .select("recorded_at")
+        .eq("product_id", productId)
+        .order("recorded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestErr) {
+        console.error("latest price_history query error", latestErr);
+      }
+      if (latest?.recorded_at) {
+        endDate = new Date(latest.recorded_at);
+      }
     }
 
     // Fetch enough raw rows to aggregate into `limit` buckets.
