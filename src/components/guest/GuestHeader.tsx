@@ -25,6 +25,11 @@ export function GuestHeader() {
                 <option value="vi">🇻🇳 Tiếng Việt</option>
                 <option value="en">🇬🇧 English</option>
                 <option value="zh">🇨🇳 中文</option>
+                <option value="th">🇹🇭 ไทย</option>
+                <option value="ja">🇯🇵 日本語</option>
+                <option value="ko">🇰🇷 한국어</option>
+                <option value="id">🇮🇩 Bahasa Indonesia</option>
+                <option value="ms">🇲🇾 Bahasa Melayu</option>
               </select>
             </div>
           </div>
