@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,7 @@ const ProductDetail = () => {
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
   const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
+  const [isLive, setIsLive] = useState(true);
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
@@ -55,12 +56,21 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
+  // Default Live mode:
+  // - ON for fast timeframes (1m/30m)
+  // - OFF for slower ones
+  useEffect(() => {
+    if (timeframe === "1m" || timeframe === "30m") setIsLive(true);
+    else setIsLive(false);
+  }, [timeframe]);
+
   // Auto-refresh for short timeframes so candles stay up-to-date.
   // - 1m: poll every 1s
   // - 30m: poll every 30s
   useEffect(() => {
     if (!id) return;
     if (timeframe !== "1m" && timeframe !== "30m") return;
+    if (!isLive) return;
 
     const intervalMs = timeframe === "1m" ? 1000 : 30_000;
     const handle = window.setInterval(() => {
@@ -72,7 +82,7 @@ const ProductDetail = () => {
     }, intervalMs);
 
     return () => window.clearInterval(handle);
-  }, [id, timeframe, priceHistoryLoading, paging]);
+  }, [id, timeframe, isLive, priceHistoryLoading, paging]);
 
   const fetchProduct = async () => {
     if (!id) return;
@@ -132,6 +142,7 @@ const ProductDetail = () => {
 
   const loadMoreHistory = async () => {
     if (!id || !nextCursor) return;
+    setIsLive(false);
     setPaging(true);
 
     const { data, error } = await supabase.functions.invoke("ohlc", {
@@ -279,6 +290,22 @@ const ProductDetail = () => {
                 >
                   <LineIcon className="h-4 w-4" />
                 </Button>
+
+                {(timeframe === "1m" || timeframe === "30m") && (
+                  <Button
+                    size="sm"
+                    variant={isLive ? "default" : "outline"}
+                    onClick={() => {
+                      setIsLive(true);
+                      fetchPriceHistory(timeframe);
+                    }}
+                    className="px-2"
+                    title={isLive ? "Đang Live" : "Nhảy về nến mới nhất"}
+                  >
+                    <Activity className="h-4 w-4" />
+                    <span className="ml-1 hidden sm:inline">Live</span>
+                  </Button>
+                )}
               </div>
             </div>
             
