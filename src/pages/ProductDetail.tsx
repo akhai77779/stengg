@@ -11,6 +11,7 @@ import { TradeDialog } from "@/components/product/TradeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
+import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { format } from "date-fns";
 
 interface Product {
@@ -44,6 +45,7 @@ const ProductDetail = () => {
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [paging, setPaging] = useState(false);
+  const [indicatorConfig, setIndicatorConfig] = useState<IndicatorConfig>(defaultIndicatorConfig);
 
   useEffect(() => {
     fetchProduct();
@@ -261,6 +263,14 @@ const ProductDetail = () => {
                   <LineIcon className="h-4 w-4" />
                 </Button>
               </div>
+              
+              {/* Indicators button - only for candle chart */}
+              {chartType === 'candle' && (
+                <ChartIndicators
+                  config={indicatorConfig}
+                  onChange={setIndicatorConfig}
+                />
+              )}
             </div>
             
             {/* Chart */}
@@ -270,7 +280,7 @@ const ProductDetail = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : chartType === 'candle' ? (
-                <CandlestickChart data={candleData} height={280} />
+                <CandlestickChart data={candleData} height={280} indicatorConfig={indicatorConfig} />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
