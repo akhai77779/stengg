@@ -13,6 +13,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [registerMethod, setRegisterMethod] = useState<'phone' | 'email'>('email');
   
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function Register() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
   const [registerName, setRegisterName] = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
@@ -130,7 +132,23 @@ export default function Register() {
             </select>
           </div>
 
-          <div className="mt-8 space-y-6">
+          {/* Register method tabs */}
+          <div className="mt-8 flex items-center gap-8 text-sm">
+            <button 
+              onClick={() => setRegisterMethod('phone')}
+              className={`pb-2 border-b-2 ${registerMethod === 'phone' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent'}`}
+            >
+              {t('auth.registerByPhone')}
+            </button>
+            <button 
+              onClick={() => setRegisterMethod('email')}
+              className={`pb-2 border-b-2 ${registerMethod === 'email' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent'}`}
+            >
+              {t('auth.registerByEmail')}
+            </button>
+          </div>
+
+          <div className="mt-6 space-y-6">
             <form onSubmit={handleRegister} className="space-y-5">
               <div>
                 <label className="text-sm text-gray-300">{t('auth.fullName')}</label>
@@ -146,20 +164,43 @@ export default function Register() {
                 )}
               </div>
 
-              <div>
-                <label className="text-sm text-gray-300">{t('auth.email')}</label>
-                <input
-                  type="email"
-                  placeholder={t('auth.emailPlaceholder')}
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="w-full mt-2 bg-transparent border-b border-gray-700 pb-2 text-sm outline-none placeholder:text-gray-500"
-                  disabled={isLoading}
-                />
-                {errors.registerEmail && (
-                  <p className="text-sm text-red-500 mt-1">{errors.registerEmail}</p>
-                )}
-              </div>
+              {registerMethod === 'email' ? (
+                <div>
+                  <label className="text-sm text-gray-300">{t('auth.email')}</label>
+                  <input
+                    type="email"
+                    placeholder={t('auth.emailPlaceholder')}
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    className="w-full mt-2 bg-transparent border-b border-gray-700 pb-2 text-sm outline-none placeholder:text-gray-500"
+                    disabled={isLoading}
+                  />
+                  {errors.registerEmail && (
+                    <p className="text-sm text-red-500 mt-1">{errors.registerEmail}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="text-sm text-gray-300">{t('auth.phone')}</label>
+                  <div className="flex items-center gap-3 mt-2 border-b border-gray-700 pb-2">
+                    <select className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1">
+                      <option className="bg-[#1a1f2e]">+84</option>
+                      <option className="bg-[#1a1f2e]">+65</option>
+                      <option className="bg-[#1a1f2e]">+66</option>
+                    </select>
+                    <input
+                      placeholder={t('auth.enterPhone')}
+                      value={registerPhone}
+                      onChange={(e) => setRegisterPhone(e.target.value)}
+                      className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {errors.registerPhone && (
+                    <p className="text-sm text-red-500 mt-1">{errors.registerPhone}</p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="text-sm text-gray-300">{t('auth.password')}</label>
