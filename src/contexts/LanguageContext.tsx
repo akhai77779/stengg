@@ -30,6 +30,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'Gửi',
     'common.status': 'Trạng thái',
     'common.details': 'Chi tiết',
+    'common.copy': 'Sao chép',
+    'common.settings': 'Cài đặt',
+    'common.processing': 'Đang xử lý...',
+    'common.error': 'Có lỗi xảy ra',
+    'common.copied': 'Đã sao chép',
     
     // Navigation
     'nav.home': 'Trang chủ',
@@ -241,6 +246,12 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.invite': 'Mời bạn bè',
     'profile.update': 'Cập nhật',
     'profile.securityNotice': 'Vui lòng không tiết lộ mật khẩu, mã OTP của bạn cho bất kỳ ai',
+    'profile.account': 'Tài khoản',
+    'profile.security': 'Bảo mật',
+    'profile.verification': 'Xác minh',
+    'profile.system': 'Hệ thống',
+    'profile.sync': 'Đồng bộ dữ liệu',
+    'profile.uidCopied': 'Đã sao chép UID',
     
     // 404
     'notFound.title': '404',
@@ -270,6 +281,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'Submit',
     'common.status': 'Status',
     'common.details': 'Details',
+    'common.copy': 'Copy',
+    'common.settings': 'Settings',
+    'common.processing': 'Processing...',
+    'common.error': 'An error occurred',
+    'common.copied': 'Copied',
     
     // Navigation
     'nav.home': 'Home',
@@ -481,6 +497,12 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.invite': 'Invite Friends',
     'profile.update': 'Update',
     'profile.securityNotice': 'Please do not share your password or OTP with anyone',
+    'profile.account': 'Account',
+    'profile.security': 'Security',
+    'profile.verification': 'Verification',
+    'profile.system': 'System',
+    'profile.sync': 'Sync Data',
+    'profile.uidCopied': 'UID copied',
     
     // 404
     'notFound.title': '404',
@@ -510,6 +532,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': '提交',
     'common.status': '状态',
     'common.details': '详情',
+    'common.copy': '复制',
+    'common.settings': '设置',
+    'common.processing': '处理中...',
+    'common.error': '发生错误',
+    'common.copied': '已复制',
     
     // Navigation
     'nav.home': '首页',
@@ -692,6 +719,17 @@ const translations: Record<Language, Record<string, string>> = {
     'products.transactions': '交易量',
     'profile.copy': '复制',
     'profile.copied': '已复制',
+    'profile.account': '账户',
+    'profile.security': '安全',
+    'profile.verification': '验证',
+    'profile.system': '系统',
+    'profile.sync': '同步数据',
+    'profile.uidCopied': 'UID已复制',
+    'profile.customerService': '客服',
+    'profile.settings': '设置',
+    'profile.invite': '邀请好友',
+    'profile.update': '更新',
+    'profile.securityNotice': '请勿向任何人透露您的密码或OTP',
     'notFound.title': '404',
     'notFound.message': '页面未找到',
     'notFound.backHome': '返回首页',
@@ -719,6 +757,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'ส่ง',
     'common.status': 'สถานะ',
     'common.details': 'รายละเอียด',
+    'common.copy': 'คัดลอก',
+    'common.settings': 'ตั้งค่า',
+    'common.processing': 'กำลังดำเนินการ...',
+    'common.error': 'เกิดข้อผิดพลาด',
+    'common.copied': 'คัดลอกแล้ว',
     
     // Navigation
     'nav.home': 'หน้าแรก',
@@ -881,6 +924,20 @@ const translations: Record<Language, Record<string, string>> = {
     'guest.contactUs': 'ติดต่อเรา',
     'guest.copyright': '© 2026 ST Engineering สงวนลิขสิทธิ์',
     'guest.termsOfUse': 'ข้อกำหนดการใช้งาน',
+    // Profile
+    'profile.copy': 'คัดลอก',
+    'profile.copied': 'คัดลอกแล้ว',
+    'profile.account': 'บัญชี',
+    'profile.security': 'ความปลอดภัย',
+    'profile.verification': 'การยืนยัน',
+    'profile.system': 'ระบบ',
+    'profile.sync': 'ซิงค์ข้อมูล',
+    'profile.uidCopied': 'คัดลอก UID แล้ว',
+    'profile.customerService': 'ฝ่ายบริการ',
+    'profile.settings': 'ตั้งค่า',
+    'profile.invite': 'เชิญเพื่อน',
+    'profile.update': 'อัปเดต',
+    'profile.securityNotice': 'กรุณาอย่าเปิดเผยรหัสผ่านหรือ OTP ให้ผู้อื่น',
     // Settings
     'settings.language': 'ภาษา',
     'settings.currency': 'สกุลเงิน',
@@ -904,6 +961,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': '送信',
     'common.status': 'ステータス',
     'common.details': '詳細',
+    'common.copy': 'コピー',
+    'common.settings': '設定',
+    'common.processing': '処理中...',
+    'common.error': 'エラーが発生しました',
+    'common.copied': 'コピーしました',
     
     // Navigation
     'nav.home': 'ホーム',
@@ -1066,6 +1128,20 @@ const translations: Record<Language, Record<string, string>> = {
     'guest.contactUs': 'お問い合わせ',
     'guest.copyright': '© 2026 ST Engineering. All rights reserved.',
     'guest.termsOfUse': '利用規約',
+    // Profile
+    'profile.copy': 'コピー',
+    'profile.copied': 'コピーしました',
+    'profile.account': 'アカウント',
+    'profile.security': 'セキュリティ',
+    'profile.verification': '認証',
+    'profile.system': 'システム',
+    'profile.sync': 'データ同期',
+    'profile.uidCopied': 'UIDをコピーしました',
+    'profile.customerService': 'サポート',
+    'profile.settings': '設定',
+    'profile.invite': '友達を招待',
+    'profile.update': '更新',
+    'profile.securityNotice': 'パスワードやOTPを他人に教えないでください',
     
     // Settings
     'settings.language': '言語',
@@ -1090,6 +1166,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': '제출',
     'common.status': '상태',
     'common.details': '세부사항',
+    'common.copy': '복사',
+    'common.settings': '설정',
+    'common.processing': '처리 중...',
+    'common.error': '오류가 발생했습니다',
+    'common.copied': '복사됨',
     
     // Navigation
     'nav.home': '홈',
@@ -1252,6 +1333,20 @@ const translations: Record<Language, Record<string, string>> = {
     'guest.contactUs': '문의하기',
     'guest.copyright': '© 2026 ST Engineering. 모든 권리 보유.',
     'guest.termsOfUse': '이용약관',
+    // Profile
+    'profile.copy': '복사',
+    'profile.copied': '복사됨',
+    'profile.account': '계정',
+    'profile.security': '보안',
+    'profile.verification': '인증',
+    'profile.system': '시스템',
+    'profile.sync': '데이터 동기화',
+    'profile.uidCopied': 'UID 복사됨',
+    'profile.customerService': '고객 지원',
+    'profile.settings': '설정',
+    'profile.invite': '친구 초대',
+    'profile.update': '업데이트',
+    'profile.securityNotice': '비밀번호나 OTP를 다른 사람에게 알려주지 마세요',
     
     // Settings
     'settings.language': '언어',
@@ -1276,6 +1371,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'Kirim',
     'common.status': 'Status',
     'common.details': 'Detail',
+    'common.copy': 'Salin',
+    'common.settings': 'Pengaturan',
+    'common.processing': 'Memproses...',
+    'common.error': 'Terjadi kesalahan',
+    'common.copied': 'Disalin',
     
     // Navigation
     'nav.home': 'Beranda',
@@ -1438,6 +1538,20 @@ const translations: Record<Language, Record<string, string>> = {
     'guest.contactUs': 'Hubungi Kami',
     'guest.copyright': '© 2026 ST Engineering. Hak cipta dilindungi.',
     'guest.termsOfUse': 'Syarat Penggunaan',
+    // Profile
+    'profile.copy': 'Salin',
+    'profile.copied': 'Disalin',
+    'profile.account': 'Akun',
+    'profile.security': 'Keamanan',
+    'profile.verification': 'Verifikasi',
+    'profile.system': 'Sistem',
+    'profile.sync': 'Sinkronisasi Data',
+    'profile.uidCopied': 'UID disalin',
+    'profile.customerService': 'Dukungan',
+    'profile.settings': 'Pengaturan',
+    'profile.invite': 'Undang Teman',
+    'profile.update': 'Perbarui',
+    'profile.securityNotice': 'Jangan bagikan kata sandi atau OTP Anda kepada siapa pun',
     
     // Settings
     'settings.language': 'Bahasa',
@@ -1462,6 +1576,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'Hantar',
     'common.status': 'Status',
     'common.details': 'Butiran',
+    'common.copy': 'Salin',
+    'common.settings': 'Tetapan',
+    'common.processing': 'Memproses...',
+    'common.error': 'Ralat berlaku',
+    'common.copied': 'Disalin',
     
     // Navigation
     'nav.home': 'Laman Utama',
@@ -1624,6 +1743,20 @@ const translations: Record<Language, Record<string, string>> = {
     'guest.contactUs': 'Hubungi Kami',
     'guest.copyright': '© 2026 ST Engineering. Hak cipta terpelihara.',
     'guest.termsOfUse': 'Terma Penggunaan',
+    // Profile
+    'profile.copy': 'Salin',
+    'profile.copied': 'Disalin',
+    'profile.account': 'Akaun',
+    'profile.security': 'Keselamatan',
+    'profile.verification': 'Pengesahan',
+    'profile.system': 'Sistem',
+    'profile.sync': 'Segerakkan Data',
+    'profile.uidCopied': 'UID disalin',
+    'profile.customerService': 'Sokongan',
+    'profile.settings': 'Tetapan',
+    'profile.invite': 'Jemput Rakan',
+    'profile.update': 'Kemas Kini',
+    'profile.securityNotice': 'Jangan kongsi kata laluan atau OTP anda dengan sesiapa',
     
     // Settings
     'settings.language': 'Bahasa',
