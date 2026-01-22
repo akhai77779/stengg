@@ -145,7 +145,7 @@ export function FeaturedProducts() {
             {displayProducts.map((product, index) => (
               <Link key={product.id} to={`/products/${product.id}`}>
                 <Card 
-                  className="group bg-card border-border hover:border-primary/50 transition-all duration-300 overflow-hidden h-full"
+                  className="group bg-card border-border hover:border-primary/50 hover:glow transition-all duration-300 overflow-hidden h-full"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   {/* Image */}
@@ -153,9 +153,11 @@ export function FeaturedProducts() {
                     <img
                       src={product.image_url || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop'}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                    <div className="absolute inset-0 hero-overlay" />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <Badge 
                       variant="outline" 
                       className={`absolute top-3 right-3 ${statusColors[product.status]}`}
