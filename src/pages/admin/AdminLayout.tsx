@@ -84,16 +84,16 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export default function AdminLayout() {
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading, isAdminLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isAdminLoading) return;
     if (!user) navigate("/login");
     else if (!isAdmin) navigate("/");
-  }, [authLoading, user, isAdmin, navigate]);
+  }, [authLoading, isAdminLoading, user, isAdmin, navigate]);
 
-  if (authLoading) return null;
+  if (authLoading || isAdminLoading) return null;
   if (!user || !isAdmin) return null;
 
   return (
