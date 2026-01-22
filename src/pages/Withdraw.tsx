@@ -141,7 +141,7 @@ const Withdraw = () => {
   const quickAmounts = [50, 100, 500, 1000];
 
   return (
-    <Layout>
+    <Layout hideFooter>
       <div className="space-y-4 pb-24">
         {/* Header */}
         <div className="flex items-center gap-3">
