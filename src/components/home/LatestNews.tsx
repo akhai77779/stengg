@@ -133,7 +133,7 @@ export function LatestNews() {
             {displayNews.map((item, index) => (
               <Link key={item.id} to={`/news/${item.id}`}>
                 <Card 
-                  className="group bg-card border-border hover:border-primary/50 transition-all duration-300 overflow-hidden h-full"
+                  className="group bg-card border-border hover:border-primary/50 hover:glow transition-all duration-300 overflow-hidden h-full"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   {/* Image */}
@@ -141,9 +141,11 @@ export function LatestNews() {
                     <img
                       src={item.image_url || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=250&fit=crop'}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                    <div className="absolute inset-0 hero-overlay" />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <Badge 
                       variant="outline" 
                       className={`absolute top-3 left-3 ${categoryColors[item.category]}`}

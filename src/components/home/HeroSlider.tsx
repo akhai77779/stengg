@@ -91,7 +91,7 @@ export function HeroSlider() {
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${banner.image_url})` }}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+              <div className="absolute inset-0 hero-overlay" />
             </div>
             
             {/* Content */}
