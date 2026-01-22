@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useLanguage, Language } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import stLogoWhite from '@/assets/st-logo-white-footer.png';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +13,7 @@ import {
 import { Menu, ChevronRight } from 'lucide-react';
 
 export function GuestHeader() {
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
 
   const menuItems = [
     { label: t('guest.aboutUs'), href: '#' },
@@ -40,20 +41,7 @@ export function GuestHeader() {
             </div>
             <div className="flex items-center gap-3">
               <Link to="/login" className="hover:text-foreground">{t('nav.login')}</Link>
-              <select 
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="bg-background/40 border border-border text-foreground/90 text-[11px] rounded px-2 py-0.5"
-              >
-                <option value="vi" className="bg-background">🇻🇳 Tiếng Việt</option>
-                <option value="en" className="bg-background">🇬🇧 English</option>
-                <option value="zh" className="bg-background">🇨🇳 中文</option>
-                <option value="th" className="bg-background">🇹🇭 ไทย</option>
-                <option value="ja" className="bg-background">🇯🇵 日本語</option>
-                <option value="ko" className="bg-background">🇰🇷 한국어</option>
-                <option value="id" className="bg-background">🇮🇩 Bahasa Indonesia</option>
-                <option value="ms" className="bg-background">🇲🇾 Bahasa Melayu</option>
-              </select>
+              <LanguageSelect variant="compact" />
             </div>
           </div>
         </div>
@@ -111,20 +99,7 @@ export function GuestHeader() {
 
                     <div className="space-y-2">
                       <div className="text-xs text-muted-foreground">{t('guest.global')}</div>
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value as Language)}
-                        className="w-full bg-background/40 border border-border text-foreground/90 text-sm rounded-md px-3 py-2"
-                      >
-                        <option value="vi" className="bg-background">🇻🇳 Tiếng Việt</option>
-                        <option value="en" className="bg-background">🇬🇧 English</option>
-                        <option value="zh" className="bg-background">🇨🇳 中文</option>
-                        <option value="th" className="bg-background">🇹🇭 ไทย</option>
-                        <option value="ja" className="bg-background">🇯🇵 日本語</option>
-                        <option value="ko" className="bg-background">🇰🇷 한국어</option>
-                        <option value="id" className="bg-background">🇮🇩 Bahasa Indonesia</option>
-                        <option value="ms" className="bg-background">🇲🇾 Bahasa Melayu</option>
-                      </select>
+                      <LanguageSelect variant="full" />
                     </div>
                   </div>
                 </div>

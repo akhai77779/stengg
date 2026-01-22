@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage, Language } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
@@ -17,7 +18,7 @@ export default function Login() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -99,20 +100,7 @@ export default function Login() {
               <a href="#" className="text-red-500 hover:text-red-400" title="Support">
                 <Headphones className="h-4 w-4" />
               </a>
-              <select 
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="bg-[#1a1f2e] border border-gray-700 text-gray-200 text-xs rounded px-2 py-1"
-              >
-                <option value="vi" className="bg-[#1a1f2e]">🇻🇳 Tiếng Việt</option>
-                <option value="en" className="bg-[#1a1f2e]">🇬🇧 English</option>
-                <option value="zh" className="bg-[#1a1f2e]">🇨🇳 中文</option>
-                <option value="th" className="bg-[#1a1f2e]">🇹🇭 ไทย</option>
-                <option value="ja" className="bg-[#1a1f2e]">🇯🇵 日本語</option>
-                <option value="ko" className="bg-[#1a1f2e]">🇰🇷 한국어</option>
-                <option value="id" className="bg-[#1a1f2e]">🇮🇩 Indonesia</option>
-                <option value="ms" className="bg-[#1a1f2e]">🇲🇾 Melayu</option>
-              </select>
+              <LanguageSelect />
             </div>
           </div>
 
