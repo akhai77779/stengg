@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Linkedin, Youtube } from 'lucide-react';
 import stLogo from '@/assets/st-logo.png';
-
 export function Footer() {
-  return (
-    <footer className="bg-card border-t border-border">
+  return <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -58,7 +56,8 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Mail className="w-4 h-4 text-primary" />
-                <span>info@stengg.com</span>
+                <span>stengg.com@stengg.it.com
+              </span>
               </li>
             </ul>
           </div>
@@ -67,28 +66,13 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Kết nối với chúng tôi</h4>
             <div className="flex gap-3">
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
+              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors">
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -101,6 +85,5 @@ export function Footer() {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 }
