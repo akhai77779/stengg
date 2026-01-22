@@ -13,6 +13,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
@@ -31,17 +32,18 @@ interface News {
   created_at: string;
 }
 
-const categoryLabels: Record<NewsCategory, string> = {
-  company: 'Công ty',
-  product: 'Sản phẩm',
-  event: 'Sự kiện',
-  announcement: 'Thông báo',
-  charity: 'Từ thiện',
-};
-
 const categories: NewsCategory[] = ['company', 'product', 'event', 'announcement', 'charity'];
 
 export function DashboardNews() {
+  const { t } = useLanguage();
+  
+  const categoryLabels: Record<NewsCategory, string> = {
+    company: t('news.category.company'),
+    product: t('news.category.product'),
+    event: t('news.category.event'),
+    announcement: t('news.category.announcement'),
+    charity: t('news.category.charity'),
+  };
   const [news, setNews] = useState<News[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

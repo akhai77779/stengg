@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { NewsComments } from '@/components/news/NewsComments';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -25,13 +26,6 @@ interface NewsItem {
   author_id: string | null;
 }
 
-const categoryLabels: Record<NewsCategory, string> = {
-  company: 'Công ty',
-  product: 'Sản phẩm',
-  event: 'Sự kiện',
-  announcement: 'Thông báo',
-  charity: 'Từ thiện',
-};
 
 const categoryColors: Record<NewsCategory, string> = {
   company: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
@@ -47,7 +41,16 @@ export default function NewsDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
+  
+  const categoryLabels: Record<NewsCategory, string> = {
+    company: t('news.category.company'),
+    product: t('news.category.product'),
+    event: t('news.category.event'),
+    announcement: t('news.category.announcement'),
+    charity: t('news.category.charity'),
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -195,7 +198,7 @@ export default function NewsDetail() {
           <Button asChild>
             <Link to="/news">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Xem thêm tin tức khác
+              {t('news.viewMore')}
             </Link>
           </Button>
         </div>
