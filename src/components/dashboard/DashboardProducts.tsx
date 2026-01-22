@@ -17,6 +17,15 @@ import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 
 type ProductStatus = Database['public']['Enums']['product_status'];
+type ProductPriceControlRow = Database['public']['Tables']['product_price_controls']['Row'];
+
+type PriceDirection = 'up' | 'down' | 'neutral';
+
+const directionOptions: { value: PriceDirection; label: string }[] = [
+  { value: 'up', label: 'Up (Tăng)' },
+  { value: 'down', label: 'Down (Giảm)' },
+  { value: 'neutral', label: 'Neutral (Trung tính)' },
+];
 
 interface Product {
   id: string;
@@ -52,6 +61,10 @@ export function DashboardProducts() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const [priceControls, setPriceControls] = useState<
+    Record<string, { direction: PriceDirection; strength: string; saving?: boolean }>
+  >({});
+
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -74,8 +87,98 @@ export function DashboardProducts() {
       console.error('Error fetching products:', error);
     } else {
       setProducts(data || []);
+      const ids = (data || []).map((p) => p.id);
+      if (ids.length) {
+        await fetchPriceControls(ids);
+      } else {
+        setPriceControls({});
+      }
     }
     setIsLoading(false);
+  };
+
+  const fetchPriceControls = async (productIds: string[]) => {
+    const { data, error } = await supabase
+      .from('product_price_controls')
+      .select('product_id,direction,strength')
+      .in('product_id', productIds);
+
+    if (error) {
+      console.error('Error fetching product price controls:', error);
+      // Fallback: still initialize defaults so UI doesn't look broken.
+      setPriceControls((prev) => {
+        const next = { ...prev };
+        for (const id of productIds) {
+          if (!next[id]) next[id] = { direction: 'neutral', strength: '1' };
+        }
+        return next;
+      });
+      return;
+    }
+
+    const rows = (data || []) as Pick<ProductPriceControlRow, 'product_id' | 'direction' | 'strength'>[];
+
+    setPriceControls(() => {
+      const next: Record<string, { direction: PriceDirection; strength: string }> = {};
+      for (const id of productIds) {
+        next[id] = { direction: 'neutral', strength: '1' };
+      }
+      for (const r of rows) {
+        const dir = (r.direction as PriceDirection) || 'neutral';
+        next[r.product_id] = {
+          direction: dir,
+          strength: String(r.strength ?? 1),
+        };
+      }
+      return next;
+    });
+  };
+
+  const clampStrength = (value: number) => {
+    if (Number.isNaN(value)) return 1;
+    return Math.min(5, Math.max(0, value));
+  };
+
+  const savePriceControl = async (productId: string, patch: Partial<{ direction: PriceDirection; strength: string }>) => {
+    const current = priceControls[productId] || { direction: 'neutral' as PriceDirection, strength: '1' };
+    const next = { ...current, ...patch };
+
+    const strengthNumber = clampStrength(parseFloat(next.strength));
+
+    setPriceControls((prev) => ({
+      ...prev,
+      [productId]: { ...next, strength: String(next.strength), saving: true },
+    }));
+
+    const { error } = await supabase
+      .from('product_price_controls')
+      .upsert(
+        {
+          product_id: productId,
+          direction: next.direction,
+          strength: strengthNumber,
+        },
+        { onConflict: 'product_id' }
+      );
+
+    if (error) {
+      console.error('Error saving product price control:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể lưu direction/strength. Vui lòng thử lại.',
+      });
+      setPriceControls((prev) => ({
+        ...prev,
+        [productId]: { ...current, saving: false },
+      }));
+      return;
+    }
+
+    setPriceControls((prev) => ({
+      ...prev,
+      [productId]: { ...next, strength: String(strengthNumber), saving: false },
+    }));
   };
 
   const resetForm = () => {
@@ -303,6 +406,8 @@ export function DashboardProducts() {
                 <TableHead>Tên</TableHead>
                 <TableHead>Danh mục</TableHead>
                 <TableHead>Giá</TableHead>
+                <TableHead>Direction</TableHead>
+                <TableHead>Strength</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Ngày tạo</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
@@ -314,6 +419,48 @@ export function DashboardProducts() {
                   <TableCell className="max-w-xs truncate font-medium">{item.name}</TableCell>
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{formatPrice(item.price)}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={(priceControls[item.id]?.direction ?? 'neutral') as PriceDirection}
+                      onValueChange={(v) => savePriceControl(item.id, { direction: v as PriceDirection })}
+                    >
+                      <SelectTrigger className="h-9 w-[160px]">
+                        <SelectValue placeholder="Chọn" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {directionOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        className="h-9 w-[110px]"
+                        value={priceControls[item.id]?.strength ?? '1'}
+                        onChange={(e) =>
+                          setPriceControls((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              direction: (prev[item.id]?.direction ?? 'neutral') as PriceDirection,
+                              strength: e.target.value,
+                            },
+                          }))
+                        }
+                        onBlur={() => savePriceControl(item.id, { strength: priceControls[item.id]?.strength ?? '1' })}
+                      />
+                      {priceControls[item.id]?.saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={statusColors[item.status]}>
                       {statusLabels[item.status]}
