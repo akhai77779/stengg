@@ -314,6 +314,7 @@ export type Database = {
           price: number | null
           price_change: number | null
           status: Database["public"]["Enums"]["product_status"]
+          symbol: string | null
           updated_at: string
           volume: string | null
         }
@@ -328,6 +329,7 @@ export type Database = {
           price?: number | null
           price_change?: number | null
           status?: Database["public"]["Enums"]["product_status"]
+          symbol?: string | null
           updated_at?: string
           volume?: string | null
         }
@@ -342,6 +344,7 @@ export type Database = {
           price?: number | null
           price_change?: number | null
           status?: Database["public"]["Enums"]["product_status"]
+          symbol?: string | null
           updated_at?: string
           volume?: string | null
         }
