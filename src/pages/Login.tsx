@@ -7,9 +7,6 @@ import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
-const emailSchema = z.string().email('Email không hợp lệ');
-const passwordSchema = z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự');
-
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -20,10 +17,13 @@ export default function Login() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+
+  const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
+  const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
 
   useEffect(() => {
     if (user) {
@@ -66,25 +66,17 @@ export default function Login() {
     setIsLoading(false);
     
     if (error) {
-      let errorMessage = 'Đã xảy ra lỗi khi đăng nhập';
-      
-      if (error.message.includes('Invalid login credentials')) {
-        errorMessage = 'Email hoặc mật khẩu không đúng';
-      } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = 'Vui lòng xác nhận email trước khi đăng nhập';
-      }
-      
       toast({
         variant: 'destructive',
-        title: 'Đăng nhập thất bại',
-        description: errorMessage,
+        title: t('auth.login') + ' thất bại',
+        description: error.message,
       });
       return;
     }
     
     toast({
-      title: 'Đăng nhập thành công',
-      description: 'Chào mừng bạn quay trở lại!',
+      title: t('auth.login') + ' thành công',
+      description: t('auth.welcomeSubtitle'),
     });
     
     navigate('/');
@@ -134,9 +126,9 @@ export default function Login() {
 
           {/* Login Form */}
           <div className="mt-8 space-y-1">
-            <h1 className="text-2xl font-semibold">Chào mừng đến ST Engineering</h1>
-            <p className="text-sm text-gray-400">Chúc bạn có trải nghiệm tuyệt vời</p>
-            <p className="text-sm text-gray-400">Cổng thông tin nội bộ</p>
+            <h1 className="text-2xl font-semibold">{t('auth.welcomeTitle')}</h1>
+            <p className="text-sm text-gray-400">{t('auth.welcomeSubtitle')}</p>
+            <p className="text-sm text-gray-400">{t('auth.internalPortal')}</p>
           </div>
 
           {/* Login method tabs */}
@@ -145,13 +137,13 @@ export default function Login() {
               onClick={() => setLoginMethod('phone')}
               className={`pb-2 border-b-2 ${loginMethod === 'phone' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent'}`}
             >
-              Đăng nhập bằng SĐT
+              {t('auth.loginByPhone')}
             </button>
             <button 
               onClick={() => setLoginMethod('email')}
               className={`pb-2 border-b-2 ${loginMethod === 'email' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent'}`}
             >
-              Đăng nhập bằng Email
+              {t('auth.loginByEmail')}
             </button>
           </div>
 
@@ -160,7 +152,7 @@ export default function Login() {
               <div className="border-b border-gray-700 pb-3">
                 <input
                   type="email"
-                  placeholder="Nhập email của bạn"
+                  placeholder={t('auth.enterEmail')}
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="w-full bg-transparent text-sm placeholder:text-gray-500 outline-none"
@@ -169,13 +161,13 @@ export default function Login() {
               </div>
             ) : (
               <div className="flex items-center gap-3 border-b border-gray-700 pb-3">
-                <select className="w-[64px] shrink-0 bg-transparent text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1">
-                  <option>+84</option>
-                  <option>+65</option>
-                  <option>+66</option>
+                <select className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1">
+                  <option className="bg-[#1a1f2e]">+84</option>
+                  <option className="bg-[#1a1f2e]">+65</option>
+                  <option className="bg-[#1a1f2e]">+66</option>
                 </select>
                 <input
-                  placeholder="Nhập số điện thoại của bạn"
+                  placeholder={t('auth.enterPhone')}
                   className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
                   disabled={isLoading}
                 />
@@ -188,7 +180,7 @@ export default function Login() {
             <div className="flex items-center gap-3 border-b border-gray-700 pb-3">
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Nhập mật khẩu của bạn"
+                placeholder={t('auth.enterPassword')}
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
@@ -214,9 +206,9 @@ export default function Login() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="accent-red-500" 
                 />
-                Ghi nhớ đăng nhập
+                {t('auth.rememberMe')}
               </label>
-              <button type="button" className="text-red-500">Quên mật khẩu?</button>
+              <button type="button" className="text-red-500">{t('auth.forgotPassword')}</button>
             </div>
 
             <button
@@ -227,18 +219,18 @@ export default function Login() {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang đăng nhập...
+                  {t('auth.loggingIn')}
                 </span>
               ) : (
-                'Đăng nhập'
+                t('auth.login')
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center text-xs text-gray-400">
-            Chưa có tài khoản?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="text-red-500">
-              Đăng ký tại đây
+              {t('auth.registerHere')}
             </Link>
           </div>
 
@@ -254,13 +246,12 @@ export default function Login() {
               />
               <div className="absolute inset-0 hero-overlay"></div>
               <div className="absolute inset-0 p-4 flex flex-col justify-end gap-2">
-                <h3 className="text-lg font-semibold text-white">Giải pháp Thành phố Thông minh</h3>
+                <h3 className="text-lg font-semibold text-white">{t('auth.smartCitySolution')}</h3>
                 <p className="text-xs text-gray-200 leading-relaxed">
-                  Xây dựng hệ sinh thái đô thị thông minh nâng cao chất lượng cuộc sống
-                  thông qua tích hợp công nghệ sáng tạo.
+                  {t('auth.smartCityDesc')}
                 </p>
                 <button className="self-start text-xs px-3 py-1.5 rounded-md bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors">
-                  Tìm hiểu thêm
+                  {t('auth.learnMore')}
                 </button>
               </div>
             </div>
