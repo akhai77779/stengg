@@ -6,16 +6,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  TrendingUp, TrendingDown, Activity, Loader2,
-  Plane, Cpu, Car, Ship, Shield, Building2, 
-  GraduationCap, Briefcase, Satellite, FlaskConical
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Loader2, Plane, Cpu, Car, Ship, Shield, Building2, GraduationCap, Briefcase, Satellite, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 const getCategoryIcon = (name: string, category: string | null) => {
   const iconClass = "w-10 h-10 p-2 rounded-lg";
-  
   if (name.includes('Aerospace') || category === 'Aerospace') {
     return <Plane className={cn(iconClass, "bg-blue-500/20 text-blue-400")} />;
   }
@@ -48,7 +42,6 @@ const getCategoryIcon = (name: string, category: string | null) => {
   }
   return <Activity className={cn(iconClass, "bg-primary/20 text-primary")} />;
 };
-
 interface Product {
   id: string;
   name: string;
@@ -59,35 +52,40 @@ interface Product {
   price_change: number | null;
   category: string | null;
 }
-
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
-  const { user, isLoading: authLoading } = useAuth();
-  const { t, language } = useLanguage();
-  const { formatCurrency } = useCurrency();
+  const {
+    user,
+    isLoading: authLoading
+  } = useAuth();
+  const {
+    t,
+    language
+  } = useLanguage();
+  const {
+    formatCurrency
+  } = useCurrency();
   const navigate = useNavigate();
-
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
-
   useEffect(() => {
     if (user) {
       fetchProducts();
     }
   }, [user]);
-
   const fetchProducts = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, description, image_url, price, volume, price_change, category')
-      .order('created_at', { ascending: false });
-
+    const {
+      data,
+      error
+    } = await supabase.from('products').select('id, name, description, image_url, price, volume, price_change, category').order('created_at', {
+      ascending: false
+    });
     if (error) {
       console.error('Error fetching products:', error);
     } else {
@@ -101,22 +99,18 @@ export default function Products() {
     }
     setIsLoading(false);
   };
-
   const formatPrice = (price: number | null) => {
     if (price === null || price === undefined) return formatCurrency(0);
     return formatCurrency(price);
   };
-
   const formatVolume = (volume: string | null) => {
     if (!volume) return '0';
     return volume;
   };
-
   const formatChange = (change: number | null) => {
     if (change === null || change === undefined) return '0.00';
     return change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
   };
-
   const getLocalizedDate = () => {
     const locales: Record<string, string> = {
       vi: 'vi-VN',
@@ -126,7 +120,7 @@ export default function Products() {
       ja: 'ja-JP',
       ko: 'ko-KR',
       id: 'id-ID',
-      ms: 'ms-MY',
+      ms: 'ms-MY'
     };
     return new Date().toLocaleString(locales[language] || 'vi-VN', {
       year: 'numeric',
@@ -134,34 +128,29 @@ export default function Products() {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
+      second: '2-digit'
     });
   };
-
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <Layout>
-      <div className="min-h-screen pb-20 md:pb-8">
+  return <Layout>
+      <div className="min-h-screen pb-20 md:pb-8 my-0">
         {/* Header */}
         <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-16 z-10">
-          <div className="container mx-auto px-4 py-4">
-            <h1 className="text-xl font-bold text-gradient mb-2">{t('products.title')}</h1>
+          <div className="container mx-auto rounded-none shadow-none opacity-100 border-0 border-none px-[18px] py-0 my-[35px]">
+            <h1 className="text-xl font-bold text-gradient mb-2 my-0 py-0 mx-0 text-center">{t('products.title')}</h1>
             
             {/* Stock ticker info */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="text-primary">•</span>
-              <span>Singapore Technologies Engineering Ltd (SGX: S63)</span>
+            <div className="gap-2 text-xs text-muted-foreground mb-2 flex items-center justify-center">
+              
+              <span>Singapore Technologies Engineering</span>
             </div>
             
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span>{t('common.date')}: {getLocalizedDate()}</span>
+            <div className="flex-wrap gap-4 text-sm text-muted-foreground items-center justify-center flex flex-row">
+              
               <span className="flex items-center gap-1">
                 <Activity className="w-4 h-4 text-primary" />
                 {t('products.transactions')}: {totalVolume.toLocaleString()}
@@ -172,39 +161,20 @@ export default function Products() {
 
         {/* Products List */}
         <div className="container mx-auto px-4 py-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
+          {isLoading ? <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-12">
+            </div> : products.length === 0 ? <div className="text-center py-12">
               <p className="text-muted-foreground">{t('products.noProducts')}</p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {products.map((product) => {
-                const isPositive = (product.price_change || 0) >= 0;
-                
-                return (
-                  <Card 
-                    key={product.id} 
-                    className="group bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/products/${product.id}`)}
-                  >
+            </div> : <div className="grid gap-3">
+              {products.map(product => {
+            const isPositive = (product.price_change || 0) >= 0;
+            return <Card key={product.id} className="group bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => navigate(`/products/${product.id}`)}>
                     {/* Product Image - Full Width with Hover Zoom */}
-                    {product.image_url ? (
-                      <div className="w-full h-32 md:h-40 overflow-hidden">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-32 md:h-40 bg-muted/30 flex items-center justify-center">
+                    {product.image_url ? <div className="w-full h-32 md:h-40 overflow-hidden">
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                      </div> : <div className="w-full h-32 md:h-40 bg-muted/30 flex items-center justify-center">
                         {getCategoryIcon(product.name, product.category)}
-                      </div>
-                    )}
+                      </div>}
                     
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
@@ -224,29 +194,17 @@ export default function Products() {
                           <span className="text-lg font-bold text-foreground">
                             {formatPrice(product.price)}
                           </span>
-                          <div className={cn(
-                            'flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
-                            isPositive 
-                              ? 'bg-green-500/20 text-green-400' 
-                              : 'bg-red-500/20 text-red-400'
-                          )}>
-                            {isPositive ? (
-                              <TrendingUp className="w-3 h-3" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3" />
-                            )}
+                          <div className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium', isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400')}>
+                            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                             <span>{formatChange(product.price_change)}%</span>
                           </div>
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                  </Card>;
+          })}
+            </div>}
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 }
