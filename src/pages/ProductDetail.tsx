@@ -126,6 +126,37 @@ const ProductDetail = () => {
     return () => clearInterval(chartRefreshInterval);
   }, [id, timeframe, candleData.length]);
 
+  // Subscribe to realtime product price updates
+  useEffect(() => {
+    if (!id || !isValidUUID(id)) return;
+
+    const productChannel = supabase
+      .channel(`product_price_${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Realtime price update:', payload.new);
+          const newProduct = payload.new as Product;
+          setProduct(prev => prev ? { ...prev, ...newProduct } : newProduct);
+          
+          // Update high/low if available from product
+          if (newProduct.high_24h) setHighPrice(newProduct.high_24h);
+          if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(productChannel);
+    };
+  }, [id]);
+
   // Fetch and subscribe to position count
   useEffect(() => {
     if (!user || !id) return;
