@@ -37,6 +37,7 @@ import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications
 
 const queryClient = new QueryClient();
 
+// App component with proper provider hierarchy
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
