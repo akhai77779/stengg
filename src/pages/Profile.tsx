@@ -11,31 +11,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
-import { 
-  Wallet, 
-  ArrowDownToLine, 
-  ArrowUpFromLine, 
-  CreditCard, 
-  Headphones,
-  ShieldCheck,
-  BadgeCheck,
-  Settings,
-  Globe,
-  UserPlus,
-  RefreshCw,
-  LogOut,
-  Loader2,
-  Copy,
-  ChevronRight,
-  UserCheck,
-  Clock,
-  XCircle,
-  Check,
-  Eye,
-  EyeOff
-} from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, RefreshCw, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface Profile {
   id: string;
   full_name: string | null;
@@ -46,28 +23,38 @@ interface Profile {
   total_income: number | null;
   user_code: number | null;
 }
-
 interface IdentityVerification {
   status: 'pending' | 'approved' | 'rejected';
 }
-
 export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
-  const { user, signOut, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const { t, language } = useLanguage();
-  const { formatCurrency, currency } = useCurrency();
+  const {
+    user,
+    signOut,
+    isLoading: authLoading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    t,
+    language
+  } = useLanguage();
+  const {
+    formatCurrency,
+    currency
+  } = useCurrency();
   const navigate = useNavigate();
-  
+
   // Fetch external balance from API
-  const { 
-    balance: externalBalance, 
+  const {
+    balance: externalBalance,
     frozen: frozenBalance,
-    isLoading: externalLoading, 
-    refetch: refetchExternalBalance 
+    isLoading: externalLoading,
+    refetch: refetchExternalBalance
   } = useExternalBalance(user?.id);
 
   // Use external balance if available, otherwise fall back to local profile balance
@@ -78,48 +65,40 @@ export default function Profile() {
   useEffect(() => {
     const fetchVerification = async () => {
       if (!user?.id) return;
-      
-      const { data, error } = await supabase
-        .from('identity_verifications')
-        .select('status')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle();
       if (!error && data) {
         setIdentityVerification(data as IdentityVerification);
       }
     };
-    
     fetchVerification();
   }, [user?.id]);
-
   const getVerificationStatusDisplay = () => {
     if (!identityVerification) return null;
-    
     switch (identityVerification.status) {
       case 'approved':
         return {
           label: t('identity.statusApproved'),
           color: 'text-green-400',
-          icon: Check,
+          icon: Check
         };
       case 'rejected':
         return {
           label: t('identity.statusRejected'),
           color: 'text-red-400',
-          icon: XCircle,
+          icon: XCircle
         };
       default:
         return {
           label: t('identity.statusPending'),
           color: 'text-yellow-400',
-          icon: Clock,
+          icon: Clock
         };
     }
   };
-
   const verificationStatus = getVerificationStatusDisplay();
-
   const languageNames: Record<string, string> = {
     vi: 'Tiếng Việt',
     en: 'English',
@@ -128,49 +107,36 @@ export default function Profile() {
     ja: '日本語',
     ko: '한국어',
     id: 'Bahasa Indonesia',
-    ms: 'Bahasa Melayu',
+    ms: 'Bahasa Melayu'
   };
-
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
-
   useEffect(() => {
     if (user) {
       fetchProfile();
-      
-      // Subscribe to realtime balance updates
-      const channel = supabase
-        .channel('profile-balance')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${user.id}`,
-          },
-          () => {
-            fetchProfile();
-          }
-        )
-        .subscribe();
 
+      // Subscribe to realtime balance updates
+      const channel = supabase.channel('profile-balance').on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`
+      }, () => {
+        fetchProfile();
+      }).subscribe();
       return () => {
         supabase.removeChannel(channel);
       };
     }
   }, [user]);
-
   const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user!.id)
-      .single();
-
+    const {
+      data,
+      error
+    } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching profile:', error);
     } else if (data) {
@@ -178,68 +144,99 @@ export default function Profile() {
     }
     setIsLoading(false);
   };
-
   const copyUID = () => {
     navigator.clipboard.writeText(uid);
     toast({
       title: t('common.copied'),
-      description: t('profile.uidCopied'),
+      description: t('profile.uidCopied')
     });
   };
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
-
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     }
     return email.slice(0, 2).toUpperCase();
   };
-
   if (authLoading || isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  const quickActions = [
-    { icon: ArrowDownToLine, label: t('transaction.deposit'), color: 'text-green-400', href: '/deposit' },
-    { icon: ArrowUpFromLine, label: t('transaction.withdraw'), color: 'text-orange-400', href: '/withdraw' },
-    { icon: CreditCard, label: t('profile.transactionHistory'), color: 'text-blue-400', href: '/wallet-details' },
-    { icon: Headphones, label: t('profile.customerService'), color: 'text-purple-400', href: '#' },
-  ];
-
-  const accountSettings = [
-    { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null, isIdentity: false },
-    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/identity-verification', badge: verificationStatus, isIdentity: true },
-    { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null, isIdentity: false },
-  ];
-
+  const quickActions = [{
+    icon: ArrowDownToLine,
+    label: t('transaction.deposit'),
+    color: 'text-green-400',
+    href: '/deposit'
+  }, {
+    icon: ArrowUpFromLine,
+    label: t('transaction.withdraw'),
+    color: 'text-orange-400',
+    href: '/withdraw'
+  }, {
+    icon: CreditCard,
+    label: t('profile.transactionHistory'),
+    color: 'text-blue-400',
+    href: '/wallet-details'
+  }, {
+    icon: Headphones,
+    label: t('profile.customerService'),
+    color: 'text-purple-400',
+    href: '#'
+  }];
+  const accountSettings = [{
+    icon: Wallet,
+    label: t('profile.walletDetails'),
+    href: '/wallet-details',
+    badge: null,
+    isIdentity: false
+  }, {
+    icon: UserCheck,
+    label: t('identity.verifyIdentity'),
+    href: '/identity-verification',
+    badge: verificationStatus,
+    isIdentity: true
+  }, {
+    icon: ShieldCheck,
+    label: t('profile.security'),
+    href: '/security',
+    badge: null,
+    isIdentity: false
+  }];
   const handleAccountItemClick = (item: typeof accountSettings[0], e: React.MouseEvent) => {
     if (item.isIdentity && identityVerification?.status === 'approved') {
       e.preventDefault();
       toast({
         title: t('identity.alreadyVerified'),
-        description: t('identity.alreadyVerifiedDesc'),
+        description: t('identity.alreadyVerifiedDesc')
       });
     }
   };
-
-  const systemSettings = [
-    { icon: Settings, label: t('common.settings'), href: '#', value: null, isLink: true },
-    { icon: UserPlus, label: t('profile.invite'), href: '#', value: null, isLink: true },
-    { icon: RefreshCw, label: t('profile.sync'), href: '#', value: null, isLink: true },
-  ];
-
-  return (
-    <Layout hideFooter>
-      <div className="min-h-screen pb-20 md:pb-8">
-        <div className="container mx-auto px-4 py-6 max-w-lg">
+  const systemSettings = [{
+    icon: Settings,
+    label: t('common.settings'),
+    href: '#',
+    value: null,
+    isLink: true
+  }, {
+    icon: UserPlus,
+    label: t('profile.invite'),
+    href: '#',
+    value: null,
+    isLink: true
+  }, {
+    icon: RefreshCw,
+    label: t('profile.sync'),
+    href: '#',
+    value: null,
+    isLink: true
+  }];
+  return <Layout hideFooter>
+      <div className="min-h-screen pb-20 md:pb-8 rounded-xl">
+        <div className="container mx-auto px-4 py-6 max-w-lg text-[#0a1942]/95">
           
           {/* User Card */}
           <Card className="bg-card border-border mb-6 overflow-hidden">
@@ -256,13 +253,10 @@ export default function Profile() {
                   <h2 className="text-lg font-bold text-foreground">
                     {profile?.full_name || user.email?.split('@')[0] || t('profile.defaultUser')}
                   </h2>
-                  <button 
-                    onClick={copyUID}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
+                  <button onClick={copyUID} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
                     <span>ID: {uid}</span>
                     <Copy className="w-3 h-3" />
-                    <span className="text-primary">{t('common.copy')}</span>
+                    <span className="text-destructive">{t('common.copy')}</span>
                   </button>
                 </div>
               </div>
@@ -277,27 +271,20 @@ export default function Profile() {
                 {/* Available Balance */}
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <button
-                      onClick={() => setShowBalance(!showBalance)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
+                    <button onClick={() => setShowBalance(!showBalance)} className="text-muted-foreground hover:text-foreground transition-colors">
                       {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
                     <p className="text-xs text-muted-foreground">{t('wallet.availableBalance')} ({currency})</p>
                   </div>
-                  {externalLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">
+                  {externalLoading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <p className="text-2xl font-bold text-primary">
                       {showBalance ? formatCurrency(balance) : '****'}
-                    </p>
-                  )}
+                    </p>}
                 </div>
                 
                 {/* Talent Charity */}
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t('wallet.charityTalent')} ({currency})</p>
-                  <p className="text-2xl font-bold text-foreground">
+                  <p className="text-2xl font-bold text-[#00bdd6]">
                     {showBalance ? '0' : '****'}
                   </p>
                 </div>
@@ -309,13 +296,13 @@ export default function Profile() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">{t('wallet.productTrade')} ({currency})</p>
-                    <p className="text-lg font-semibold text-green-500">
+                    <p className="text-lg font-semibold text-[#26e36b]">
                       {showBalance ? '0' : '****'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{t('wallet.charityTalent')} ({currency})</p>
-                    <p className="text-lg font-semibold text-foreground">
+                    <p className="text-lg font-semibold bg-[#0b111e] text-[#11df6e]">
                       {showBalance ? '0' : '****'}
                     </p>
                   </div>
@@ -323,26 +310,18 @@ export default function Profile() {
               </div>
 
               {/* Frozen Balance */}
-              {frozenBalance !== null && frozenBalance > 0 && (
-                <p className="text-xs text-muted-foreground">
+              {frozenBalance !== null && frozenBalance > 0 && <p className="text-xs text-muted-foreground">
                   {t('wallet.frozenBalance')}: {showBalance ? formatCurrency(frozenBalance) : '****'}
-                </p>
-              )}
+                </p>}
 
               {/* Quick Actions */}
               <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-border">
-                {quickActions.map((action) => (
-                  <Link 
-                    key={action.label} 
-                    to={action.href}
-                    className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
+                {quickActions.map(action => <Link key={action.label} to={action.href} className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white">
                     <div className={cn('p-2 rounded-full bg-card', action.color)}>
                       <action.icon className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
-                  </Link>
-                ))}
+                  </Link>)}
               </div>
             </CardContent>
           </Card>
@@ -353,27 +332,18 @@ export default function Profile() {
             <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.account')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
-                {accountSettings.map((item) => (
-                  <Link 
-                    key={item.label} 
-                    to={item.href}
-                    onClick={(e) => handleAccountItemClick(item, e)}
-                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-                  >
+                {accountSettings.map(item => <Link key={item.label} to={item.href} onClick={e => handleAccountItemClick(item, e)} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-2xl">
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
-                      {item.badge && (
-                        <span className={cn("text-xs", item.badge.color)}>
+                      {item.badge && <span className={cn("text-xs", item.badge.color)}>
                           {item.badge.label}
-                        </span>
-                      )}
+                        </span>}
                     </div>
                     <div className="flex items-center gap-1">
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
-                  </Link>
-                ))}
+                  </Link>)}
               </CardContent>
             </Card>
           </div>
@@ -384,7 +354,7 @@ export default function Profile() {
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
               {/* Language Selector */}
-                <div className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between p-4 rounded-xl">
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm text-foreground">{t('settings.language')}</span>
@@ -392,30 +362,19 @@ export default function Profile() {
                   <LanguageSelect />
                 </div>
                 
-                {systemSettings.map((item) => (
-                  <Link 
-                    key={item.label} 
-                    to={item.href}
-                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-                  >
+                {systemSettings.map(item => <Link key={item.label} to={item.href} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-xl">
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {item.value && (
-                        <span className="text-xs text-muted-foreground">{item.value}</span>
-                      )}
+                      {item.value && <span className="text-xs text-muted-foreground">{item.value}</span>}
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
-                  </Link>
-                ))}
+                  </Link>)}
                 
                 {/* Sign Out */}
-                <button 
-                  onClick={handleSignOut}
-                  className="flex items-center gap-3 p-4 w-full hover:bg-muted/30 transition-colors text-destructive"
-                >
+                <button onClick={handleSignOut} className="p-4 w-full transition-colors flex items-center justify-center text-white bg-[#cc0000] gap-[10px] text-base font-sans font-medium border-double rounded-3xl">
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm">{t('nav.logout')}</span>
                 </button>
@@ -429,6 +388,5 @@ export default function Profile() {
           </p>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 }
