@@ -289,6 +289,7 @@ export type Database = {
           expires_at: string | null
           fee_rate: number
           id: string
+          loss_rate: number | null
           product_id: string
           profit_loss: number | null
           profit_rate: number
@@ -309,6 +310,7 @@ export type Database = {
           expires_at?: string | null
           fee_rate?: number
           id?: string
+          loss_rate?: number | null
           product_id: string
           profit_loss?: number | null
           profit_rate?: number
@@ -329,6 +331,7 @@ export type Database = {
           expires_at?: string | null
           fee_rate?: number
           id?: string
+          loss_rate?: number | null
           product_id?: string
           profit_loss?: number | null
           profit_rate?: number
@@ -657,18 +660,32 @@ export type Database = {
         Args: { _address: string; _network: string }
         Returns: boolean
       }
-      process_option_trade: {
-        Args: {
-          _amount: number
-          _direction: string
-          _duration_seconds: number
-          _fee_rate: number
-          _product_id: string
-          _profit_rate: number
-          _user_id: string
-        }
-        Returns: Json
-      }
+      process_option_trade:
+        | {
+            Args: {
+              _amount: number
+              _direction: string
+              _duration_seconds: number
+              _fee_rate: number
+              _product_id: string
+              _profit_rate: number
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _amount: number
+              _direction: string
+              _duration_seconds: number
+              _fee_rate: number
+              _loss_rate?: number
+              _product_id: string
+              _profit_rate: number
+              _user_id: string
+            }
+            Returns: Json
+          }
       process_trade: {
         Args: {
           _amount: number
