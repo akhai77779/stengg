@@ -184,6 +184,57 @@ export type Database = {
         }
         Relationships: []
       }
+      identity_verifications: {
+        Row: {
+          address: string
+          back_image_url: string
+          created_at: string
+          date_of_birth: string
+          document_number: string
+          document_type: string
+          expiry_date: string
+          front_image_url: string
+          full_name: string
+          id: string
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          back_image_url: string
+          created_at?: string
+          date_of_birth: string
+          document_number: string
+          document_type: string
+          expiry_date: string
+          front_image_url: string
+          full_name: string
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          back_image_url?: string
+          created_at?: string
+          date_of_birth?: string
+          document_number?: string
+          document_type?: string
+          expiry_date?: string
+          front_image_url?: string
+          full_name?: string
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       news: {
         Row: {
           author_id: string | null
