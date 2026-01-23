@@ -151,7 +151,7 @@ export default function Profile() {
   const quickActions = [
     { icon: ArrowDownToLine, label: t('transaction.deposit'), color: 'text-green-400', href: '/deposit' },
     { icon: ArrowUpFromLine, label: t('transaction.withdraw'), color: 'text-orange-400', href: '/withdraw' },
-    { icon: CreditCard, label: t('profile.walletDetails'), color: 'text-blue-400', href: '/wallet-details' },
+    { icon: CreditCard, label: t('profile.transactionHistory'), color: 'text-blue-400', href: '/wallet-details' },
     { icon: Headphones, label: t('profile.customerService'), color: 'text-purple-400', href: '#' },
   ];
 
