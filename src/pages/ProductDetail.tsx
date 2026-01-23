@@ -106,13 +106,13 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Auto-refresh chart data every 5 seconds for real-time updates
+  // Auto-refresh chart data every 3 seconds for real-time updates
   useEffect(() => {
     if (!isValidUUID(id)) return;
     
     const chartRefreshInterval = setInterval(() => {
       fetchPriceHistory(timeframe);
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(chartRefreshInterval);
   }, [id, timeframe]);
