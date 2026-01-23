@@ -157,8 +157,7 @@ export default function Profile() {
 
   const accountSettings = [
     { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null },
-    { icon: ShieldCheck, label: t('profile.security'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
-    { icon: BadgeCheck, label: t('profile.verification'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
+    { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null },
   ];
 
   const systemSettings = [
@@ -257,9 +256,7 @@ export default function Profile() {
                       <span className="text-sm text-foreground">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {item.badge && (
-                        <span className={cn('text-xs', item.badgeColor)}>{item.badge}</span>
-                      )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </Link>
