@@ -428,14 +428,18 @@ export type Database = {
           created_at: string
           department: string | null
           email: string | null
+          frozen_reason: string | null
           full_name: string | null
           id: string
+          is_frozen: boolean | null
+          is_trade_frozen: boolean | null
           last_login_at: string | null
           last_login_ip: string | null
           phone: string | null
           position: string | null
           total_income: number | null
           updated_at: string
+          user_code: number | null
           wallet_address_bep20: string | null
           wallet_address_erc20: string | null
           wallet_address_trc20: string | null
@@ -446,14 +450,18 @@ export type Database = {
           created_at?: string
           department?: string | null
           email?: string | null
+          frozen_reason?: string | null
           full_name?: string | null
           id: string
+          is_frozen?: boolean | null
+          is_trade_frozen?: boolean | null
           last_login_at?: string | null
           last_login_ip?: string | null
           phone?: string | null
           position?: string | null
           total_income?: number | null
           updated_at?: string
+          user_code?: number | null
           wallet_address_bep20?: string | null
           wallet_address_erc20?: string | null
           wallet_address_trc20?: string | null
@@ -464,14 +472,18 @@ export type Database = {
           created_at?: string
           department?: string | null
           email?: string | null
+          frozen_reason?: string | null
           full_name?: string | null
           id?: string
+          is_frozen?: boolean | null
+          is_trade_frozen?: boolean | null
           last_login_at?: string | null
           last_login_ip?: string | null
           phone?: string | null
           position?: string | null
           total_income?: number | null
           updated_at?: string
+          user_code?: number | null
           wallet_address_bep20?: string | null
           wallet_address_erc20?: string | null
           wallet_address_trc20?: string | null

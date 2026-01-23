@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Edit2, Key, Copy, Check, DollarSign, Mail, Phone, Globe } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Edit2, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,10 @@ interface Profile {
   wallet_address_bep20: string | null;
   wallet_address_trc20: string | null;
   wallet_address_erc20: string | null;
+  user_code: number | null;
+  is_frozen: boolean | null;
+  is_trade_frozen: boolean | null;
+  frozen_reason: string | null;
 }
 
 interface UserRole {
@@ -58,6 +63,12 @@ export function DashboardUsers() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Freeze reason dialog
+  const [freezeUser, setFreezeUser] = useState<Profile | null>(null);
+  const [freezeReason, setFreezeReason] = useState('');
+  const [freezeType, setFreezeType] = useState<'account' | 'trade'>('account');
+  const [isUpdatingFreeze, setIsUpdatingFreeze] = useState(false);
 
   // Copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -96,7 +107,8 @@ export function DashboardUsers() {
       p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase())
+      p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.user_code?.toString().includes(searchQuery)
   );
 
   const getInitials = (name: string | null) => {
@@ -107,6 +119,10 @@ export function DashboardUsers() {
       .join('')
       .slice(0, 2)
       .toUpperCase();
+  };
+
+  const getUserCode = (profile: Profile) => {
+    return profile.user_code?.toString().padStart(5, '0') || '-----';
   };
 
   const copyToClipboard = async (text: string, id: string) => {
@@ -189,6 +205,87 @@ export function DashboardUsers() {
     setIsChangingPassword(false);
   };
 
+  const handleToggleAccountFreeze = async (profile: Profile) => {
+    const newFrozenState = !profile.is_frozen;
+    
+    if (newFrozenState) {
+      // Show dialog for reason
+      setFreezeUser(profile);
+      setFreezeType('account');
+      setFreezeReason('');
+    } else {
+      // Unfreeze directly
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_frozen: false, frozen_reason: null })
+        .eq('id', profile.id);
+
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Thành công', description: 'Đã mở khóa tài khoản' });
+        setProfiles(profiles.map(p => p.id === profile.id ? { ...p, is_frozen: false, frozen_reason: null } : p));
+      }
+    }
+  };
+
+  const handleToggleTradeFreeze = async (profile: Profile) => {
+    const newFrozenState = !profile.is_trade_frozen;
+    
+    if (newFrozenState) {
+      // Show dialog for reason
+      setFreezeUser(profile);
+      setFreezeType('trade');
+      setFreezeReason('');
+    } else {
+      // Unfreeze directly
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_trade_frozen: false })
+        .eq('id', profile.id);
+
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Thành công', description: 'Đã mở khóa giao dịch' });
+        setProfiles(profiles.map(p => p.id === profile.id ? { ...p, is_trade_frozen: false } : p));
+      }
+    }
+  };
+
+  const handleConfirmFreeze = async () => {
+    if (!freezeUser) return;
+
+    setIsUpdatingFreeze(true);
+
+    const updateData = freezeType === 'account' 
+      ? { is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
+      : { is_trade_frozen: true };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', freezeUser.id);
+
+    if (error) {
+      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } else {
+      const message = freezeType === 'account' ? 'Đã khóa tài khoản' : 'Đã đóng băng giao dịch';
+      toast({ title: 'Thành công', description: message });
+      setProfiles(profiles.map(p => {
+        if (p.id === freezeUser.id) {
+          return freezeType === 'account'
+            ? { ...p, is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
+            : { ...p, is_trade_frozen: true };
+        }
+        return p;
+      }));
+      setFreezeUser(null);
+    }
+
+    setIsUpdatingFreeze(false);
+  };
+
   return (
     <>
       <Card className="bg-card border-border">
@@ -220,35 +317,23 @@ export function DashboardUsers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[120px]">ID</TableHead>
+                    <TableHead className="w-[80px]">ID</TableHead>
                     <TableHead>Người dùng</TableHead>
                     <TableHead>Email/SĐT</TableHead>
                     <TableHead>Số dư</TableHead>
-                    <TableHead>Vai trò</TableHead>
+                    <TableHead>Trạng thái</TableHead>
                     <TableHead>IP cuối</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProfiles.map((profile) => (
-                    <TableRow key={profile.id}>
+                    <TableRow key={profile.id} className={profile.is_frozen ? 'opacity-60 bg-destructive/5' : ''}>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                            {profile.id.slice(0, 8)}...
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono font-bold">
+                            {getUserCode(profile)}
                           </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => copyToClipboard(profile.id, profile.id)}
-                          >
-                            {copiedId === profile.id ? (
-                              <Check className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </Button>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -259,9 +344,17 @@ export function DashboardUsers() {
                               {getInitials(profile.full_name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">
-                            {profile.full_name || 'Chưa cập nhật'}
-                          </span>
+                          <div>
+                            <span className="font-medium block">
+                              {profile.full_name || 'Chưa cập nhật'}
+                            </span>
+                            {roles[profile.id] === 'admin' && (
+                              <Badge className="bg-primary/20 text-primary border-primary/50 text-[10px] h-4">
+                                <Shield className="w-2.5 h-2.5 mr-0.5" />
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -269,7 +362,7 @@ export function DashboardUsers() {
                           {profile.email && (
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Mail className="w-3 h-3" />
-                              <span>{profile.email}</span>
+                              <span className="truncate max-w-[150px]">{profile.email}</span>
                             </div>
                           )}
                           {profile.phone && (
@@ -300,17 +393,25 @@ export function DashboardUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {roles[profile.id] === 'admin' ? (
-                          <Badge className="bg-primary/20 text-primary border-primary/50">
-                            <Shield className="w-3 h-3 mr-1" />
-                            Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            <User className="w-3 h-3 mr-1" />
-                            User
-                          </Badge>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {profile.is_frozen && (
+                            <Badge variant="destructive" className="text-[10px] h-5">
+                              <Ban className="w-2.5 h-2.5 mr-0.5" />
+                              Đã khóa
+                            </Badge>
+                          )}
+                          {profile.is_trade_frozen && (
+                            <Badge variant="outline" className="text-[10px] h-5 border-orange-500 text-orange-500">
+                              <TrendingUp className="w-2.5 h-2.5 mr-0.5" />
+                              Đóng băng GD
+                            </Badge>
+                          )}
+                          {!profile.is_frozen && !profile.is_trade_frozen && (
+                            <Badge variant="outline" className="text-[10px] h-5 text-green-500 border-green-500">
+                              Hoạt động
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {profile.last_login_ip ? (
@@ -332,6 +433,7 @@ export function DashboardUsers() {
                               setSelectedUser(profile);
                               setShowDetailDialog(true);
                             }}
+                            title="Chi tiết"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -344,8 +446,27 @@ export function DashboardUsers() {
                               setNewPassword('');
                               setConfirmPassword('');
                             }}
+                            title="Đổi mật khẩu"
                           >
                             <Key className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${profile.is_trade_frozen ? 'text-orange-500' : ''}`}
+                            onClick={() => handleToggleTradeFreeze(profile)}
+                            title={profile.is_trade_frozen ? 'Mở khóa giao dịch' : 'Đóng băng giao dịch'}
+                          >
+                            <TrendingUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${profile.is_frozen ? 'text-destructive' : ''}`}
+                            onClick={() => handleToggleAccountFreeze(profile)}
+                            title={profile.is_frozen ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                          >
+                            {profile.is_frozen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                           </Button>
                         </div>
                       </TableCell>
@@ -376,18 +497,27 @@ export function DashboardUsers() {
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">{selectedUser.full_name || 'Chưa cập nhật'}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {roles[selectedUser.id] === 'admin' ? 'Quản trị viên' : 'Người dùng'}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline">ID: {getUserCode(selectedUser)}</Badge>
+                    {roles[selectedUser.id] === 'admin' && (
+                      <Badge className="bg-primary/20 text-primary border-primary/50">Admin</Badge>
+                    )}
+                    {selectedUser.is_frozen && (
+                      <Badge variant="destructive">Đã khóa</Badge>
+                    )}
+                    {selectedUser.is_trade_frozen && (
+                      <Badge variant="outline" className="border-orange-500 text-orange-500">Đóng băng GD</Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
-                  <p className="text-muted-foreground">User ID</p>
+                  <p className="text-muted-foreground">User ID (System)</p>
                   <div className="flex items-center gap-2">
                     <code className="text-xs bg-muted px-2 py-1 rounded font-mono break-all">
-                      {selectedUser.id}
+                      {selectedUser.id.slice(0, 8)}...
                     </code>
                     <Button
                       variant="ghost"
@@ -422,16 +552,6 @@ export function DashboardUsers() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-muted-foreground">Phòng ban</p>
-                  <p>{selectedUser.department || '-'}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Chức vụ</p>
-                  <p>{selectedUser.position || '-'}</p>
-                </div>
-
-                <div className="space-y-1">
                   <p className="text-muted-foreground">Ngày tham gia</p>
                   <p>{format(new Date(selectedUser.created_at), 'dd/MM/yyyy HH:mm')}</p>
                 </div>
@@ -449,10 +569,20 @@ export function DashboardUsers() {
                   <p className="text-muted-foreground">IP cuối cùng</p>
                   <p className="font-mono text-xs">{selectedUser.last_login_ip || '-'}</p>
                 </div>
+
+                {selectedUser.frozen_reason && (
+                  <div className="col-span-2 space-y-1">
+                    <p className="text-muted-foreground">Lý do khóa</p>
+                    <p className="text-destructive">{selectedUser.frozen_reason}</p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
-                <p className="text-muted-foreground text-sm mb-2">Địa chỉ ví</p>
+                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
+                  <Landmark className="w-4 h-4" />
+                  Thông tin ngân hàng
+                </p>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="w-14 justify-center">BEP20</Badge>
@@ -474,6 +604,36 @@ export function DashboardUsers() {
                   </div>
                 </div>
               </div>
+
+              {/* Quick Actions in Detail Dialog */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground text-sm mb-3">Thao tác nhanh</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={selectedUser.is_frozen ? "default" : "destructive"}
+                    size="sm"
+                    onClick={() => handleToggleAccountFreeze(selectedUser)}
+                  >
+                    {selectedUser.is_frozen ? (
+                      <><Unlock className="w-4 h-4 mr-2" />Mở khóa tài khoản</>
+                    ) : (
+                      <><Lock className="w-4 h-4 mr-2" />Khóa tài khoản</>
+                    )}
+                  </Button>
+                  <Button
+                    variant={selectedUser.is_trade_frozen ? "default" : "outline"}
+                    size="sm"
+                    className={!selectedUser.is_trade_frozen ? "border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white" : ""}
+                    onClick={() => handleToggleTradeFreeze(selectedUser)}
+                  >
+                    {selectedUser.is_trade_frozen ? (
+                      <><Unlock className="w-4 h-4 mr-2" />Mở khóa GD</>
+                    ) : (
+                      <><TrendingUp className="w-4 h-4 mr-2" />Đóng băng GD</>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -485,7 +645,7 @@ export function DashboardUsers() {
           <DialogHeader>
             <DialogTitle>Chỉnh sửa số dư</DialogTitle>
             <DialogDescription>
-              Thay đổi số dư cho {editBalanceUser?.full_name || editBalanceUser?.email}
+              Thay đổi số dư cho {editBalanceUser?.full_name || editBalanceUser?.email} (ID: {editBalanceUser && getUserCode(editBalanceUser)})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -530,7 +690,7 @@ export function DashboardUsers() {
           <DialogHeader>
             <DialogTitle>Đổi mật khẩu</DialogTitle>
             <DialogDescription>
-              Đổi mật khẩu cho {passwordUser?.full_name || passwordUser?.email}
+              Đổi mật khẩu cho {passwordUser?.full_name || passwordUser?.email} (ID: {passwordUser && getUserCode(passwordUser)})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -562,6 +722,54 @@ export function DashboardUsers() {
             <Button onClick={handleChangePassword} disabled={isChangingPassword}>
               {isChangingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Đổi mật khẩu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Freeze Reason Dialog */}
+      <Dialog open={!!freezeUser} onOpenChange={(open) => !open && setFreezeUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {freezeType === 'account' ? 'Khóa tài khoản' : 'Đóng băng giao dịch'}
+            </DialogTitle>
+            <DialogDescription>
+              {freezeType === 'account' 
+                ? `Người dùng ${freezeUser?.full_name || freezeUser?.email} sẽ không thể đăng nhập.`
+                : `Người dùng ${freezeUser?.full_name || freezeUser?.email} sẽ không thể thực hiện giao dịch trade hoặc rút tiền.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {freezeType === 'account' && (
+              <div className="space-y-2">
+                <Label htmlFor="freezeReason">Lý do khóa (hiển thị cho người dùng)</Label>
+                <Input
+                  id="freezeReason"
+                  value={freezeReason}
+                  onChange={(e) => setFreezeReason(e.target.value)}
+                  placeholder="VD: Vi phạm điều khoản sử dụng"
+                />
+              </div>
+            )}
+            <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+              <p className="font-medium">Cảnh báo:</p>
+              <p>
+                {freezeType === 'account' 
+                  ? 'Người dùng sẽ bị đăng xuất và không thể đăng nhập lại cho đến khi được mở khóa.'
+                  : 'Người dùng sẽ không thể thực hiện bất kỳ giao dịch trade hoặc rút tiền nào.'
+                }
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFreezeUser(null)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmFreeze} disabled={isUpdatingFreeze}>
+              {isUpdatingFreeze && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Xác nhận
             </Button>
           </DialogFooter>
         </DialogContent>

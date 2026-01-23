@@ -9,7 +9,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isAdminLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; frozenReason?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -99,14 +99,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ error: Error | null; frozenReason?: string }> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
+    if (error) {
+      return { error };
+    }
+    
+    // Check if account is frozen
+    if (data?.user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_frozen, frozen_reason')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (!profileError && profile?.is_frozen) {
+        // Account is frozen - sign out immediately
+        await supabase.auth.signOut();
+        return { 
+          error: new Error(profile.frozen_reason || 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.'),
+          frozenReason: profile.frozen_reason || 'Tài khoản đã bị khóa'
+        };
+      }
+    }
+    
     // Track login IP after successful sign in
-    if (!error && data?.session) {
+    if (data?.session) {
       try {
         await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-login`, {
           method: 'POST',
@@ -120,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     
-    return { error };
+    return { error: null };
   };
 
   const signOut = async () => {
