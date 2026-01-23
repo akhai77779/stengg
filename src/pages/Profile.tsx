@@ -26,7 +26,11 @@ import {
   LogOut,
   Loader2,
   Copy,
-  ChevronRight
+  ChevronRight,
+  UserCheck,
+  Clock,
+  XCircle,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,9 +44,14 @@ interface Profile {
   total_income: number | null;
 }
 
+interface IdentityVerification {
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
   const { user, signOut, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -60,6 +69,52 @@ export default function Profile() {
   // Use external balance if available, otherwise fall back to local profile balance
   const balance = externalBalance ?? profile?.balance ?? 0;
   const uid = user?.id?.slice(0, 5) || '00000';
+
+  // Fetch identity verification status
+  useEffect(() => {
+    const fetchVerification = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('identity_verifications')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (!error && data) {
+        setIdentityVerification(data as IdentityVerification);
+      }
+    };
+    
+    fetchVerification();
+  }, [user?.id]);
+
+  const getVerificationStatusDisplay = () => {
+    if (!identityVerification) return null;
+    
+    switch (identityVerification.status) {
+      case 'approved':
+        return {
+          label: t('identity.statusApproved'),
+          color: 'text-green-400',
+          icon: Check,
+        };
+      case 'rejected':
+        return {
+          label: t('identity.statusRejected'),
+          color: 'text-red-400',
+          icon: XCircle,
+        };
+      default:
+        return {
+          label: t('identity.statusPending'),
+          color: 'text-yellow-400',
+          icon: Clock,
+        };
+    }
+  };
+
+  const verificationStatus = getVerificationStatusDisplay();
 
   const languageNames: Record<string, string> = {
     vi: 'Tiếng Việt',
@@ -157,6 +212,7 @@ export default function Profile() {
 
   const accountSettings = [
     { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null },
+    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/security', badge: verificationStatus },
     { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null },
   ];
 
@@ -254,9 +310,13 @@ export default function Profile() {
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
+                      {item.badge && (
+                        <span className={cn("text-xs", item.badge.color)}>
+                          {item.badge.label}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1">
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </Link>
