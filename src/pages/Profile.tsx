@@ -44,6 +44,7 @@ interface Profile {
   position: string | null;
   balance: number | null;
   total_income: number | null;
+  user_code: number | null;
 }
 
 interface IdentityVerification {
@@ -71,7 +72,7 @@ export default function Profile() {
 
   // Use external balance if available, otherwise fall back to local profile balance
   const balance = externalBalance ?? profile?.balance ?? 0;
-  const uid = user?.id?.slice(0, 5) || '00000';
+  const uid = profile?.user_code?.toString() || '00000';
 
   // Fetch identity verification status
   useEffect(() => {
