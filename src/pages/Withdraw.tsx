@@ -1,284 +1,180 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { ArrowLeft, Menu, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Wallet, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Layout } from "@/components/layout/Layout";
 
-const networks = [
-  { id: "bep20", name: "BNB Smart Chain (BEP20)" },
-  { id: "trc20", name: "Tron (TRC20)" },
-  { id: "erc20", name: "Ethereum (ERC20)" },
-];
-
-const Withdraw = () => {
+export default function WithdrawPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { t } = useLanguage();
-  const { formatCurrency } = useCurrency();
-  const [network, setNetwork] = useState(networks[0].id);
+  const [balance] = useState(0.0);
   const [amount, setAmount] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [balance, setBalance] = useState(0);
+  const [country, setCountry] = useState("");
+  const [currency, setCurrency] = useState("VND");
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchBalance();
-    }
-  }, [user]);
+  const minWithdraw = 10;
+  const maxWithdraw = 0.0;
+  const fee = 0.0;
+  const feeRate = 0.3;
 
-  const fetchBalance = async () => {
-    if (!user) return;
-    
-    const { data } = await supabase
-      .from("profiles")
-      .select("balance")
-      .eq("id", user.id)
-      .maybeSingle();
-    
-    if (data) {
-      setBalance(data.balance || 0);
-    }
+  const calculateTotal = () => {
+    const amountNum = parseFloat(amount) || 0;
+    return amountNum - fee;
   };
 
-  // Enhanced client-side validation (server validates again)
-  const isValidWalletAddress = (address: string, net: string): boolean => {
-    if (!address || !net) return false;
-    
-    if (net === 'trc20') {
-      // TRC20: starts with T, 34 chars, base58
-      return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
-    }
-    if (net === 'bep20' || net === 'erc20') {
-      // ERC20/BEP20: 0x + 40 hex chars
-      return /^0x[0-9a-fA-F]{40}$/.test(address);
-    }
-    return false;
+  const handleWithdraw = () => {
+    // Implement withdraw logic here
+    console.log("Withdraw:", {
+      amount,
+      country,
+      currency,
+      address,
+      password,
+    });
   };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      toast.error(t('withdraw.loginRequired'));
-      navigate("/auth");
-      return;
-    }
-
-    const withdrawAmount = parseFloat(amount);
-
-    if (!amount || withdrawAmount <= 0) {
-      toast.error(t('withdraw.invalidAmount'));
-      return;
-    }
-
-    if (withdrawAmount < 10) {
-      toast.error(t('withdraw.minAmount'));
-      return;
-    }
-
-    const fee = withdrawAmount * 0.01;
-    const totalDeduction = withdrawAmount + fee;
-
-    if (totalDeduction > balance) {
-      toast.error(t('withdraw.insufficientBalance'));
-      return;
-    }
-
-    if (!walletAddress.trim()) {
-      toast.error(t('withdraw.walletRequired'));
-      return;
-    }
-
-    // Enhanced client-side validation
-    if (!isValidWalletAddress(walletAddress.trim(), network)) {
-      if (network === "trc20") {
-        toast.error(t('withdraw.invalidTRC20'));
-      } else {
-        toast.error(t('withdraw.invalidERC20'));
-      }
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Use secure server-side RPC function for withdrawal validation
-      const { data, error } = await supabase.rpc('create_withdrawal_request', {
-        _user_id: user.id,
-        _amount: withdrawAmount,
-        _network: network,
-        _wallet_address: walletAddress.trim(),
-      });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; error?: string };
-
-      if (!result.success) {
-        toast.error(result.error || t('common.error'));
-        setLoading(false);
-        return;
-      }
-
-      toast.success(t('withdraw.success'));
-      navigate("/profile");
-    } catch (error) {
-      console.error('Withdrawal error:', error);
-      toast.error(t('common.error'));
-    }
-
-    setLoading(false);
-  };
-
-  const quickAmounts = [50, 100, 500, 1000];
 
   return (
-    <Layout hideFooter>
-      <div className="space-y-4 pb-24">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">{t('withdraw.title')}</h1>
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-gray-800">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-lg font-semibold">Rút tiền</h1>
+        <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 py-4 space-y-4">
+        {/* Balance Card */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <div className="space-y-1">
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm text-gray-400">Số cân bằng:</span>
+              <span className="text-lg font-semibold text-red-500">{balance.toFixed(2)} USD</span>
+            </div>
+            <div className="text-sm text-gray-500">≈ 0 VND</div>
+          </div>
         </div>
 
-        {/* Balance Card */}
-        <Card className="bg-gradient-to-r from-primary/20 to-primary/5 border-primary/30">
-          <CardContent className="p-4">
+        {/* Country Select */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Quốc gia</Label>
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger className="w-full bg-transparent border-0 text-gray-400 h-auto p-0 focus:ring-0">
+              <SelectValue placeholder="Vui lòng chọn một quốc gia" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1a1a1a] border-gray-800">
+              <SelectItem value="vn">Vietnam</SelectItem>
+              <SelectItem value="us">United States</SelectItem>
+              <SelectItem value="jp">Japan</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Currency Select */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Tiền tệ</Label>
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="w-full bg-transparent border-0 text-gray-400 h-auto p-0 focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1a1a1a] border-gray-800">
+              <SelectItem value="VND">VND - Vietnamese Dong</SelectItem>
+              <SelectItem value="USD">USD - US Dollar</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Address Input */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Địa chỉ ví</Label>
+          <Input
+            type="text"
+            placeholder="Nhập địa chỉ ví của bạn"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="bg-transparent border-0 text-gray-400 placeholder:text-gray-600 h-auto p-0 focus-visible:ring-0"
+          />
+        </div>
+
+        {/* Amount Section */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Số lượng</Label>
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('withdraw.availableBalance')}</p>
-                <p className="text-2xl font-bold text-primary">${balance.toFixed(2)}</p>
-              </div>
-              <Wallet className="h-10 w-10 text-primary/50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Network Selection */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-primary" />
-              {t('withdraw.selectNetwork')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select value={network} onValueChange={setNetwork}>
-              <SelectTrigger className="bg-muted/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {networks.map((n) => (
-                  <SelectItem key={n.id} value={n.id}>
-                    {n.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Withdrawal Info */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t('withdraw.info')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('withdraw.walletAddress')}</Label>
-              <Input
-                placeholder={t('withdraw.walletPlaceholder')}
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                className="bg-muted/50 font-mono text-sm"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('withdraw.amount')}</Label>
               <Input
                 type="number"
-                placeholder={t('withdraw.amountPlaceholder')}
+                placeholder="Vui lòng nhập số lượng"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="bg-muted/50"
+                className="bg-transparent border-0 text-gray-400 placeholder:text-gray-600 h-auto p-0 flex-1 focus-visible:ring-0"
               />
-              <div className="flex gap-2 flex-wrap">
-                {quickAmounts.map((qa) => (
-                  <Button
-                    key={qa}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAmount(qa.toString())}
-                    disabled={qa > balance}
-                    className="text-xs"
-                  >
-                    ${qa}
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAmount(balance.toString())}
-                  className="text-xs"
-                >
-                  {t('common.all')}
-                </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-white">USD</span>
+                <button className="text-red-500 text-sm font-medium">tất cả</button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Số tiền rút tiền tối thiểu</span>
+              <span className="text-white">{minWithdraw} USD</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Số tiền rút tiền tối đa</span>
+              <span className="text-white">{maxWithdraw.toFixed(2)} USD</span>
+            </div>
+          </div>
+        </div>
 
-        {/* Fee Info */}
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t('withdraw.withdrawAmount')}</span>
-              <span>{amount || "0"} USDT</span>
+        {/* Fee Section */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Phí xử lý</Label>
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-semibold text-white">{fee.toFixed(2)} USD</span>
+              <span className="text-sm text-gray-500">≈ 0 VND</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t('withdraw.fee')}</span>
-              <span>{amount ? (parseFloat(amount) * 0.01).toFixed(2) : "0"} USDT</span>
-            </div>
-            <div className="flex justify-between text-sm font-medium pt-2 border-t border-border/50">
-              <span>{t('withdraw.actualReceive')}</span>
-              <span className="text-primary">
-                {amount ? (parseFloat(amount) * 0.99).toFixed(2) : "0"} USDT
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+            <div className="text-sm text-gray-500">Tỷ lệ phí: {feeRate}%</div>
+          </div>
+        </div>
 
-        {/* Warning */}
-        <div className="flex items-start gap-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-          <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5" />
-          <div className="text-xs text-yellow-500 space-y-1">
-            <p>• {t('withdraw.warning1')}</p>
-            <p>• {t('withdraw.warning2')}</p>
-            <p>• {t('withdraw.warning3')}</p>
+        {/* Password Input */}
+        <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-800">
+          <Label className="text-sm text-white mb-2 block">Mật khẩu rút tiền</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Vui lòng nhập mật khẩu rút tiền của bạn"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-transparent border-0 text-gray-400 placeholder:text-gray-600 h-auto p-0 flex-1 focus-visible:ring-0"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-red-500 hover:bg-transparent h-auto w-auto p-0"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
 
         {/* Submit Button */}
         <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+          onClick={handleWithdraw}
+          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-6 rounded-lg"
         >
-          {loading ? t('common.processing') : t('withdraw.confirm')}
+          Rút tiền
         </Button>
       </div>
-    </Layout>
+    </div>
   );
-};
-
-export default Withdraw;
+}
