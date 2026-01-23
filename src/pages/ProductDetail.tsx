@@ -9,6 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
 import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
 import { useAuth } from "@/hooks/useAuth";
+import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
@@ -74,6 +75,16 @@ const ProductDetail = () => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
+
+  // Auto-sync external data every 3 seconds and refresh product info
+  useAutoSync({ 
+    enabled: !!user && isValidUUID(id),
+    interval: 3000,
+    onSuccess: () => {
+      // Refresh product data after sync
+      if (isValidUUID(id)) fetchProduct();
+    }
+  });
 
   useEffect(() => {
     if (isValidUUID(id)) {

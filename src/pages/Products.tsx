@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoSync } from '@/hooks/useAutoSync';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +74,16 @@ export default function Products() {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+  // Auto-sync external data every 3 seconds and refresh products list
+  useAutoSync({ 
+    enabled: !!user,
+    interval: 3000,
+    onSuccess: () => {
+      // Refresh products after sync
+      if (user) fetchProducts();
+    }
+  });
+
   useEffect(() => {
     if (user) {
       fetchProducts();

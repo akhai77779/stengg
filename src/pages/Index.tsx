@@ -3,11 +3,18 @@ import { HeroSlider } from '@/components/home/HeroSlider';
 import { LatestNews } from '@/components/home/LatestNews';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoSync } from '@/hooks/useAutoSync';
 import { Loader2 } from 'lucide-react';
 import GuestHome from './GuestHome';
 
 const Index = () => {
   const { user, isLoading } = useAuth();
+
+  // Auto-sync external data every 3 seconds when user is authenticated
+  useAutoSync({ 
+    enabled: !!user,
+    interval: 3000 
+  });
 
   if (isLoading) {
     return (
