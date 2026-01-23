@@ -27,6 +27,8 @@ interface Product {
   price_change: number | null;
   image_url: string | null;
   description: string | null;
+  high_24h?: number | null;
+  low_24h?: number | null;
 }
 
 interface LineChartData {
@@ -328,11 +330,11 @@ const ProductDetail = () => {
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h highest price</span>
-              <AnimatedStat value={highPrice ? formatPrice(highPrice) : null} className="font-medium" />
+              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : null)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h lowest price</span>
-              <AnimatedStat value={lowPrice ? formatPrice(lowPrice) : null} className="font-medium" />
+              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : null)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h trading volume</span>

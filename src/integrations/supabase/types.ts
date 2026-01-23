@@ -433,8 +433,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          high_24h: number | null
           id: string
           image_url: string | null
+          low_24h: number | null
           name: string
           price: number | null
           price_change: number | null
@@ -448,8 +450,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          high_24h?: number | null
           id?: string
           image_url?: string | null
+          low_24h?: number | null
           name: string
           price?: number | null
           price_change?: number | null
@@ -463,8 +467,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          high_24h?: number | null
           id?: string
           image_url?: string | null
+          low_24h?: number | null
           name?: string
           price?: number | null
           price_change?: number | null
