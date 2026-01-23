@@ -25,17 +25,18 @@ interface DurationOption {
   seconds: number;
   label: string;
   profitRate: number;
+  lossRate: number;
 }
 
 const DURATION_OPTIONS: DurationOption[] = [
-  { seconds: 240, label: '240 Thứ hai', profitRate: 0.06 },
-  { seconds: 360, label: '360 Thứ hai', profitRate: 0.12 },
-  { seconds: 600, label: '600 Thứ hai', profitRate: 0.18 },
+  { seconds: 240, label: '240s', profitRate: 0.06, lossRate: 0.15 },
+  { seconds: 360, label: '360s', profitRate: 0.12, lossRate: 0.15 },
+  { seconds: 600, label: '600s', profitRate: 0.18, lossRate: 0.20 },
 ];
 
-const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000];
+const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
 const FEE_RATE = 0.002;
-const MIN_AMOUNT = 100;
+const MIN_AMOUNT = 200;
 
 export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: OptionsTradeSheetProps) {
   const [amount, setAmount] = useState('');
@@ -242,6 +243,9 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
                       : "text-muted-foreground"
                   )}>
                     Lợi nhuận{(opt.profitRate * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-red-400">
+                    Lỗ {(opt.lossRate * 100).toFixed(0)}%
                   </div>
                 </button>
               ))}
