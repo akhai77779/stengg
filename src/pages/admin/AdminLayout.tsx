@@ -21,6 +21,7 @@ import {
   Menu,
   Settings,
   Clock,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,6 +47,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       { to: "/admin/option-trades", label: "Option Trades", icon: Clock },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
       { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard },
+      { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
       { to: "/admin/users", label: t('admin.users'), icon: Users },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },

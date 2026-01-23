@@ -212,7 +212,7 @@ export default function Profile() {
 
   const accountSettings = [
     { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null },
-    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/security', badge: verificationStatus },
+    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/identity-verification', badge: verificationStatus },
     { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null },
   ];
 
