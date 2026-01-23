@@ -12,171 +12,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Layout } from "@/components/layout/Layout";
 
-const networks = [
-  { id: "bep20", name: "BNB Smart Chain (BEP20)", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f1dE61" },
-  { id: "trc20", name: "Tron (TRC20)", address: "TN8sfEoGhFkJaAMjTmYxTnhBBfzkcLPfPX" },
-  { id: "erc20", name: "Ethereum (ERC20)", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f1dE61" },
-];
-
-const Deposit = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { t } = useLanguage();
-  const [network, setNetwork] = useState(networks[0].id);
-  const [amount, setAmount] = useState("");
-  const [txHash, setTxHash] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const selectedNetwork = networks.find((n) => n.id === network);
-
-  const copyAddress = () => {
-    if (selectedNetwork) {
-      navigator.clipboard.writeText(selectedNetwork.address);
-      setCopied(true);
-      toast.success(t('deposit.addressCopied'));
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      toast.error(t('deposit.loginRequired'));
-      navigate("/auth");
-      return;
-    }
-
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error(t('deposit.invalidAmount'));
-      return;
-    }
-
-    if (!txHash.trim()) {
-      toast.error(t('deposit.txHashRequired'));
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await supabase.from("transactions").insert({
-      user_id: user.id,
-      type: "deposit",
-      amount: parseFloat(amount),
-      network: network,
-      tx_hash: txHash.trim(),
-      wallet_address: selectedNetwork?.address,
-      status: "pending",
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast.error(t('common.error'));
-      console.error(error);
-      return;
-    }
-
-    toast.success(t('deposit.success'));
-    navigate("/profile");
-  };
-
+const Maintenance = () => {
   return (
-    <Layout hideFooter>
-      <div className="space-y-4 pb-24">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">{t('deposit.title')}</h1>
+    <div className="min-h-screen flex items-center justify-center p-8 bg-[radial-gradient(1100px_720px_at_18%_8%,rgba(59,130,246,0.08),transparent_60%),radial-gradient(900px_680px_at_82%_18%,rgba(148,163,184,0.05),transparent_55%),#0b1424]">
+      <div className="max-w-[560px] w-full bg-[rgba(13,24,33,0.6)] border border-[rgba(148,163,184,0.18)] rounded-[20px] p-8 text-center shadow-[0_24px_60px_rgba(3,7,18,0.65)] backdrop-blur-md">
+        {/* Badge */}
+        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-[rgba(245,158,11,0.12)] text-[#fde68a] border border-[rgba(251,191,36,0.3)] text-xs font-semibold tracking-wide">
+          BẢO TRÌ
+        </span>
+
+        {/* Icon */}
+        <div className="w-16 h-16 mx-auto mt-5 mb-4 rounded-[18px] bg-[rgba(245,158,11,0.12)] border border-[rgba(251,191,36,0.3)] flex items-center justify-center text-3xl">
+          🛠️
         </div>
 
-        {/* Network Selection */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-primary" />
-              {t('deposit.selectNetwork')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select value={network} onValueChange={setNetwork}>
-              <SelectTrigger className="bg-muted/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {networks.map((n) => (
-                  <SelectItem key={n.id} value={n.id}>
-                    {n.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        {/* Title */}
+        <h1 className="text-[26px] font-bold text-[#f8fafc] mb-3">Hệ thống đang bảo trì</h1>
 
-        {/* Wallet Address */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t('deposit.walletAddress')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 p-3 bg-muted/50 rounded-lg text-sm break-all font-mono">
-                {selectedNetwork?.address}
-              </div>
-              <Button variant="outline" size="icon" onClick={copyAddress}>
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-            <div className="flex items-start gap-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-              <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5" />
-              <p className="text-xs text-yellow-500">
-                {t('deposit.warning').replace('{network}', selectedNetwork?.name || '')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Description */}
+        <p className="text-[#cbd5f1] leading-relaxed text-[15px]">
+          Chúng tôi đang nâng cấp để phục vụ tốt hơn. Vui lòng quay lại sau.
+        </p>
 
-        {/* Amount & TX Hash */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t('deposit.transactionInfo')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('deposit.amount')}</Label>
-              <Input
-                type="number"
-                placeholder={t('deposit.amountPlaceholder')}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="bg-muted/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('deposit.txHash')}</Label>
-              <Input
-                placeholder={t('deposit.txHashPlaceholder')}
-                value={txHash}
-                onChange={(e) => setTxHash(e.target.value)}
-                className="bg-muted/50"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submit Button */}
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          {loading ? t('common.processing') : t('deposit.confirm')}
-        </Button>
+        {/* Note with pulsing dot */}
+        <div className="mt-5 flex items-center justify-center gap-2 text-[#94a3b8] text-[13px]">
+          <span className="w-2 h-2 rounded-full bg-[#fbbf24] shadow-[0_0_12px_rgba(251,191,36,0.7)] animate-pulse" />
+          Cảm ơn bạn đã kiên nhẫn.
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 };
+
+export default Maintenance;
 
 export default Deposit;
