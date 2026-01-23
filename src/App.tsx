@@ -15,6 +15,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Charity from "./pages/Charity";
 import Profile from "./pages/Profile";
+import WalletDetails from "./pages/WalletDetails";
 import Dashboard from "./pages/Dashboard";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/charity" element={<Charity />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/wallet-details" element={<WalletDetails />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
