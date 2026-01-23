@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
-import { TransactionHistory } from '@/components/profile/TransactionHistory';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { 
   Wallet, 
@@ -157,7 +156,7 @@ export default function Profile() {
   ];
 
   const accountSettings = [
-    { icon: Wallet, label: t('profile.balance'), href: '#', badge: null },
+    { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null },
     { icon: ShieldCheck, label: t('profile.security'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
     { icon: BadgeCheck, label: t('profile.verification'), href: '#', badge: t('transaction.approved'), badgeColor: 'text-green-400' },
   ];
@@ -241,10 +240,6 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Transaction History */}
-          <div className="mb-6">
-            <TransactionHistory />
-          </div>
 
           {/* Account Section */}
           <div className="mb-6">

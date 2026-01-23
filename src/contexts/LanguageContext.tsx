@@ -276,6 +276,8 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'Hệ thống',
     'profile.sync': 'Đồng bộ dữ liệu',
     'profile.uidCopied': 'Đã sao chép UID',
+    'profile.walletDetails': 'Chi tiết ví',
+    'profile.defaultUser': 'Người dùng',
     
     // 404
     'notFound.title': '404',
@@ -551,6 +553,8 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'System',
     'profile.sync': 'Sync Data',
     'profile.uidCopied': 'UID copied',
+    'profile.walletDetails': 'Wallet Details',
+    'profile.defaultUser': 'User',
     
     // 404
     'notFound.title': '404',
