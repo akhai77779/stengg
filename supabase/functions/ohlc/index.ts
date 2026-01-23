@@ -122,6 +122,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(productId)) {
+      console.error("Invalid productId format:", productId);
+      return new Response(JSON.stringify({ error: "Invalid productId format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const limit = clamp(Math.floor(limitRaw), 50, 500);
 
     // Fetch product to get symbol
