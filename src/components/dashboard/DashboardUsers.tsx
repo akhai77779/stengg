@@ -53,10 +53,15 @@ export function DashboardUsers() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
-  // Edit balance dialog
-  const [editBalanceUser, setEditBalanceUser] = useState<Profile | null>(null);
-  const [newBalance, setNewBalance] = useState('');
-  const [isSavingBalance, setIsSavingBalance] = useState(false);
+  // Add balance dialog
+  const [addBalanceUser, setAddBalanceUser] = useState<Profile | null>(null);
+  const [addAmount, setAddAmount] = useState('');
+  const [isAddingBalance, setIsAddingBalance] = useState(false);
+
+  // Subtract balance dialog
+  const [subtractBalanceUser, setSubtractBalanceUser] = useState<Profile | null>(null);
+  const [subtractAmount, setSubtractAmount] = useState('');
+  const [isSubtractingBalance, setIsSubtractingBalance] = useState(false);
 
   // Change password dialog
   const [passwordUser, setPasswordUser] = useState<Profile | null>(null);
@@ -131,31 +136,70 @@ export function DashboardUsers() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleSaveBalance = async () => {
-    if (!editBalanceUser) return;
+  const handleAddBalance = async () => {
+    if (!addBalanceUser) return;
 
-    const balanceNum = parseFloat(newBalance);
-    if (isNaN(balanceNum) || balanceNum < 0) {
-      toast({ title: 'Lỗi', description: 'Số dư không hợp lệ', variant: 'destructive' });
+    const amount = parseFloat(addAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Lỗi', description: 'Số tiền không hợp lệ', variant: 'destructive' });
       return;
     }
 
-    setIsSavingBalance(true);
+    setIsAddingBalance(true);
+
+    const newBalance = (addBalanceUser.balance || 0) + amount;
 
     const { error } = await supabase
       .from('profiles')
-      .update({ balance: balanceNum })
-      .eq('id', editBalanceUser.id);
+      .update({ balance: newBalance })
+      .eq('id', addBalanceUser.id);
 
     if (error) {
       toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Thành công', description: 'Đã cập nhật số dư' });
-      setProfiles(profiles.map(p => p.id === editBalanceUser.id ? { ...p, balance: balanceNum } : p));
-      setEditBalanceUser(null);
+      toast({ title: 'Thành công', description: `Đã cộng $${amount.toFixed(2)} vào tài khoản` });
+      setProfiles(profiles.map(p => p.id === addBalanceUser.id ? { ...p, balance: newBalance } : p));
+      setAddBalanceUser(null);
+      setAddAmount('');
     }
 
-    setIsSavingBalance(false);
+    setIsAddingBalance(false);
+  };
+
+  const handleSubtractBalance = async () => {
+    if (!subtractBalanceUser) return;
+
+    const amount = parseFloat(subtractAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Lỗi', description: 'Số tiền không hợp lệ', variant: 'destructive' });
+      return;
+    }
+
+    const currentBalance = subtractBalanceUser.balance || 0;
+    if (amount > currentBalance) {
+      toast({ title: 'Lỗi', description: 'Số tiền trừ không được lớn hơn số dư hiện tại', variant: 'destructive' });
+      return;
+    }
+
+    setIsSubtractingBalance(true);
+
+    const newBalance = currentBalance - amount;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance: newBalance })
+      .eq('id', subtractBalanceUser.id);
+
+    if (error) {
+      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Thành công', description: `Đã trừ $${amount.toFixed(2)} khỏi tài khoản` });
+      setProfiles(profiles.map(p => p.id === subtractBalanceUser.id ? { ...p, balance: newBalance } : p));
+      setSubtractBalanceUser(null);
+      setSubtractAmount('');
+    }
+
+    setIsSubtractingBalance(false);
   };
 
   const handleChangePassword = async () => {
@@ -381,8 +425,8 @@ export function DashboardUsers() {
                             size="icon"
                             className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                             onClick={() => {
-                              setEditBalanceUser(profile);
-                              setNewBalance((profile.balance || 0).toFixed(2));
+                              setSubtractBalanceUser(profile);
+                              setSubtractAmount('');
                             }}
                             title="Trừ tiền"
                           >
@@ -396,8 +440,8 @@ export function DashboardUsers() {
                             size="icon"
                             className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-500/10"
                             onClick={() => {
-                              setEditBalanceUser(profile);
-                              setNewBalance((profile.balance || 0).toFixed(2));
+                              setAddBalanceUser(profile);
+                              setAddAmount('');
                             }}
                             title="Cộng tiền"
                           >
@@ -652,46 +696,112 @@ export function DashboardUsers() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Balance Dialog */}
-      <Dialog open={!!editBalanceUser} onOpenChange={(open) => !open && setEditBalanceUser(null)}>
+      {/* Add Balance Dialog */}
+      <Dialog open={!!addBalanceUser} onOpenChange={(open) => !open && setAddBalanceUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa số dư</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-green-500">
+              <span className="text-2xl">+</span> Cộng tiền
+            </DialogTitle>
             <DialogDescription>
-              Thay đổi số dư cho {editBalanceUser?.full_name || editBalanceUser?.email} (ID: {editBalanceUser && getUserCode(editBalanceUser)})
+              Cộng tiền cho {addBalanceUser?.full_name || addBalanceUser?.email} (ID: {addBalanceUser && getUserCode(addBalanceUser)})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Số dư hiện tại</Label>
               <p className="font-mono text-lg text-green-500">
-                ${(editBalanceUser?.balance || 0).toLocaleString()}
+                ${(addBalanceUser?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newBalance">Số dư mới ($)</Label>
+              <Label htmlFor="addAmount">Số tiền cộng thêm ($)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="newBalance"
+                  id="addAmount"
                   type="number"
                   step="0.01"
-                  min="0"
-                  value={newBalance}
-                  onChange={(e) => setNewBalance(e.target.value)}
+                  min="0.01"
+                  value={addAmount}
+                  onChange={(e) => setAddAmount(e.target.value)}
                   className="pl-10"
                   placeholder="0.00"
                 />
               </div>
             </div>
+            {addAmount && parseFloat(addAmount) > 0 && (
+              <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                <p className="text-sm text-muted-foreground">Số dư sau khi cộng:</p>
+                <p className="font-mono text-lg text-green-500 font-semibold">
+                  ${((addBalanceUser?.balance || 0) + parseFloat(addAmount || '0')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditBalanceUser(null)}>
+            <Button variant="outline" onClick={() => setAddBalanceUser(null)}>
               Hủy
             </Button>
-            <Button onClick={handleSaveBalance} disabled={isSavingBalance}>
-              {isSavingBalance && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Lưu
+            <Button onClick={handleAddBalance} disabled={isAddingBalance} className="bg-green-600 hover:bg-green-700">
+              {isAddingBalance && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Cộng tiền
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subtract Balance Dialog */}
+      <Dialog open={!!subtractBalanceUser} onOpenChange={(open) => !open && setSubtractBalanceUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-500">
+              <span className="text-2xl">−</span> Trừ tiền
+            </DialogTitle>
+            <DialogDescription>
+              Trừ tiền từ {subtractBalanceUser?.full_name || subtractBalanceUser?.email} (ID: {subtractBalanceUser && getUserCode(subtractBalanceUser)})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Số dư hiện tại</Label>
+              <p className="font-mono text-lg text-green-500">
+                ${(subtractBalanceUser?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subtractAmount">Số tiền trừ đi ($)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="subtractAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={subtractBalanceUser?.balance || 0}
+                  value={subtractAmount}
+                  onChange={(e) => setSubtractAmount(e.target.value)}
+                  className="pl-10"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            {subtractAmount && parseFloat(subtractAmount) > 0 && (
+              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                <p className="text-sm text-muted-foreground">Số dư sau khi trừ:</p>
+                <p className="font-mono text-lg text-red-500 font-semibold">
+                  ${Math.max(0, (subtractBalanceUser?.balance || 0) - parseFloat(subtractAmount || '0')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubtractBalanceUser(null)}>
+              Hủy
+            </Button>
+            <Button onClick={handleSubtractBalance} disabled={isSubtractingBalance} variant="destructive">
+              {isSubtractingBalance && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Trừ tiền
             </Button>
           </DialogFooter>
         </DialogContent>
