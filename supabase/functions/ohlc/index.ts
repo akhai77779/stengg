@@ -9,6 +9,59 @@ const corsHeaders = {
 
 const EXTERNAL_KLINE_API_URL = "https://admin.stenggg.com/api/app/option/getKline";
 
+// In-memory cache for kline data
+interface CacheEntry {
+  data: { candles: unknown[]; nextCursor: string | null; symbol: string };
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+// Cache TTL based on timeframe (in milliseconds)
+function getCacheTTL(timeframe: string): number {
+  switch (timeframe) {
+    case "1m": return 10 * 1000;      // 10 seconds for 1-minute chart
+    case "30m": return 30 * 1000;     // 30 seconds for 30-minute chart
+    case "1h": return 60 * 1000;      // 1 minute for 1-hour chart
+    case "1d": return 5 * 60 * 1000;  // 5 minutes for daily chart
+    default: return 30 * 1000;
+  }
+}
+
+// Generate cache key from request parameters
+function getCacheKey(productId: string, timeframe: string, limit: number, cursor: string | null): string {
+  return `${productId}:${timeframe}:${limit}:${cursor || "latest"}`;
+}
+
+// Get cached data if valid
+function getCachedData(key: string, ttl: number): CacheEntry["data"] | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  
+  const now = Date.now();
+  if (now - entry.timestamp > ttl) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return entry.data;
+}
+
+// Set cache data
+function setCacheData(key: string, data: CacheEntry["data"]): void {
+  cache.set(key, { data, timestamp: Date.now() });
+  
+  // Clean up old entries (keep cache size reasonable)
+  if (cache.size > 100) {
+    const now = Date.now();
+    for (const [k, v] of cache.entries()) {
+      if (now - v.timestamp > 5 * 60 * 1000) { // Remove entries older than 5 minutes
+        cache.delete(k);
+      }
+    }
+  }
+}
+
 type Timeframe = "1m" | "30m" | "1h" | "1d";
 
 interface KlineItem {
@@ -161,6 +214,21 @@ Deno.serve(async (req) => {
 
     const limit = clamp(Math.floor(limitRaw), 50, 500);
 
+    // Check cache first (before fetching product info for "latest" requests only)
+    const cacheKey = getCacheKey(productId, timeframe, limit, cursor);
+    const cacheTTL = getCacheTTL(timeframe);
+    const cachedData = getCachedData(cacheKey, cacheTTL);
+    
+    if (cachedData) {
+      console.log(`Cache HIT for key: ${cacheKey}`);
+      return new Response(JSON.stringify(cachedData), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    console.log(`Cache MISS for key: ${cacheKey}`);
+
     // Fetch product to get symbol
     const { data: product, error: productError } = await supabase
       .from("products")
@@ -275,7 +343,12 @@ Deno.serve(async (req) => {
       ? new Date(fromTimestamp * 1000).toISOString()
       : null;
 
-    return new Response(JSON.stringify({ candles, nextCursor, symbol }), {
+    // Cache the result
+    const responseData = { candles, nextCursor, symbol };
+    setCacheData(cacheKey, responseData);
+    console.log(`Cached data for key: ${cacheKey}, TTL: ${cacheTTL}ms`);
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
