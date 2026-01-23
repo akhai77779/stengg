@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "rec
 import { Layout } from "@/components/layout/Layout";
 import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
 import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
+import { AnimatedPrice, AnimatedStat } from "@/components/product/AnimatedPrice";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
@@ -304,9 +305,11 @@ const ProductDetail = () => {
         {/* Price Info Section - Top */}
         <div className="flex items-start justify-between px-1">
           <div>
-            <div className={`text-2xl font-bold ${isPositive ? "text-green-500" : "text-red-500"}`}>
-              {formatPrice(product.price)}
-            </div>
+            <AnimatedPrice
+              value={product.price}
+              formatter={formatPrice}
+              className="text-2xl font-bold"
+            />
             <div className="text-xs text-muted-foreground">
               ≈{formatPrice(product.price)}
             </div>
@@ -314,19 +317,19 @@ const ProductDetail = () => {
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h highest price</span>
-              <span className="text-cyan-400 font-medium">{highPrice ? formatPrice(highPrice) : "--"}</span>
+              <AnimatedStat value={highPrice ? formatPrice(highPrice) : null} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h lowest price</span>
-              <span className="text-cyan-400 font-medium">{lowPrice ? formatPrice(lowPrice) : "--"}</span>
+              <AnimatedStat value={lowPrice ? formatPrice(lowPrice) : null} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h trading volume</span>
-              <span className="text-cyan-400 font-medium">{formatVolume(product.volume)}</span>
+              <AnimatedStat value={formatVolume(product.volume)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h turnover</span>
-              <span className="text-cyan-400 font-medium">{formatVolume(product.volume)}</span>
+              <AnimatedStat value={formatVolume(product.volume)} className="font-medium" />
             </div>
           </div>
         </div>

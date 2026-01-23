@@ -92,6 +92,12 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "price-flash": {
+          "0%, 100%": { opacity: "1" },
+          "25%": { opacity: "0.4", color: "hsl(0 0% 100%)" },
+          "50%": { opacity: "1" },
+          "75%": { opacity: "0.4", color: "hsl(0 0% 100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -100,6 +106,7 @@ export default {
         "slide-in-right": "slide-in-right 0.5s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
+        "price-flash": "price-flash 0.6s ease-in-out",
       },
       backgroundImage: {
         "grid-pattern": "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
