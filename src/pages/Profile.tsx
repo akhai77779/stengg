@@ -259,7 +259,7 @@ export default function Profile() {
                     onClick={copyUID}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                   >
-                    <span>UID: {uid}</span>
+                    <span>ID người dùng: {uid}</span>
                     <Copy className="w-3 h-3" />
                     <span className="text-primary">{t('common.copy')}</span>
                   </button>
