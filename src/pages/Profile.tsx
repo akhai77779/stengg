@@ -30,7 +30,9 @@ import {
   UserCheck,
   Clock,
   XCircle,
-  Check
+  Check,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +53,7 @@ interface IdentityVerification {
 export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(true);
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
   const { user, signOut, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -268,27 +271,65 @@ export default function Profile() {
           {/* Balance Card */}
           <Card className="bg-card border-border mb-6">
             <CardContent className="p-4">
-              <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground mb-1">{t('profile.balance')} ({currency})</p>
-                {externalLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Loading...</span>
+              {/* Balance Row */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Available Balance */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <button
+                      onClick={() => setShowBalance(!showBalance)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                    <p className="text-xs text-muted-foreground">{t('wallet.availableBalance')} ({currency})</p>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
-                    {frozenBalance !== null && frozenBalance > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Frozen: {formatCurrency(frozenBalance)}
-                      </p>
-                    )}
-                  </>
-                )}
+                  {externalLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">
+                      {showBalance ? formatCurrency(balance) : '****'}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Talent Charity */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{t('wallet.charityTalent')} ({currency})</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {showBalance ? '0' : '****'}
+                  </p>
+                </div>
               </div>
 
+              {/* Today Earnings */}
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground mb-2">{t('wallet.todayIncome')}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('wallet.productTrade')} ({currency})</p>
+                    <p className="text-lg font-semibold text-green-500">
+                      {showBalance ? '0' : '****'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('wallet.charityTalent')} ({currency})</p>
+                    <p className="text-lg font-semibold text-foreground">
+                      {showBalance ? '0' : '****'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frozen Balance */}
+              {frozenBalance !== null && frozenBalance > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('wallet.frozenBalance')}: {showBalance ? formatCurrency(frozenBalance) : '****'}
+                </p>
+              )}
+
               {/* Quick Actions */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-border">
                 {quickActions.map((action) => (
                   <Link 
                     key={action.label} 
