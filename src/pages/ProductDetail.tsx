@@ -90,13 +90,12 @@ const ProductDetail = () => {
     return uuidRegex.test(str);
   };
 
-  // Auto-sync external data every 3 seconds and refresh product info
+  // Auto-sync external data every 15 seconds (reduced since realtime handles price updates)
   useAutoSync({ 
     enabled: !!user && isValidUUID(id),
-    interval: 3000,
+    interval: 15000, // Increased from 3s to 15s - realtime handles instant updates
     onSuccess: () => {
-      // Refresh product data after sync
-      if (isValidUUID(id)) fetchProduct();
+      // No need to fetch product - realtime subscription handles it
     }
   });
 
@@ -115,13 +114,13 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Auto-refresh only latest candles every 3 seconds (optimized)
+  // Auto-refresh candles every 10 seconds (reduced frequency since price updates come via realtime)
   useEffect(() => {
     if (!isValidUUID(id)) return;
     
     const chartRefreshInterval = setInterval(() => {
       refreshLatestCandles();
-    }, 3000);
+    }, 10000); // Increased from 3s to 10s
 
     return () => clearInterval(chartRefreshInterval);
   }, [id, timeframe, candleData.length]);
