@@ -47,13 +47,14 @@ export function Header() {
     return email.slice(0, 2).toUpperCase();
   };
 
-  // Only show header on home page
-  if (!isHome) {
-    return null;
-  }
-
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-transparent">
+    <header
+      className={
+        isHome
+          ? 'fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-transparent'
+          : 'hidden md:block fixed top-0 left-0 right-0 z-50 glass border-b border-border/50'
+      }
+    >
       {isHome && (
         <div
           aria-hidden="true"
