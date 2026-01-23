@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Layout } from "@/components/layout/Layout";
 import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
@@ -49,6 +50,23 @@ const ProductDetail = () => {
   const [indicatorConfig, setIndicatorConfig] = useState<IndicatorConfig>(defaultIndicatorConfig);
   const [highPrice, setHighPrice] = useState<number | null>(null);
   const [lowPrice, setLowPrice] = useState<number | null>(null);
+  const [activePositionCount, setActivePositionCount] = useState(0);
+
+  // Fetch active position count
+  const fetchActivePositionCount = useCallback(async () => {
+    if (!user || !id) return;
+    
+    const { count, error } = await supabase
+      .from("option_trades")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("product_id", id)
+      .eq("status", "active");
+
+    if (!error && count !== null) {
+      setActivePositionCount(count);
+    }
+  }, [user, id]);
 
   useEffect(() => {
     fetchProduct();
@@ -59,6 +77,34 @@ const ProductDetail = () => {
       fetchPriceHistory(timeframe);
     }
   }, [id, timeframe]);
+
+  // Fetch and subscribe to position count
+  useEffect(() => {
+    if (!user || !id) return;
+
+    fetchActivePositionCount();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel(`option_trades_${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'option_trades',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchActivePositionCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, id, fetchActivePositionCount]);
 
   const fetchProduct = async () => {
     if (!id) return;
@@ -213,7 +259,7 @@ const ProductDetail = () => {
 
   return (
     <Layout hideFooter>
-      <div className="space-y-3 pb-24">
+      <div className="space-y-3 pb-24 bg-background min-h-screen">
         {/* Header with back button, product name and history icon */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -319,45 +365,49 @@ const ProductDetail = () => {
         )}
 
         {/* Chart */}
-        <div className="h-64">
-          {priceHistoryLoading ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Card className="bg-card border-border">
+          <CardContent className="p-2">
+            <div className="h-64">
+              {priceHistoryLoading ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : chartType === 'candle' ? (
+                <CandlestickChart data={candleData} height={256} indicatorConfig={indicatorConfig} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis 
+                      dataKey="time" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      hide 
+                      domain={['dataMin - 100', 'dataMax + 100']}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
-          ) : chartType === 'candle' ? (
-            <CandlestickChart data={candleData} height={256} indicatorConfig={indicatorConfig} />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <XAxis 
-                  dataKey="time" 
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  hide 
-                  domain={['dataMin - 100', 'dataMax + 100']}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="price"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+          </CardContent>
+        </Card>
 
         {chartType === "candle" && nextCursor && (
           <div className="flex justify-center">
@@ -374,8 +424,8 @@ const ProductDetail = () => {
 
         {/* Position Section */}
         <div className="px-1">
-          <div className="flex items-center justify-between py-3 border-b border-border/50">
-            <span className="text-sm text-muted-foreground">Position(0)</span>
+          <div className="flex items-center justify-between py-3 border-b border-border">
+            <span className="text-sm text-muted-foreground">Position({activePositionCount})</span>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -392,13 +442,16 @@ const ProductDetail = () => {
               <ActiveOptionTrade 
                 productId={product.id} 
                 currentPrice={product.price}
-                onSettled={fetchProduct}
+                onSettled={() => {
+                  fetchProduct();
+                  fetchActivePositionCount();
+                }}
               />
             </div>
           )}
           
           {/* Empty state when no positions */}
-          {(!user || !product) && (
+          {activePositionCount === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
               Chưa có vị thế nào
             </div>
