@@ -32,8 +32,8 @@ interface DurationOption {
 
 const DURATION_OPTIONS: DurationOption[] = [
   { seconds: 240, label: '240s', profitRate: 0.06, lossRate: 0.15, minAmount: 200 },
-  { seconds: 360, label: '360s', profitRate: 0.12, lossRate: 0.15, minAmount: 10000 },
-  { seconds: 600, label: '600s', profitRate: 0.18, lossRate: 0.20, minAmount: 100000 },
+  { seconds: 360, label: '360s', profitRate: 0.10, lossRate: 0.12, minAmount: 10000 },
+  { seconds: 600, label: '600s', profitRate: 0.15, lossRate: 0.18, minAmount: 100000 },
 ];
 
 const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
