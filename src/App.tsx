@@ -17,6 +17,7 @@ import Charity from "./pages/Charity";
 import Profile from "./pages/Profile";
 import WalletDetails from "./pages/WalletDetails";
 import SecuritySettings from "./pages/SecuritySettings";
+import IdentityVerification from "./pages/IdentityVerification";
 import Dashboard from "./pages/Dashboard";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
@@ -32,6 +33,7 @@ import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOptionTrades from "./pages/admin/AdminOptionTrades";
+import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,7 @@ const App = () => (
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/wallet-details" element={<WalletDetails />} />
                 <Route path="/security" element={<SecuritySettings />} />
+                <Route path="/identity-verification" element={<IdentityVerification />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
@@ -63,12 +66,13 @@ const App = () => (
                   <Route path="banners" element={<AdminBanners />} />
                   <Route path="news" element={<AdminNews />} />
                   <Route path="products" element={<AdminProducts />} />
+                  <Route path="option-trades" element={<AdminOptionTrades />} />
                   <Route path="charity" element={<AdminCharity />} />
                   <Route path="transactions" element={<AdminTransactions />} />
+                  <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
                   <Route path="audit-logs" element={<AdminAuditLogs />} />
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="settings" element={<AdminSettings />} />
-                  <Route path="option-trades" element={<AdminOptionTrades />} />
                 </Route>
                 <Route path="/deposit" element={<Deposit />} />
                 <Route path="/withdraw" element={<Withdraw />} />

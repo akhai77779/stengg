@@ -59,6 +59,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.auditLogs': 'Audit logs',
     'admin.users': 'Người dùng',
     'admin.settings': 'Cấu hình',
+    'admin.identityVerifications': 'Xác minh danh tính',
     'admin.syncData': 'Đồng bộ dữ liệu',
     'admin.syncDescription': 'Đồng bộ dữ liệu từ API bên ngoài (products, news, banners, option times).',
     'admin.syncNow': 'Đồng bộ ngay',
@@ -344,6 +345,7 @@ const translations: Record<Language, Record<string, string>> = {
     'identity.statusPending': 'Đang chờ xác minh',
     'identity.statusApproved': 'Đã xác minh',
     'identity.statusRejected': 'Bị từ chối',
+    'identity.verifiedMessage': 'Danh tính của bạn đã được xác minh',
 
     // 404
     'notFound.title': '404',
@@ -402,6 +404,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.auditLogs': 'Audit Logs',
     'admin.users': 'Users',
     'admin.settings': 'Settings',
+    'admin.identityVerifications': 'Identity Verifications',
     'admin.syncData': 'Sync Data',
     'admin.syncDescription': 'Sync data from external API (products, news, banners, option times).',
     'admin.syncNow': 'Sync Now',
@@ -686,6 +689,7 @@ const translations: Record<Language, Record<string, string>> = {
     'identity.statusPending': 'Pending verification',
     'identity.statusApproved': 'Verified',
     'identity.statusRejected': 'Rejected',
+    'identity.verifiedMessage': 'Your identity has been verified',
 
     // 404
     'notFound.title': '404',
