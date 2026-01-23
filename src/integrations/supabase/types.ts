@@ -427,8 +427,12 @@ export type Database = {
           balance: number | null
           created_at: string
           department: string | null
+          email: string | null
           full_name: string | null
           id: string
+          last_login_at: string | null
+          last_login_ip: string | null
+          phone: string | null
           position: string | null
           total_income: number | null
           updated_at: string
@@ -441,8 +445,12 @@ export type Database = {
           balance?: number | null
           created_at?: string
           department?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
+          last_login_at?: string | null
+          last_login_ip?: string | null
+          phone?: string | null
           position?: string | null
           total_income?: number | null
           updated_at?: string
@@ -455,8 +463,12 @@ export type Database = {
           balance?: number | null
           created_at?: string
           department?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
+          last_login_at?: string | null
+          last_login_ip?: string | null
+          phone?: string | null
           position?: string | null
           total_income?: number | null
           updated_at?: string
