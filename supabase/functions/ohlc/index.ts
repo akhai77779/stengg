@@ -61,6 +61,33 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+// Retry fetch with exponential backoff for transient network errors
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  retries = 3, 
+  delayMs = 500
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`Fetch attempt ${i + 1}/${retries} failed:`, lastError.message);
+      
+      if (i < retries - 1) {
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, i)));
+      }
+    }
+  }
+  
+  throw lastError || new Error("Fetch failed after retries");
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -175,13 +202,24 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching kline data from: ${apiUrl}`);
 
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "ST-Engineering-Chart/1.0",
-      },
-    });
+    // Use fetchWithRetry for resilience against transient network errors
+    let response: Response;
+    try {
+      response = await fetchWithRetry(apiUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Chart/1.0",
+        },
+      }, 3, 300);
+    } catch (fetchError) {
+      console.error(`External API fetch failed after retries:`, fetchError);
+      // Return empty candles instead of error to prevent UI breaking
+      return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!response.ok) {
       console.error(`External API error: ${response.status}`);
