@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
 import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
 import { AnimatedPrice, AnimatedStat } from "@/components/product/AnimatedPrice";
+import { MiniPriceChart } from "@/components/product/MiniPriceChart";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
@@ -284,13 +285,23 @@ const ProductDetail = () => {
   return (
     <Layout hideFooter>
       <div className="space-y-3 pb-24 bg-background min-h-screen">
-        {/* Header with back button, product name and history icon */}
+        {/* Header with back button, product name, mini chart and history icon */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate max-w-[200px]">{product.name}</h1>
+            <h1 className="text-base font-medium truncate max-w-[140px]">{product.name}</h1>
+            {/* Mini sparkline chart */}
+            <MiniPriceChart 
+              data={candleData.slice(-20).map(c => c.close)} 
+              width={50} 
+              height={20}
+            />
+            {/* Price change badge */}
+            <span className={`text-xs font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+              {isPositive ? '+' : ''}{(product.price_change || 0).toFixed(2)}%
+            </span>
           </div>
           <Button 
             variant="ghost" 
