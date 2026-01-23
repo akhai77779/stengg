@@ -24,6 +24,7 @@ interface Product {
   symbol?: string | null;
   price: number | null;
   volume: string | null;
+  turnover?: string | null;
   price_change: number | null;
   image_url: string | null;
   description: string | null;
@@ -342,7 +343,7 @@ const ProductDetail = () => {
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">24h turnover</span>
-              <AnimatedStat value={formatVolume(product.volume)} className="font-medium" />
+              <AnimatedStat value={formatVolume(product.turnover || product.volume)} className="font-medium" />
             </div>
           </div>
         </div>
