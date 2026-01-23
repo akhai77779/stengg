@@ -432,18 +432,6 @@ const ProductDetail = () => {
           </CardContent>
         </Card>
 
-        {chartType === "candle" && nextCursor && (
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paging}
-              onClick={loadMoreHistory}
-            >
-              {paging ? "Đang tải..." : "Tải thêm"}
-            </Button>
-          </div>
-        )}
 
         {/* Position Section */}
         <div className="px-1">
