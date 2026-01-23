@@ -445,6 +445,8 @@ Deno.serve(async (req) => {
             // Parse high/low 24h prices
             const high24h = parseFloat(String(coin.high_24h || coin.high || 0)) || null;
             const low24h = parseFloat(String(coin.low_24h || coin.low || 0)) || null;
+            // Parse turnover (trading volume in money terms)
+            const turnover = String(coin.turnover || "0");
 
             const productData = {
               name: productName,
@@ -453,6 +455,7 @@ Deno.serve(async (req) => {
               category: "crypto",
               price: price,
               volume: volume,
+              turnover: turnover,
               price_change: priceChange,
               status: coin.status === 1 ? "available" : "unavailable",
               high_24h: high24h,
@@ -478,6 +481,7 @@ Deno.serve(async (req) => {
                   image_url: productData.image_url,
                   price: productData.price,
                   volume: productData.volume,
+                  turnover: productData.turnover,
                   price_change: productData.price_change,
                   status: productData.status,
                   high_24h: productData.high_24h,
