@@ -106,6 +106,17 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
+  // Auto-refresh chart data every 5 seconds for real-time updates
+  useEffect(() => {
+    if (!isValidUUID(id)) return;
+    
+    const chartRefreshInterval = setInterval(() => {
+      fetchPriceHistory(timeframe);
+    }, 5000);
+
+    return () => clearInterval(chartRefreshInterval);
+  }, [id, timeframe]);
+
   // Fetch and subscribe to position count
   useEffect(() => {
     if (!user || !id) return;
