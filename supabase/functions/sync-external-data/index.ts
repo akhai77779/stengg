@@ -448,10 +448,6 @@ Deno.serve(async (req) => {
             const price = parseFloat(String(coin.price || 0)) || 0;
             const priceChange = coin.increase ?? 0;
             const volume = String(coin.vol || "0");
-            // Map status to valid enum values (available, sold, pending)
-            const status = coin.status === 1 ? "available" : "pending";
-
-            console.log(`CoinList item ${productName}: vol=${coin.vol}, mapped volume=${volume}, status=${coin.status} -> ${status}`);
 
             const productData = {
               name: productName,
@@ -461,7 +457,7 @@ Deno.serve(async (req) => {
               price: price,
               volume: volume,
               price_change: priceChange,
-              status: status,
+              status: coin.status === 1 ? "available" : "unavailable",
             };
 
             if (!productData.name) {
@@ -492,7 +488,7 @@ Deno.serve(async (req) => {
                 console.error(`Error updating product from coinList ${productData.name}:`, error.message);
                 results.products.errors++;
               } else {
-                console.log(`Updated product from coinList: ${productData.name}, volume=${volume}`);
+                console.log(`Updated product from coinList: ${productData.name}`);
                 results.products.synced++;
               }
             } else {
@@ -504,7 +500,7 @@ Deno.serve(async (req) => {
                 console.error(`Error inserting product from coinList ${productData.name}:`, error.message);
                 results.products.errors++;
               } else {
-                console.log(`Inserted product from coinList: ${productData.name}, volume=${volume}`);
+                console.log(`Inserted product from coinList: ${productData.name}`);
                 results.products.synced++;
               }
             }
