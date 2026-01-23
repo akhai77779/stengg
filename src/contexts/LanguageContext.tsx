@@ -346,6 +346,8 @@ const translations: Record<Language, Record<string, string>> = {
     'identity.statusApproved': 'Đã xác minh',
     'identity.statusRejected': 'Bị từ chối',
     'identity.verifiedMessage': 'Danh tính của bạn đã được xác minh',
+    'identity.alreadyVerified': 'Đã xác minh',
+    'identity.alreadyVerifiedDesc': 'Bạn đã xác minh danh tính thành công',
 
     // 404
     'notFound.title': '404',
@@ -690,6 +692,8 @@ const translations: Record<Language, Record<string, string>> = {
     'identity.statusApproved': 'Verified',
     'identity.statusRejected': 'Rejected',
     'identity.verifiedMessage': 'Your identity has been verified',
+    'identity.alreadyVerified': 'Already Verified',
+    'identity.alreadyVerifiedDesc': 'Your identity has been successfully verified',
 
     // 404
     'notFound.title': '404',

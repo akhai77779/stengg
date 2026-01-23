@@ -211,10 +211,20 @@ export default function Profile() {
   ];
 
   const accountSettings = [
-    { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null },
-    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/identity-verification', badge: verificationStatus },
-    { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null },
+    { icon: Wallet, label: t('profile.walletDetails'), href: '/wallet-details', badge: null, isIdentity: false },
+    { icon: UserCheck, label: t('identity.verifyIdentity'), href: '/identity-verification', badge: verificationStatus, isIdentity: true },
+    { icon: ShieldCheck, label: t('profile.security'), href: '/security', badge: null, isIdentity: false },
   ];
+
+  const handleAccountItemClick = (item: typeof accountSettings[0], e: React.MouseEvent) => {
+    if (item.isIdentity && identityVerification?.status === 'approved') {
+      e.preventDefault();
+      toast({
+        title: t('identity.alreadyVerified'),
+        description: t('identity.alreadyVerifiedDesc'),
+      });
+    }
+  };
 
   const systemSettings = [
     { icon: Settings, label: t('common.settings'), href: '#', value: null, isLink: true },
@@ -305,6 +315,7 @@ export default function Profile() {
                   <Link 
                     key={item.label} 
                     to={item.href}
+                    onClick={(e) => handleAccountItemClick(item, e)}
                     className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-3">
