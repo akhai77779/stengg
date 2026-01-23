@@ -74,24 +74,9 @@ export function Header() {
             />
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
           {/* Language/Currency Selector + User Menu */}
           <div className="flex items-center gap-2">
             <LanguageCurrencySelector showCurrency={false} />
-            {/* Mobile: keep header minimal (bottom nav already exists) */}
             <SupportMenuButton />
 
             {/* Desktop: user menu/login */}
