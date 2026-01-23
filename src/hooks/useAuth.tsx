@@ -2,10 +2,37 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Authentication Context and Provider
+ * 
+ * SECURITY NOTICE:
+ * ================
+ * The `isAdmin` state is for UI DISPLAY PURPOSES ONLY.
+ * It determines which UI elements to show/hide (admin menus, buttons, etc.)
+ * 
+ * ⚠️ IMPORTANT: Do NOT rely on `isAdmin` for authorization decisions!
+ * 
+ * All actual access control is enforced server-side via:
+ * 1. Row-Level Security (RLS) policies using `has_role(auth.uid(), 'admin')`
+ * 2. SECURITY DEFINER functions that verify admin role before operations
+ * 
+ * Even if a malicious user manipulates the client-side `isAdmin` state,
+ * database queries will still fail due to RLS policies. This provides
+ * defense-in-depth security.
+ * 
+ * For critical admin operations, always use:
+ * - RLS policies with `USING (has_role(auth.uid(), 'admin'))`
+ * - Server-side role verification in Edge Functions
+ */
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  /** 
+   * UI-only admin flag. Use for showing/hiding admin UI elements.
+   * @security Do NOT use for authorization - server RLS policies enforce actual access.
+   */
   isAdmin: boolean;
   isAdminLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -19,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // SECURITY: isAdmin is UI-only. Actual authorization is enforced by server-side RLS policies.
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminLoading, setIsAdminLoading] = useState(true);
 
