@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Layout } from "@/components/layout/Layout";
 import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
@@ -13,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
+import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { format } from "date-fns";
 
 interface Product {
@@ -43,10 +42,13 @@ const ProductDetail = () => {
   const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
+  const [historySheetOpen, setHistorySheetOpen] = useState(false);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [paging, setPaging] = useState(false);
   const [indicatorConfig, setIndicatorConfig] = useState<IndicatorConfig>(defaultIndicatorConfig);
+  const [highPrice, setHighPrice] = useState<number | null>(null);
+  const [lowPrice, setLowPrice] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProduct();
@@ -99,6 +101,12 @@ const ProductDetail = () => {
     if (candles.length > 0) {
       setCandleData(candles);
 
+      // Calculate 24h high/low from candle data
+      const high = Math.max(...candles.map(c => c.high));
+      const low = Math.min(...candles.map(c => c.low));
+      setHighPrice(high);
+      setLowPrice(low);
+
       const timeFmt = tf === "1m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
       setChartData(
         candles.map((d) => ({
@@ -109,6 +117,8 @@ const ProductDetail = () => {
     } else {
       setCandleData([]);
       setChartData([]);
+      setHighPrice(null);
+      setLowPrice(null);
     }
     
     setPriceHistoryLoading(false);
@@ -140,7 +150,6 @@ const ProductDetail = () => {
     if (candles.length > 0) {
       const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
-      // Prepend older candles, de-dupe by exact time, then rebuild line-series labels from merged candles.
       setCandleData((prev) => {
         const map = new Map<string, OHLCData>();
         for (const c of [...candles, ...prev]) map.set(c.time, c);
@@ -170,6 +179,15 @@ const ProductDetail = () => {
     return price.toFixed(4);
   };
 
+  const formatVolume = (volume: string | null) => {
+    if (!volume) return "0";
+    const num = parseFloat(volume);
+    if (isNaN(num)) return volume;
+    if (num >= 1000000) return (num / 1000000).toFixed(2) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(2) + "K";
+    return volume;
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -195,197 +213,203 @@ const ProductDetail = () => {
 
   return (
     <Layout hideFooter>
-      <div className="space-y-4 pb-24">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/products")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+      <div className="space-y-3 pb-24">
+        {/* Header with back button, product name and history icon */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {product.image_url && (
-              <img src={product.image_url} alt={product.name} className="w-8 h-8 rounded-full" />
-            )}
-            <h1 className="text-xl font-bold">{product.name}</h1>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-base font-medium truncate max-w-[200px]">{product.name}</h1>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => setHistorySheetOpen(true)}
+          >
+            <FileText className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Price Info Section - Top */}
+        <div className="flex items-start justify-between px-1">
+          <div>
+            <div className={`text-2xl font-bold ${isPositive ? "text-green-500" : "text-red-500"}`}>
+              {formatPrice(product.price)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              ≈{formatPrice(product.price)}
+            </div>
+          </div>
+          <div className="text-right text-xs space-y-0.5">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">24h highest price</span>
+              <span className="text-cyan-400 font-medium">{highPrice ? formatPrice(highPrice) : "--"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">24h lowest price</span>
+              <span className="text-cyan-400 font-medium">{lowPrice ? formatPrice(lowPrice) : "--"}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">24h trading volume</span>
+              <span className="text-cyan-400 font-medium">{formatVolume(product.volume)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">24h turnover</span>
+              <span className="text-cyan-400 font-medium">{formatVolume(product.volume)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Price Info */}
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-bold text-primary">
-                ${formatPrice(product.price)}
-              </span>
-              <span className={`flex items-center text-sm ${isPositive ? "text-green-500" : "text-red-500"}`}>
-                {isPositive ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                {isPositive ? "+" : ""}{product.price_change?.toFixed(2)}%
-              </span>
-            </div>
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>Vol 24H: {product.volume || "0"}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Chart */}
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-4">
-            {/* Timeframe and Chart Type Controls */}
-            <div className="flex gap-2 mb-4">
-              {/* Timeframe buttons */}
-              {(["1m", "30m", "1h", "1d"] as const).map((tf) => (
-                <Button
-                  key={tf}
-                  variant={timeframe === tf ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimeframe(tf)}
-                  className="flex-1"
-                >
-                  {tf}
-                </Button>
-              ))}
-              
-              {/* Chart type toggle */}
-              <div className="flex gap-1 ml-2 border-l border-border pl-2">
-                <Button
-                  size="sm"
-                  variant={chartType === 'candle' ? 'default' : 'outline'}
-                  onClick={() => setChartType('candle')}
-                  className="px-2"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={chartType === 'line' ? 'default' : 'outline'}
-                  onClick={() => setChartType('line')}
-                  className="px-2"
-                >
-                  <LineIcon className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Indicators button - only for candle chart */}
-              {chartType === 'candle' && (
-                <ChartIndicators
-                  config={indicatorConfig}
-                  onChange={setIndicatorConfig}
-                />
-              )}
-            </div>
-            
-            {/* Chart */}
-            <div className="h-72">
-              {priceHistoryLoading ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : chartType === 'candle' ? (
-                <CandlestickChart data={candleData} height={280} indicatorConfig={indicatorConfig} />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      hide 
-                      domain={['dataMin - 100', 'dataMax + 100']}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="price"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            {chartType === "candle" && (
-              <div className="mt-3 flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!nextCursor || paging}
-                  onClick={loadMoreHistory}
-                >
-                  {paging ? "Đang tải..." : nextCursor ? "Tải thêm" : "Hết dữ liệu"}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <Tabs defaultValue="history" className="w-full">
-          <TabsList className="w-full bg-muted/50">
-            <TabsTrigger value="history" className="flex-1">Lịch sử GD</TabsTrigger>
-            <TabsTrigger value="info" className="flex-1">Thông tin</TabsTrigger>
-          </TabsList>
+        {/* Chart Type and Timeframe Controls */}
+        <div className="flex items-center gap-2 px-1">
+          <Button
+            variant={chartType === 'line' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setChartType('line')}
+            className="h-7 px-2 text-xs"
+          >
+            Line
+          </Button>
+          {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => {
+            const mappedTf = tf === "5m" || tf === "15m" ? "1m" : tf as "1m" | "30m" | "1h" | "1d";
+            const displayLabel = tf === "1m" ? "1M" : tf === "5m" ? "5M" : tf === "15m" ? "15M" : tf === "30m" ? "30M" : tf === "1h" ? "1H" : "1D";
+            return (
+              <Button
+                key={tf}
+                variant={timeframe === mappedTf && chartType === 'candle' && (tf === "1m" || tf === "30m" || tf === "1h" || tf === "1d") ? "default" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  setChartType('candle');
+                  setTimeframe(mappedTf);
+                }}
+                className="h-7 px-2 text-xs"
+              >
+                {displayLabel}
+              </Button>
+            );
+          })}
           
-          <TabsContent value="history" className="mt-4">
-            <Card className="bg-card/50 border-border/50">
-              <CardContent className="p-4 text-center text-muted-foreground">
-                <p className="text-sm">Chưa có giao dịch nào cho sản phẩm này</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Indicators button */}
+          {chartType === 'candle' && (
+            <div className="ml-auto">
+              <ChartIndicators
+                config={indicatorConfig}
+                onChange={setIndicatorConfig}
+              />
+            </div>
+          )}
+        </div>
 
-          <TabsContent value="info" className="mt-4">
-            <Card className="bg-card/50 border-border/50">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Giá hiện tại</span>
-                  <span className="font-medium">${formatPrice(product.price)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Khối lượng 24H</span>
-                  <span className="font-medium">{product.volume || "0"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Thay đổi 24H</span>
-                  <span className={`font-medium ${isPositive ? "text-green-500" : "text-red-500"}`}>
-                    {isPositive ? "+" : ""}{product.price_change?.toFixed(2)}%
-                  </span>
-                </div>
-                {product.description && (
-                  <div className="pt-3 border-t border-border/50">
-                    <p className="text-sm text-muted-foreground">{product.description}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Active Option Trade Display */}
-        {user && product && (
-          <ActiveOptionTrade 
-            productId={product.id} 
-            currentPrice={product.price}
-            onSettled={fetchProduct}
-          />
+        {/* MA Indicators Display */}
+        {chartType === 'candle' && (indicatorConfig.ma.enabled || indicatorConfig.ema.enabled) && (
+          <div className="flex gap-4 text-xs px-1">
+            {indicatorConfig.ma.enabled && (
+              <span style={{ color: indicatorConfig.ma.color }}>
+                MA{indicatorConfig.ma.period}: {candleData.length > 0 ? formatPrice(candleData[candleData.length - 1]?.close) : "--"}
+              </span>
+            )}
+            {indicatorConfig.ema.enabled && (
+              <span style={{ color: indicatorConfig.ema.color }}>
+                MA{indicatorConfig.ema.period}: {candleData.length > 0 ? formatPrice(candleData[candleData.length - 1]?.close) : "--"}
+              </span>
+            )}
+          </div>
         )}
 
-        {/* Trade Button */}
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50">
-          <div className="max-w-md mx-auto">
+        {/* Chart */}
+        <div className="h-64">
+          {priceHistoryLoading ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : chartType === 'candle' ? (
+            <CandlestickChart data={candleData} height={256} indicatorConfig={indicatorConfig} />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis 
+                  hide 
+                  domain={['dataMin - 100', 'dataMax + 100']}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="price"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {chartType === "candle" && nextCursor && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={paging}
+              onClick={loadMoreHistory}
+            >
+              {paging ? "Đang tải..." : "Tải thêm"}
+            </Button>
+          </div>
+        )}
+
+        {/* Position Section */}
+        <div className="px-1">
+          <div className="flex items-center justify-between py-3 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Position(0)</span>
             <Button 
-              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold"
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={() => setHistorySheetOpen(true)}
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Active Option Trade Display */}
+          {user && product && (
+            <div className="mt-3">
+              <ActiveOptionTrade 
+                productId={product.id} 
+                currentPrice={product.price}
+                onSettled={fetchProduct}
+              />
+            </div>
+          )}
+          
+          {/* Empty state when no positions */}
+          {(!user || !product) && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Chưa có vị thế nào
+            </div>
+          )}
+        </div>
+
+        {/* Buy Up / Buy Down Buttons */}
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50">
+          <div className="max-w-md mx-auto flex gap-3">
+            <Button 
+              className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white text-base font-semibold rounded-lg"
               onClick={() => {
                 if (!user) {
                   toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
@@ -395,8 +419,20 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              <TrendingUp className="h-5 w-5 mr-2" />
-              Mua nó ngay bây giờ
+              Buy Up
+            </Button>
+            <Button 
+              className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-lg"
+              onClick={() => {
+                if (!user) {
+                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+                  navigate('/login');
+                  return;
+                }
+                setOptionsSheetOpen(true);
+              }}
+            >
+              Buy Down
             </Button>
           </div>
         </div>
@@ -415,6 +451,13 @@ const ProductDetail = () => {
             onSuccess={fetchProduct}
           />
         )}
+
+        {/* Transaction History Sheet */}
+        <TransactionHistorySheet 
+          isOpen={historySheetOpen}
+          onClose={() => setHistorySheetOpen(false)}
+          productId={product.id}
+        />
       </div>
     </Layout>
   );
