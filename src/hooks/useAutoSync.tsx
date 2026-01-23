@@ -16,8 +16,8 @@ interface UseAutoSyncOptions {
 
 export function useAutoSync(options: UseAutoSyncOptions = {}) {
   const { 
-    enabled = false, // DISABLED: Auto-sync is turned off
-    interval = 3000, // 3 seconds default
+    enabled = true, // Re-enabled with longer interval
+    interval = 10000, // 10 seconds
     onSuccess,
     onError 
   } = options;

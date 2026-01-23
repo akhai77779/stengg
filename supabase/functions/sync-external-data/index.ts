@@ -250,22 +250,13 @@ Deno.serve(async (req) => {
             console.error(`Error updating product ${productData.name}:`, error.message);
             results.products.errors++;
           } else {
-            console.log(`Updated product: ${productData.name}`);
+          console.log(`Updated product: ${productData.name}`);
             results.products.synced++;
           }
         } else {
-          // Insert new product
-          const { error } = await supabase
-            .from("products")
-            .insert(productData);
-
-          if (error) {
-            console.error(`Error inserting product ${productData.name}:`, error.message);
-            results.products.errors++;
-          } else {
-            console.log(`Inserted product: ${productData.name}`);
-            results.products.synced++;
-          }
+          // Skip creating new products - only update existing ones
+          console.log(`Skipping new product (auto-create disabled): ${productData.name}`);
+          results.products.skipped++;
         }
       } catch (err) {
         console.error(`Error processing product ${i}:`, err);
@@ -492,17 +483,9 @@ Deno.serve(async (req) => {
                 results.products.synced++;
               }
             } else {
-              const { error } = await supabase
-                .from("products")
-                .insert(productData);
-
-              if (error) {
-                console.error(`Error inserting product from coinList ${productData.name}:`, error.message);
-                results.products.errors++;
-              } else {
-                console.log(`Inserted product from coinList: ${productData.name}`);
-                results.products.synced++;
-              }
+              // Skip creating new products - only update existing ones
+              console.log(`Skipping new product from coinList (auto-create disabled): ${productData.name}`);
+              results.products.skipped++;
             }
           } catch (err) {
             console.error(`Error processing coinList item ${i}:`, err);
