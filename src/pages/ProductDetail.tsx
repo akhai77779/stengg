@@ -114,13 +114,13 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Auto-refresh candles every 10 seconds (reduced frequency since price updates come via realtime)
+  // Auto-refresh candles every 3 seconds
   useEffect(() => {
     if (!isValidUUID(id)) return;
     
     const chartRefreshInterval = setInterval(() => {
       refreshLatestCandles();
-    }, 10000); // Increased from 3s to 10s
+    }, 3000);
 
     return () => clearInterval(chartRefreshInterval);
   }, [id, timeframe, candleData.length]);
