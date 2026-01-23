@@ -284,17 +284,22 @@ const ProductDetail = () => {
     <Layout hideFooter>
       <div className="space-y-3 pb-24 bg-background min-h-screen">
         {/* Header with back button, product name and history icon */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-9 w-9">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate max-w-[200px]">{product.name}</h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-semibold">{product.name}</h1>
+              {product.symbol && (
+                <span className="text-xs text-muted-foreground">{product.symbol}</span>
+              )}
+            </div>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8"
+            className="h-9 w-9"
             onClick={() => setHistorySheetOpen(true)}
           >
             <FileText className="h-5 w-5" />
