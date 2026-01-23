@@ -30,6 +30,7 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isProductDetail = location.pathname.startsWith('/products/') && location.pathname !== '/products';
 
   const navItems = [
     { label: t('nav.home'), href: '/', icon: Home },
@@ -46,6 +47,11 @@ export function Header() {
   const getInitials = (email: string) => {
     return email.slice(0, 2).toUpperCase();
   };
+
+  // Hide header completely on product detail pages (they have their own header)
+  if (isProductDetail) {
+    return null;
+  }
 
   return (
     <header

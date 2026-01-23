@@ -12,11 +12,12 @@ interface LayoutProps {
 export function Layout({ children, hideFooter = false }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isProductDetail = location.pathname.startsWith('/products/') && location.pathname !== '/products';
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className={isHome ? 'flex-1 pt-16 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
+      <main className={isHome ? 'flex-1 pt-16 pb-16 md:pb-0' : isProductDetail ? 'flex-1 pt-2 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
         {children}
       </main>
       {!hideFooter && <Footer />}
