@@ -106,16 +106,16 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Auto-refresh chart data every 3 seconds for real-time updates
+  // Auto-refresh only latest candles every 3 seconds (optimized)
   useEffect(() => {
     if (!isValidUUID(id)) return;
     
     const chartRefreshInterval = setInterval(() => {
-      fetchPriceHistory(timeframe);
+      refreshLatestCandles();
     }, 3000);
 
     return () => clearInterval(chartRefreshInterval);
-  }, [id, timeframe]);
+  }, [id, timeframe, candleData.length]);
 
   // Fetch and subscribe to position count
   useEffect(() => {
@@ -207,6 +207,54 @@ const ProductDetail = () => {
     }
     
     setPriceHistoryLoading(false);
+  };
+
+  // Fetch only latest candles and merge with existing data (for real-time updates)
+  const refreshLatestCandles = async () => {
+    if (!id || candleData.length === 0) return;
+
+    const { data, error } = await supabase.functions.invoke("ohlc", {
+      body: {
+        productId: id,
+        timeframe,
+        limit: 5, // Only fetch last 5 candles
+      },
+    });
+
+    if (error || !data?.candles) return;
+
+    const latestCandles = (data.candles ?? []) as OHLCData[];
+    if (latestCandles.length === 0) return;
+
+    const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+
+    setCandleData((prev) => {
+      // Merge latest candles with existing data
+      const map = new Map<string, OHLCData>();
+      for (const c of prev) map.set(c.time, c);
+      // Overwrite with latest data
+      for (const c of latestCandles) map.set(c.time, c);
+      
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+      );
+
+      // Update line chart data
+      setChartData(
+        merged.map((d) => ({
+          time: format(new Date(d.time), timeFmt),
+          price: Number(d.close),
+        })),
+      );
+
+      // Update high/low from merged data
+      const high = Math.max(...merged.map(c => c.high));
+      const low = Math.min(...merged.map(c => c.low));
+      setHighPrice(high);
+      setLowPrice(low);
+
+      return merged;
+    });
   };
 
   const loadMoreHistory = async () => {
