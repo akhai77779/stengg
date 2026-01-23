@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
-import { TransactionHistory } from '@/components/profile/TransactionHistory';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { 
   ArrowLeft,
-  ArrowDownToLine, 
-  ArrowUpFromLine, 
+  Eye,
+  EyeOff,
   Loader2,
-  RefreshCw
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,11 +22,21 @@ interface Profile {
   id: string;
   full_name: string | null;
   balance: number | null;
+  total_income: number | null;
+}
+
+interface DailyIncome {
+  date: string;
+  amount: number;
 }
 
 export default function WalletDetails() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(true);
+  const [todayTradeIncome, setTodayTradeIncome] = useState(0);
+  const [charityIncome, setCharityIncome] = useState(0);
+  const [dailyIncomeHistory, setDailyIncomeHistory] = useState<DailyIncome[]>([]);
   const { user, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { formatCurrency, currency } = useCurrency();
@@ -35,8 +45,7 @@ export default function WalletDetails() {
   const { 
     balance: externalBalance, 
     frozen: frozenBalance,
-    isLoading: externalLoading, 
-    refetch: refetchExternalBalance 
+    isLoading: externalLoading
   } = useExternalBalance(user?.id);
 
   const balance = externalBalance ?? profile?.balance ?? 0;
@@ -50,19 +59,22 @@ export default function WalletDetails() {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchTodayIncome();
+      fetchDailyIncomeHistory();
       
       const channel = supabase
         .channel('wallet-balance')
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*',
             schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${user.id}`,
+            table: 'option_trades',
+            filter: `user_id=eq.${user.id}`,
           },
           () => {
-            fetchProfile();
+            fetchTodayIncome();
+            fetchDailyIncomeHistory();
           }
         )
         .subscribe();
@@ -76,7 +88,7 @@ export default function WalletDetails() {
   const fetchProfile = async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, balance')
+      .select('id, full_name, balance, total_income')
       .eq('id', user!.id)
       .single();
 
@@ -88,6 +100,60 @@ export default function WalletDetails() {
     setIsLoading(false);
   };
 
+  const fetchTodayIncome = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Fetch today's option trade profits
+    const { data: trades, error } = await supabase
+      .from('option_trades')
+      .select('profit_loss')
+      .eq('user_id', user!.id)
+      .in('status', ['won', 'lost'])
+      .gte('settled_at', today.toISOString());
+
+    if (!error && trades) {
+      const totalProfit = trades.reduce((sum, trade) => sum + (trade.profit_loss || 0), 0);
+      setTodayTradeIncome(totalProfit);
+    }
+  };
+
+  const fetchDailyIncomeHistory = async () => {
+    // Get last 30 days of income grouped by day
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { data: trades, error } = await supabase
+      .from('option_trades')
+      .select('profit_loss, settled_at')
+      .eq('user_id', user!.id)
+      .in('status', ['won', 'lost'])
+      .gte('settled_at', thirtyDaysAgo.toISOString())
+      .order('settled_at', { ascending: false });
+
+    if (!error && trades) {
+      // Group by date
+      const groupedByDate: Record<string, number> = {};
+      trades.forEach(trade => {
+        if (trade.settled_at) {
+          const date = new Date(trade.settled_at).toLocaleDateString('vi-VN');
+          groupedByDate[date] = (groupedByDate[date] || 0) + (trade.profit_loss || 0);
+        }
+      });
+
+      const history = Object.entries(groupedByDate).map(([date, amount]) => ({
+        date,
+        amount
+      }));
+      setDailyIncomeHistory(history);
+    }
+  };
+
+  const formatAmount = (amount: number) => {
+    if (!showBalance) return '****';
+    return formatCurrency(amount);
+  };
+
   if (authLoading || isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -95,11 +161,6 @@ export default function WalletDetails() {
       </div>
     );
   }
-
-  const quickActions = [
-    { icon: ArrowDownToLine, label: t('transaction.deposit'), color: 'text-green-400', href: '/deposit' },
-    { icon: ArrowUpFromLine, label: t('transaction.withdraw'), color: 'text-orange-400', href: '/withdraw' },
-  ];
 
   return (
     <Layout hideFooter>
@@ -116,66 +177,207 @@ export default function WalletDetails() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl font-bold text-foreground">{t('profile.walletDetails')}</h1>
+            <h1 className="text-xl font-bold text-foreground flex-1 text-center pr-10">
+              {t('wallet.assets')}
+            </h1>
           </div>
 
-          {/* Balance Card */}
-          <Card className="bg-card border-border mb-6">
-            <CardContent className="p-4">
-              <div className="text-center mb-4">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <p className="text-sm text-muted-foreground">{t('profile.balance')} ({currency})</p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => refetchExternalBalance()}
-                    disabled={externalLoading}
-                  >
-                    <RefreshCw className={cn("w-4 h-4", externalLoading && "animate-spin")} />
-                  </Button>
-                </div>
-                {externalLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Loading...</span>
+          {/* Tabs */}
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="w-full mb-4 bg-transparent border-b border-border rounded-none p-0 h-auto">
+              <TabsTrigger 
+                value="overview" 
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3"
+              >
+                {t('wallet.overview')}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="charity" 
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3"
+              >
+                {t('wallet.charityTalent')}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="mt-0">
+              {/* Balance Card */}
+              <Card className="bg-card border-border mb-6">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.valuation')} ({currency})
+                    </span>
+                    <button 
+                      onClick={() => setShowBalance(!showBalance)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-3xl font-bold text-gradient">{formatCurrency(balance)}</p>
-                    {frozenBalance !== null && frozenBalance > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Frozen: {formatCurrency(frozenBalance)}
-                      </p>
-                    )}
-                  </>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {externalLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                      ) : (
+                        <p className="text-3xl font-bold text-foreground">
+                          {formatAmount(balance)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
+                      <Wallet className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Today's Income */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-foreground mb-3">
+                  {t('wallet.todayIncome')}
+                </h3>
+                
+                <Card className="bg-card border-border mb-3">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.productTrade')} ({currency})
+                    </span>
+                    <span className={cn(
+                      "font-mono font-medium",
+                      todayTradeIncome > 0 ? "text-green-500" : todayTradeIncome < 0 ? "text-red-500" : "text-foreground"
+                    )}>
+                      {showBalance ? todayTradeIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
+                    </span>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.charityTalent')} ({currency})
+                    </span>
+                    <span className="font-mono font-medium text-foreground">
+                      {showBalance ? charityIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
+                    </span>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Account Details */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-foreground mb-3">
+                  {t('wallet.accountDetails')}
+                </h3>
+                
+                <Card className="bg-card border-border mb-3">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.availableBalance')} ({currency})
+                    </span>
+                    <span className="font-mono font-medium text-primary">
+                      {formatAmount(balance)}
+                    </span>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.charityTalent')} ({currency})
+                    </span>
+                    <span className="font-mono font-medium text-foreground">
+                      {showBalance ? '0' : '****'}
+                    </span>
+                  </CardContent>
+                </Card>
+
+                {frozenBalance !== null && frozenBalance > 0 && (
+                  <Card className="bg-card border-border mt-3">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {t('wallet.frozenBalance')} ({currency})
+                      </span>
+                      <span className="font-mono font-medium text-orange-500">
+                        {formatAmount(frozenBalance)}
+                      </span>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
+            </TabsContent>
 
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                {quickActions.map((action) => (
-                  <Button 
-                    key={action.label} 
-                    variant="outline"
-                    className="flex items-center justify-center gap-2 py-6"
-                    onClick={() => navigate(action.href)}
-                  >
-                    <action.icon className={cn("w-5 h-5", action.color)} />
-                    <span className="text-sm">{action.label}</span>
-                  </Button>
-                ))}
+            {/* Charity Tab */}
+            <TabsContent value="charity" className="mt-0">
+              {/* Charity Balance Card */}
+              <Card className="bg-card border-border mb-6">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      {t('wallet.valuation')} ({currency})
+                    </span>
+                    <button 
+                      onClick={() => setShowBalance(!showBalance)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <p className="text-3xl font-bold text-foreground">
+                      {showBalance ? '0' : '****'}
+                    </p>
+                    <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
+                      <Wallet className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* No Profit Card */}
+              <Card className="bg-card border-border mb-6">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {t('wallet.noProfit')}
+                  </span>
+                  <span className="font-mono font-medium text-foreground">0</span>
+                </CardContent>
+              </Card>
+
+              {/* Daily Income History */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-foreground mb-3">
+                  {t('wallet.dailyIncomeHistory')}
+                </h3>
+                
+                {dailyIncomeHistory.length === 0 ? (
+                  <Card className="bg-card border-border">
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                      {t('wallet.noHistory')}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    {dailyIncomeHistory.map((item, index) => (
+                      <Card key={index} className="bg-card border-border">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">{item.date}</span>
+                          <span className={cn(
+                            "font-mono font-medium",
+                            item.amount > 0 ? "text-green-500" : item.amount < 0 ? "text-red-500" : "text-foreground"
+                          )}>
+                            {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Transaction History */}
-          <div className="mb-6">
-            <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
-              {t('profile.transactionHistory')}
-            </h2>
-            <TransactionHistory />
-          </div>
+            </TabsContent>
+          </Tabs>
 
         </div>
       </div>

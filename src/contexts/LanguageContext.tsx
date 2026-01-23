@@ -279,6 +279,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.walletDetails': 'Chi tiết ví',
     'profile.defaultUser': 'Người dùng',
     
+    // Wallet
+    'wallet.assets': 'Tài sản',
+    'wallet.overview': 'Tổng quan',
+    'wallet.charityTalent': 'Tổ chức từ thiện tài năng',
+    'wallet.valuation': 'Định giá',
+    'wallet.todayIncome': 'Thu nhập hôm nay',
+    'wallet.productTrade': 'Giao dịch sản phẩm',
+    'wallet.accountDetails': 'Chi tiết tài khoản',
+    'wallet.availableBalance': 'Số dư có sẵn',
+    'wallet.frozenBalance': 'Số dư đóng băng',
+    'wallet.noProfit': 'Không có lợi',
+    'wallet.dailyIncomeHistory': 'Lịch sử thu nhập hàng ngày',
+    'wallet.noHistory': 'Chưa có lịch sử',
+
     // 404
     'notFound.title': '404',
     'notFound.message': 'Oops! Trang không tồn tại',
@@ -555,7 +569,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.uidCopied': 'UID copied',
     'profile.walletDetails': 'Wallet Details',
     'profile.defaultUser': 'User',
-    
+    // Wallet
+    'wallet.assets': 'Assets',
+    'wallet.overview': 'Overview',
+    'wallet.charityTalent': 'Charity Talent Organization',
+    'wallet.valuation': 'Valuation',
+    'wallet.todayIncome': "Today's Income",
+    'wallet.productTrade': 'Product Trade',
+    'wallet.accountDetails': 'Account Details',
+    'wallet.availableBalance': 'Available Balance',
+    'wallet.frozenBalance': 'Frozen Balance',
+    'wallet.noProfit': 'No Profit',
+    'wallet.dailyIncomeHistory': 'Daily Income History',
+    'wallet.noHistory': 'No history yet',
+
     // 404
     'notFound.title': '404',
     'notFound.message': 'Oops! Page not found',
