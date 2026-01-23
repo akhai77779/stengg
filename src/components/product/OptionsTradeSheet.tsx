@@ -27,12 +27,13 @@ interface DurationOption {
   label: string;
   profitRate: number;
   lossRate: number;
+  minAmount: number;
 }
 
 const DURATION_OPTIONS: DurationOption[] = [
-  { seconds: 240, label: '240s', profitRate: 0.06, lossRate: 0.15 },
-  { seconds: 360, label: '360s', profitRate: 0.12, lossRate: 0.15 },
-  { seconds: 600, label: '600s', profitRate: 0.18, lossRate: 0.20 },
+  { seconds: 240, label: '240s', profitRate: 0.06, lossRate: 0.15, minAmount: 200 },
+  { seconds: 360, label: '360s', profitRate: 0.12, lossRate: 0.15, minAmount: 10000 },
+  { seconds: 600, label: '600s', profitRate: 0.18, lossRate: 0.20, minAmount: 200 },
 ];
 
 const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
@@ -54,6 +55,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
 
   const price = product.price || 0;
   const amountNum = parseFloat(amount) || 0;
+  const currentMinAmount = selectedDuration.minAmount;
   const estimatedProfit = amountNum * selectedDuration.profitRate;
   const priceEquivalent = amountNum > 0 && price > 0 ? (amountNum / price).toFixed(4) : '0';
 
@@ -130,10 +132,10 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
       return;
     }
 
-    if (amountNum < MIN_AMOUNT) {
+    if (amountNum < currentMinAmount) {
       toast({ 
         title: 'Số tiền không hợp lệ', 
-        description: `Tối thiểu: $${MIN_AMOUNT}`,
+        description: `Tối thiểu cho ${selectedDuration.label}: $${currentMinAmount.toLocaleString()}`,
         variant: 'destructive' 
       });
       return;
@@ -314,7 +316,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Buying amount</span>
-                <span className="text-muted-foreground">Minimum: {MIN_AMOUNT}</span>
+                <span className="text-muted-foreground">Minimum: {currentMinAmount.toLocaleString()}</span>
               </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
@@ -366,7 +368,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-red-600 hover:bg-red-700"
               )}
-              disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < MIN_AMOUNT || (balance !== null && amountNum > balance)}
+              disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
               onClick={handleTrade}
             >
               {isLoading ? (
