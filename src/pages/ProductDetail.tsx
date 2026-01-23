@@ -218,7 +218,7 @@ const ProductDetail = () => {
     setPriceHistoryLoading(false);
   };
 
-  // Fetch only latest candles and merge with existing data (for real-time updates)
+  // Fetch only latest 2 candles and merge with existing data (for real-time updates)
   const refreshLatestCandles = async () => {
     if (!id || candleData.length === 0) return;
 
@@ -226,7 +226,7 @@ const ProductDetail = () => {
       body: {
         productId: id,
         timeframe,
-        limit: 5, // Only fetch last 5 candles
+        limit: 2, // Only fetch last 2 candles (current + previous for accuracy)
       },
     });
 
@@ -238,11 +238,22 @@ const ProductDetail = () => {
     const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
     setCandleData((prev) => {
-      // Merge latest candles with existing data
+      // Only update/add the latest candles, don't rebuild the entire array
       const map = new Map<string, OHLCData>();
       for (const c of prev) map.set(c.time, c);
-      // Overwrite with latest data
-      for (const c of latestCandles) map.set(c.time, c);
+      
+      let hasChanges = false;
+      for (const c of latestCandles) {
+        const existing = map.get(c.time);
+        // Only update if candle is new or has changed
+        if (!existing || existing.close !== c.close || existing.high !== c.high || existing.low !== c.low) {
+          map.set(c.time, c);
+          hasChanges = true;
+        }
+      }
+      
+      // If no changes, return previous state to prevent unnecessary re-renders
+      if (!hasChanges) return prev;
       
       const merged = Array.from(map.values()).sort(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
