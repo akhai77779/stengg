@@ -58,6 +58,15 @@ const ProductDetail = () => {
   const [lowPrice, setLowPrice] = useState<number | null>(null);
   const [activePositionCount, setActivePositionCount] = useState(0);
 
+  // Get latest price from candle data (synced with chart)
+  const latestCandlePrice = useMemo(() => {
+    if (candleData.length === 0) return null;
+    return candleData[candleData.length - 1].close;
+  }, [candleData]);
+
+  // Use candle price if available, otherwise fallback to product price
+  const displayPrice = latestCandlePrice ?? product?.price ?? null;
+
   // Fetch active position count
   const fetchActivePositionCount = useCallback(async () => {
     if (!user || !id) return;
@@ -379,12 +388,12 @@ const ProductDetail = () => {
         <div className="flex items-start justify-between px-1">
           <div>
             <AnimatedPrice
-              value={product.price}
+              value={displayPrice}
               formatter={formatPrice}
               className="text-2xl font-bold"
             />
             <div className="text-xs text-muted-foreground">
-              ≈{formatPrice(product.price)}
+              ≈{formatPrice(displayPrice)}
             </div>
           </div>
           <div className="text-right text-xs space-y-0.5">
