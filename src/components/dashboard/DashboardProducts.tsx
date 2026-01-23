@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +59,8 @@ export function DashboardProducts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -280,6 +283,56 @@ export function DashboardProducts() {
     fetchProducts();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} sản phẩm đã chọn?`)) return;
+
+    setIsDeleting(true);
+
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .in('id', Array.from(selectedIds));
+
+    setIsDeleting(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể xóa các sản phẩm đã chọn.',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Thành công',
+      description: `Đã xóa ${selectedIds.size} sản phẩm.`,
+    });
+
+    setSelectedIds(new Set());
+    fetchProducts();
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
   const formatPrice = (price: number | null) => {
     if (!price) return '-';
     return new Intl.NumberFormat('vi-VN', {
@@ -290,8 +343,25 @@ export function DashboardProducts() {
 
   return (
     <Card className="bg-card border-border">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Quản lý Sản phẩm</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-4">
+          <CardTitle>Quản lý Sản phẩm</CardTitle>
+          {selectedIds.size > 0 && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Xóa {selectedIds.size} sản phẩm
+            </Button>
+          )}
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
           if (!open) resetForm();
@@ -403,6 +473,12 @@ export function DashboardProducts() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox 
+                    checked={products.length > 0 && selectedIds.size === products.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Tên</TableHead>
                 <TableHead>Danh mục</TableHead>
                 <TableHead>Giá</TableHead>
@@ -415,7 +491,13 @@ export function DashboardProducts() {
             </TableHeader>
             <TableBody>
               {products.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className={selectedIds.has(item.id) ? 'bg-muted/50' : ''}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={() => toggleSelect(item.id)}
+                    />
+                  </TableCell>
                   <TableCell className="max-w-xs truncate font-medium">{item.name}</TableCell>
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{formatPrice(item.price)}</TableCell>
