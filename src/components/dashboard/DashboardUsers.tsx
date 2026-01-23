@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Edit2, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -375,20 +375,33 @@ export function DashboardUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-medium text-green-500">
-                            ${(profile.balance || 0).toLocaleString()}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            onClick={() => {
+                              setEditBalanceUser(profile);
+                              setNewBalance((profile.balance || 0).toFixed(2));
+                            }}
+                            title="Trừ tiền"
+                          >
+                            <span className="text-lg font-bold">−</span>
+                          </Button>
+                          <span className="font-mono font-medium text-green-500 min-w-[80px] text-center">
+                            ${(profile.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-500/10"
                             onClick={() => {
                               setEditBalanceUser(profile);
-                              setNewBalance((profile.balance || 0).toString());
+                              setNewBalance((profile.balance || 0).toFixed(2));
                             }}
+                            title="Cộng tiền"
                           >
-                            <Edit2 className="w-3 h-3" />
+                            <span className="text-lg font-bold">+</span>
                           </Button>
                         </div>
                       </TableCell>
