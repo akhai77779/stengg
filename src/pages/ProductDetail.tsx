@@ -68,12 +68,24 @@ const ProductDetail = () => {
     }
   }, [user, id]);
 
+  // Validate UUID format
+  const isValidUUID = (str: string | undefined): boolean => {
+    if (!str) return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
   useEffect(() => {
-    fetchProduct();
+    if (isValidUUID(id)) {
+      fetchProduct();
+    } else if (id) {
+      // Invalid ID format
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
-    if (id) {
+    if (isValidUUID(id)) {
       fetchPriceHistory(timeframe);
     }
   }, [id, timeframe]);
