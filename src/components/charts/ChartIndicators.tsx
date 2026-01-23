@@ -25,8 +25,8 @@ interface ChartIndicatorsProps {
 }
 
 export const defaultIndicatorConfig: IndicatorConfig = {
-  ma: { enabled: false, period: 20, color: '#3b82f6' },
-  ema: { enabled: false, period: 12, color: '#f59e0b' },
+  ma: { enabled: true, period: 20, color: '#3b82f6' },
+  ema: { enabled: true, period: 12, color: '#f59e0b' },
 };
 
 export const ChartIndicators = ({ config, onChange }: ChartIndicatorsProps) => {
