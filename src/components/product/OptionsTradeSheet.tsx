@@ -161,6 +161,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
         _duration_seconds: selectedDuration.seconds,
         _profit_rate: selectedDuration.profitRate,
         _fee_rate: FEE_RATE,
+        _loss_rate: selectedDuration.lossRate,
       });
 
       if (error) throw error;
