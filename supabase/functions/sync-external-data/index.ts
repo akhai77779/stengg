@@ -92,6 +92,9 @@ interface BetCoinItem {
   high?: string | number;
   low?: string | number;
   vol?: string | number;
+  high_24h?: string | number;
+  low_24h?: string | number;
+  turnover?: string | number;
 }
 
 interface BetCoinListResponse {
@@ -439,6 +442,9 @@ Deno.serve(async (req) => {
             const price = parseFloat(String(coin.price || 0)) || 0;
             const priceChange = coin.increase ?? 0;
             const volume = String(coin.vol || "0");
+            // Parse high/low 24h prices
+            const high24h = parseFloat(String(coin.high_24h || coin.high || 0)) || null;
+            const low24h = parseFloat(String(coin.low_24h || coin.low || 0)) || null;
 
             const productData = {
               name: productName,
@@ -449,6 +455,8 @@ Deno.serve(async (req) => {
               volume: volume,
               price_change: priceChange,
               status: coin.status === 1 ? "available" : "unavailable",
+              high_24h: high24h,
+              low_24h: low24h,
             };
 
             if (!productData.name) {
@@ -472,6 +480,8 @@ Deno.serve(async (req) => {
                   volume: productData.volume,
                   price_change: productData.price_change,
                   status: productData.status,
+                  high_24h: productData.high_24h,
+                  low_24h: productData.low_24h,
                 })
                 .eq("id", existing.id);
 
