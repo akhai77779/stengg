@@ -1,5 +1,5 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData } from 'lightweight-charts';
+import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useState } from 'react';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
@@ -25,10 +25,19 @@ export interface CandlestickChartRef {
   resetZoom: () => void;
 }
 
+// Track last candle for highlight detection
+interface LastCandleInfo {
+  time: string;
+  close: number;
+}
+
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
   ({ data, height = 280, indicatorConfig = defaultIndicatorConfig }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
+    const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+    const lastCandleRef = useRef<LastCandleInfo | null>(null);
+    const [isHighlighting, setIsHighlighting] = useState(false);
     
     // Calculate indicators
     const maData = useMemo(() => {
@@ -40,6 +49,32 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       if (!indicatorConfig.ema.enabled) return [];
       return calculateEMA(data, indicatorConfig.ema.period);
     }, [data, indicatorConfig.ema.enabled, indicatorConfig.ema.period]);
+
+    // Detect latest candle update and trigger highlight
+    useEffect(() => {
+      if (data.length === 0) return;
+      
+      const latestCandle = data[data.length - 1];
+      const prevCandle = lastCandleRef.current;
+      
+      // Check if the latest candle has been updated
+      if (prevCandle && (
+        latestCandle.time !== prevCandle.time || 
+        latestCandle.close !== prevCandle.close
+      )) {
+        setIsHighlighting(true);
+        
+        // Reset highlight after animation
+        setTimeout(() => {
+          setIsHighlighting(false);
+        }, 600);
+      }
+      
+      lastCandleRef.current = {
+        time: latestCandle.time,
+        close: latestCandle.close,
+      };
+    }, [data]);
 
     useImperativeHandle(ref, () => ({
       zoomIn: handleZoomIn,
@@ -214,8 +249,34 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       );
     }
 
+    // Determine if latest candle is up or down for highlight color
+    const latestIsUp = data.length > 0 && data[data.length - 1].close >= data[data.length - 1].open;
+
     return (
       <div className="relative">
+        {/* Highlight overlay when price updates */}
+        {isHighlighting && (
+          <div 
+            className="absolute inset-0 pointer-events-none z-20 animate-pulse"
+            style={{
+              background: latestIsUp 
+                ? 'linear-gradient(90deg, transparent 85%, rgba(34, 197, 94, 0.15) 100%)'
+                : 'linear-gradient(90deg, transparent 85%, rgba(239, 68, 68, 0.15) 100%)',
+            }}
+          />
+        )}
+        
+        {/* Update indicator badge */}
+        {isHighlighting && (
+          <div 
+            className={`absolute top-2 left-2 z-20 px-2 py-0.5 rounded text-xs font-medium animate-fade-in ${
+              latestIsUp ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+            }`}
+          >
+            ● LIVE
+          </div>
+        )}
+        
         {/* Zoom Controls */}
         <div className="absolute top-2 right-2 z-10 flex gap-1">
           <Button
