@@ -26,21 +26,24 @@ export function useExternalBalance(userId: string | undefined): ExternalBalanceD
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('fetch-fund-account', {
-        body: { user_id: userId },
-      });
+      const { data: profile, error: dbError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', userId)
+        .maybeSingle();
 
-      if (fnError) {
-        console.error('Error fetching external balance:', fnError);
-        setError(fnError.message);
+      if (dbError) {
+        console.error('Error fetching balance from profiles:', dbError);
+        setError(dbError.message);
         return;
       }
 
-      if (data?.success) {
-        setBalance(data.balance);
-        setFrozen(data.frozen ?? 0);
+      if (profile) {
+        setBalance(profile.balance ?? 0);
+        setFrozen(0); // profiles table doesn't have frozen balance
       } else {
-        setError(data?.error || 'Failed to fetch balance');
+        setBalance(0);
+        setFrozen(0);
       }
     } catch (err) {
       console.error('Error in useExternalBalance:', err);
@@ -53,6 +56,33 @@ export function useExternalBalance(userId: string | undefined): ExternalBalanceD
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
+
+  // Realtime subscription for balance updates
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`balance-updates-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('Balance updated via realtime:', payload);
+          const newBalance = payload.new as { balance: number | null };
+          setBalance(newBalance.balance ?? 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   return {
     balance,
