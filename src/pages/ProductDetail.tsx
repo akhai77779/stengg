@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
+import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { format } from "date-fns";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -70,6 +71,7 @@ const ProductDetail = () => {
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [candleFlash, setCandleFlash] = useState(false);
   const [realtimeUpdateCount, setRealtimeUpdateCount] = useState(0);
+  const [candleCountdown, setCandleCountdown] = useState(0);
   const lastCandleTimeRef = useRef<string | null>(null);
 
   // Get latest price from candle data (synced with chart)
@@ -668,6 +670,26 @@ const ProductDetail = () => {
         {/* Chart */}
         <Card className={`bg-card border-border transition-shadow duration-300 ${candleFlash ? 'animate-candle-flash' : ''}`}>
           <CardContent className="p-2">
+            {/* Live indicator and countdown */}
+            {chartType === 'candle' && (
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Live</span>
+                  </div>
+                  {realtimeUpdateCount > 0 && (
+                    <span className="text-[10px] text-muted-foreground">
+                      +{realtimeUpdateCount} updates
+                    </span>
+                  )}
+                </div>
+                <CandleCountdown 
+                  timeframe={timeframe} 
+                  lastCandleTime={candleData.length > 0 ? candleData[candleData.length - 1].time : undefined}
+                />
+              </div>
+            )}
             <div className="h-64">
               {priceHistoryLoading ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
