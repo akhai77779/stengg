@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,15 @@ import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { format } from "date-fns";
+
+// Simple in-memory cache for candle data
+const candleCache = new Map<string, { data: OHLCData[]; timestamp: number; nextCursor: string | null }>();
+const CACHE_TTL: Record<string, number> = {
+  "1m": 500,   // 500ms for 1m timeframe
+  "30m": 5000, // 5s for 30m
+  "1h": 10000, // 10s for 1h
+  "1d": 30000, // 30s for 1d
+};
 
 interface Product {
   id: string;
@@ -249,8 +258,27 @@ const ProductDetail = () => {
   };
 
   // Fetch only latest 2 candles and merge with existing data (for real-time updates)
+  // Uses cache to reduce API calls
+  const lastRefreshRef = useRef<number>(0);
+  
   const refreshLatestCandles = async () => {
     if (!id || candleData.length === 0) return;
+
+    // Check cache TTL - skip if recently fetched
+    const now = Date.now();
+    const ttl = CACHE_TTL[timeframe] || 1000;
+    if (now - lastRefreshRef.current < ttl) {
+      return; // Skip - too soon since last refresh
+    }
+    lastRefreshRef.current = now;
+
+    const cacheKey = `refresh_${id}_${timeframe}`;
+    const cached = candleCache.get(cacheKey);
+    
+    // Return cached data if still valid
+    if (cached && (now - cached.timestamp) < ttl) {
+      return;
+    }
 
     const { data, error } = await supabase.functions.invoke("ohlc", {
       body: {
@@ -264,6 +292,13 @@ const ProductDetail = () => {
 
     const latestCandles = (data.candles ?? []) as OHLCData[];
     if (latestCandles.length === 0) return;
+
+    // Update cache
+    candleCache.set(cacheKey, {
+      data: latestCandles,
+      timestamp: now,
+      nextCursor: null,
+    });
 
     const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
