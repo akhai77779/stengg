@@ -191,29 +191,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Create Supabase client with optional auth header (for RLS if needed)
+    const authHeader = req.headers.get("Authorization");
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: {
-        headers: {
-          Authorization: authHeader,
-        },
+        headers: authHeader ? { Authorization: authHeader } : {},
       },
     });
-
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const body = await req.json().catch(() => ({}));
     const productId = typeof body.productId === "string" ? body.productId : "";
