@@ -10,9 +10,9 @@ import GuestHome from './GuestHome';
 const Index = () => {
   const { user, isLoading } = useAuth();
 
-  // Auto-sync external data every 3 seconds when user is authenticated
+  // Auto-sync disabled
   useAutoSync({ 
-    enabled: !!user,
+    enabled: false,
     interval: 3000 
   });
 
