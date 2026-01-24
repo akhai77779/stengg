@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { format } from "date-fns";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Simple in-memory cache for candle data
 const candleCache = new Map<string, { data: OHLCData[]; timestamp: number; nextCursor: string | null }>();
@@ -66,6 +67,9 @@ const ProductDetail = () => {
   const [highPrice, setHighPrice] = useState<number | null>(null);
   const [lowPrice, setLowPrice] = useState<number | null>(null);
   const [activePositionCount, setActivePositionCount] = useState(0);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [candleFlash, setCandleFlash] = useState(false);
+  const lastCandleTimeRef = useRef<string | null>(null);
 
   // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {
@@ -127,6 +131,8 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!isValidUUID(id)) return;
 
+    setRealtimeStatus('connecting');
+
     const priceHistoryChannel = supabase
       .channel(`price_history_${id}`)
       .on(
@@ -156,6 +162,13 @@ const ProductDetail = () => {
             close: newRecord.close_price,
           };
 
+          // Trigger flash animation if it's a new candle
+          if (lastCandleTimeRef.current !== newCandle.time) {
+            lastCandleTimeRef.current = newCandle.time;
+            setCandleFlash(true);
+            setTimeout(() => setCandleFlash(false), 600);
+          }
+
           // Merge with existing candles
           setCandleData(prev => {
             if (prev.length === 0) return [newCandle];
@@ -183,7 +196,14 @@ const ProductDetail = () => {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected');
+        }
+      });
 
     // Fallback polling every 5 seconds (reduced from 1s since realtime handles most updates)
     const fallbackInterval = setInterval(() => {
@@ -193,6 +213,7 @@ const ProductDetail = () => {
     return () => {
       supabase.removeChannel(priceHistoryChannel);
       clearInterval(fallbackInterval);
+      setRealtimeStatus('disconnected');
     };
   }, [id, timeframe]);
 
@@ -494,13 +515,13 @@ const ProductDetail = () => {
   return (
     <Layout hideFooter>
       <div className="space-y-3 pb-24 bg-background min-h-screen">
-        {/* Header with back button, product name, mini chart and history icon */}
+        {/* Header with back button, product name, mini chart, realtime status and history icon */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate max-w-[140px]">{product.name}</h1>
+            <h1 className="text-base font-medium truncate max-w-[120px]">{product.name}</h1>
             {/* Mini sparkline chart */}
             <MiniPriceChart 
               data={candleData.slice(-20).map(c => c.close)} 
@@ -511,6 +532,38 @@ const ProductDetail = () => {
             <span className={`text-xs font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? '+' : ''}{(product.price_change || 0).toFixed(2)}%
             </span>
+            {/* Realtime connection status */}
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    {realtimeStatus === 'connected' ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-dot" />
+                        <Wifi className="h-3 w-3 text-green-500" />
+                      </>
+                    ) : realtimeStatus === 'connecting' ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                        <Wifi className="h-3 w-3 text-yellow-500" />
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <WifiOff className="h-3 w-3 text-red-500" />
+                      </>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">
+                    {realtimeStatus === 'connected' && 'Realtime: Đang kết nối'}
+                    {realtimeStatus === 'connecting' && 'Realtime: Đang kết nối...'}
+                    {realtimeStatus === 'disconnected' && 'Realtime: Mất kết nối'}
+                  </p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
           </div>
           <Button 
             variant="ghost" 
@@ -611,7 +664,7 @@ const ProductDetail = () => {
         )}
 
         {/* Chart */}
-        <Card className="bg-card border-border">
+        <Card className={`bg-card border-border transition-shadow duration-300 ${candleFlash ? 'animate-candle-flash' : ''}`}>
           <CardContent className="p-2">
             <div className="h-64">
               {priceHistoryLoading ? (
