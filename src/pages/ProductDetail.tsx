@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff, Clock } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,8 +17,9 @@ import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
+import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
+import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
 import { format } from "date-fns";
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Simple in-memory cache for candle data
 const candleCache = new Map<string, { data: OHLCData[]; timestamp: number; nextCursor: string | null }>();
@@ -29,6 +30,16 @@ const CACHE_TTL: Record<string, number> = {
   "30m": 5000, // 5s for 30m
   "1h": 10000, // 10s for 1h
   "1d": 30000, // 30s for 1d
+};
+
+// Throttle intervals based on timeframe (faster timeframes need faster updates)
+const THROTTLE_MS: Record<string, number> = {
+  "1m": 100,   // 100ms for 1m
+  "5m": 200,   // 200ms for 5m
+  "15m": 300,  // 300ms for 15m
+  "30m": 500,  // 500ms for 30m
+  "1h": 500,   // 500ms for 1h
+  "1d": 1000,  // 1s for 1d
 };
 
 interface Product {
@@ -49,6 +60,10 @@ interface LineChartData {
   time: string;
   price: number;
 }
+
+// Memoized chart wrapper to prevent unnecessary re-renders
+const MemoizedCandlestickChart = memo(CandlestickChart);
+const MemoizedMiniPriceChart = memo(MiniPriceChart);
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -71,11 +86,9 @@ const ProductDetail = () => {
   const [highPrice, setHighPrice] = useState<number | null>(null);
   const [lowPrice, setLowPrice] = useState<number | null>(null);
   const [activePositionCount, setActivePositionCount] = useState(0);
-  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [candleFlash, setCandleFlash] = useState(false);
-  const [realtimeUpdateCount, setRealtimeUpdateCount] = useState(0);
-  const [candleCountdown, setCandleCountdown] = useState(0);
   const lastCandleTimeRef = useRef<string | null>(null);
+  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {
@@ -85,6 +98,13 @@ const ProductDetail = () => {
 
   // Use candle price if available, otherwise fallback to product price
   const displayPrice = latestCandlePrice ?? product?.price ?? null;
+
+  // Validate UUID format
+  const isValidUUID = useCallback((str: string | undefined): boolean => {
+    if (!str) return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }, []);
 
   // Fetch active position count
   const fetchActivePositionCount = useCallback(async () => {
@@ -102,210 +122,128 @@ const ProductDetail = () => {
     }
   }, [user, id]);
 
-  // Validate UUID format
-  const isValidUUID = (str: string | undefined): boolean => {
-    if (!str) return false;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  };
+  // Handle candle updates from realtime - memoized to prevent hook re-subscription
+  const handleCandleUpdate = useCallback((newCandle: OHLCData) => {
+    if (lastCandleTimeRef.current !== newCandle.time) {
+      lastCandleTimeRef.current = newCandle.time;
+      setCandleFlash(true);
+      setTimeout(() => setCandleFlash(false), 600);
+    }
+
+    setCandleData(prev => {
+      if (prev.length === 0) return [newCandle];
+      
+      const candleMap = new Map(prev.map(c => [c.time, c]));
+      const existing = candleMap.get(newCandle.time);
+      
+      // Skip if no change
+      if (existing && 
+          existing.open === newCandle.open && 
+          existing.high === newCandle.high &&
+          existing.low === newCandle.low &&
+          existing.close === newCandle.close) {
+        return prev;
+      }
+      
+      candleMap.set(newCandle.time, newCandle);
+      
+      const merged = Array.from(candleMap.values())
+        .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+      
+      const high = Math.max(...merged.map(c => c.high));
+      const low = Math.min(...merged.map(c => c.low));
+      setHighPrice(high);
+      setLowPrice(low);
+
+      const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+      setChartData(merged.map(d => {
+        const dateObj = new Date(d.time);
+        const timeStr = isNaN(dateObj.getTime()) ? d.time : format(dateObj, timeFmt);
+        return {
+          time: timeStr,
+          price: Number(d.close),
+        };
+      }));
+      
+      return merged;
+    });
+  }, [timeframe]);
+
+  // Handle product updates from realtime
+  const handleProductUpdate = useCallback((newProduct: Partial<Product>) => {
+    setProduct(prev => prev ? { ...prev, ...newProduct } : null);
+    if (newProduct.high_24h) setHighPrice(newProduct.high_24h);
+    if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
+  }, []);
+
+  // Use optimized realtime hook for product data
+  const { 
+    status: realtimeStatus, 
+    stats: realtimeStats, 
+    reconnect: reconnectRealtime,
+    isConnected 
+  } = useProductRealtime({
+    productId: id || '',
+    enabled: !!id && isValidUUID(id),
+    onCandleUpdate: handleCandleUpdate,
+    onProductUpdate: handleProductUpdate,
+    throttleMs: THROTTLE_MS[timeframe] || 200,
+    reconnectDelay: 2000,
+    maxReconnectAttempts: 5,
+  });
+
+  // Use optimized realtime hook for user trades
+  useUserTradesRealtime({
+    userId: user?.id || '',
+    productId: id,
+    enabled: !!user && !!id && isValidUUID(id),
+    onTradeUpdate: fetchActivePositionCount,
+    debounceMs: 300,
+  });
 
   // Auto-sync external data every 15 seconds (reduced since realtime handles price updates)
   useAutoSync({ 
     enabled: !!user && isValidUUID(id),
-    interval: 15000, // Increased from 3s to 15s - realtime handles instant updates
-    onSuccess: () => {
-      // No need to fetch product - realtime subscription handles it
-    }
+    interval: 15000,
+    onSuccess: () => {}
   });
 
   useEffect(() => {
     if (isValidUUID(id)) {
       fetchProduct();
+      fetchActivePositionCount();
     } else if (id) {
-      // Invalid ID format
       setLoading(false);
     }
-  }, [id]);
+  }, [id, isValidUUID, fetchActivePositionCount]);
 
   useEffect(() => {
     if (isValidUUID(id)) {
       fetchPriceHistory(timeframe);
     }
-  }, [id, timeframe]);
+  }, [id, timeframe, isValidUUID]);
 
-  // Consolidated realtime subscriptions - use single channel to avoid rate limits
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+  // Fallback polling when realtime is not connected
   useEffect(() => {
-    if (!isValidUUID(id)) return;
-
-    // Cleanup previous channel if exists
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-    
     if (fallbackIntervalRef.current) {
       clearInterval(fallbackIntervalRef.current);
       fallbackIntervalRef.current = null;
     }
 
-    setRealtimeStatus('connecting');
-
-    // Create single consolidated channel for all product-related updates
-    const channelName = `product_updates_${id}`;
-    const channel = supabase
-      .channel(channelName)
-      // Subscribe to price_history changes
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'price_history',
-          filter: `product_id=eq.${id}`,
-        },
-        (payload) => {
-          console.log('Realtime candle update:', payload.eventType);
-          const newRecord = payload.new as {
-            recorded_at: string;
-            open_price: number;
-            high_price: number;
-            low_price: number;
-            close_price: number;
-          };
-
-          const newCandle: OHLCData = {
-            time: newRecord.recorded_at,
-            open: newRecord.open_price,
-            high: newRecord.high_price,
-            low: newRecord.low_price,
-            close: newRecord.close_price,
-          };
-
-          if (lastCandleTimeRef.current !== newCandle.time) {
-            lastCandleTimeRef.current = newCandle.time;
-            setCandleFlash(true);
-            setTimeout(() => setCandleFlash(false), 600);
-          }
-          
-          setRealtimeUpdateCount(prev => prev + 1);
-
-          setCandleData(prev => {
-            if (prev.length === 0) return [newCandle];
-            
-            const candleMap = new Map(prev.map(c => [c.time, c]));
-            const existing = candleMap.get(newCandle.time);
-            
-            if (existing && 
-                existing.open === newCandle.open && 
-                existing.high === newCandle.high &&
-                existing.low === newCandle.low &&
-                existing.close === newCandle.close) {
-              return prev;
-            }
-            
-            candleMap.set(newCandle.time, newCandle);
-            
-            const merged = Array.from(candleMap.values())
-              .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-            
-            const high = Math.max(...merged.map(c => c.high));
-            const low = Math.min(...merged.map(c => c.low));
-            setHighPrice(high);
-            setLowPrice(low);
-
-            const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
-            setChartData(merged.map(d => {
-              const dateObj = new Date(d.time);
-              // Validate date before formatting
-              const timeStr = isNaN(dateObj.getTime()) ? d.time : format(dateObj, timeFmt);
-              return {
-                time: timeStr,
-                price: Number(d.close),
-              };
-            }));
-            
-            return merged;
-          });
-        }
-      )
-      // Subscribe to product price updates  
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'products',
-          filter: `id=eq.${id}`,
-        },
-        (payload) => {
-          console.log('Realtime price update:', payload.new);
-          const newProduct = payload.new as Product;
-          setProduct(prev => prev ? { ...prev, ...newProduct } : newProduct);
-          
-          if (newProduct.high_24h) setHighPrice(newProduct.high_24h);
-          if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
-        }
-      )
-      .subscribe((status, err) => {
-        console.log('Realtime subscription status:', status, err?.message);
-        
-        if (status === 'SUBSCRIBED') {
-          setRealtimeStatus('connected');
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          setRealtimeStatus('disconnected');
-        }
-      });
-
-    channelRef.current = channel;
-
-    // Fallback polling every 5 seconds
-    fallbackIntervalRef.current = setInterval(() => {
-      refreshLatestCandles();
-    }, 5000);
+    // Only poll if not connected via realtime
+    if (!isConnected && isValidUUID(id)) {
+      fallbackIntervalRef.current = setInterval(() => {
+        refreshLatestCandles();
+      }, 5000);
+    }
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
       if (fallbackIntervalRef.current) {
         clearInterval(fallbackIntervalRef.current);
         fallbackIntervalRef.current = null;
       }
-      setRealtimeStatus('disconnected');
     };
-  }, [id, timeframe]);
-
-  // Separate subscription for option trades (user-specific)
-  useEffect(() => {
-    if (!user || !id || !isValidUUID(id)) return;
-
-    fetchActivePositionCount();
-
-    const channelName = `option_trades_user_${user.id}_${id}`;
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'option_trades',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchActivePositionCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, id, fetchActivePositionCount]);
+  }, [isConnected, id, isValidUUID]);
 
   const fetchProduct = async () => {
     if (!id) return;
@@ -563,38 +501,14 @@ const ProductDetail = () => {
             <span className={`text-xs font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? '+' : ''}{(product.price_change || 0).toFixed(2)}%
             </span>
-            {/* Realtime connection status */}
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1">
-                    {realtimeStatus === 'connected' ? (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-dot" />
-                        <Wifi className="h-3 w-3 text-green-500" />
-                      </>
-                    ) : realtimeStatus === 'connecting' ? (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                        <Wifi className="h-3 w-3 text-yellow-500" />
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <WifiOff className="h-3 w-3 text-red-500" />
-                      </>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p className="text-xs">
-                    {realtimeStatus === 'connected' && `Realtime: Đang kết nối (${realtimeUpdateCount} updates)`}
-                    {realtimeStatus === 'connecting' && 'Realtime: Đang kết nối...'}
-                    {realtimeStatus === 'disconnected' && 'Realtime: Mất kết nối'}
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            {/* Realtime connection status - using memoized component */}
+            <RealtimeStatusIndicator
+              status={realtimeStatus}
+              updateCount={realtimeStats.updateCount}
+              reconnectCount={realtimeStats.reconnectCount}
+              onReconnect={reconnectRealtime}
+              showReconnectButton={realtimeStatus === 'disconnected'}
+            />
           </div>
           <Button 
             variant="ghost" 
@@ -699,17 +613,17 @@ const ProductDetail = () => {
             {/* Live indicator and countdown */}
             {chartType === 'candle' && (
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Live</span>
-                  </div>
-                  {realtimeUpdateCount > 0 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      +{realtimeUpdateCount} updates
-                    </span>
-                  )}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Live</span>
                 </div>
+                {realtimeStats.updateCount > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    +{realtimeStats.updateCount} updates
+                  </span>
+                )}
+              </div>
                 <CandleCountdown 
                   timeframe={timeframe} 
                   lastCandleTime={candleData.length > 0 ? candleData[candleData.length - 1].time : undefined}
