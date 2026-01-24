@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Menu, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Menu, Eye, EyeOff, Loader2, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,24 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Network options with fees
-const NETWORKS = [
-  { id: 'trc20', name: 'TRC20 (USDT)', fee: 1 },
-  { id: 'bep20', name: 'BEP20 (BSC)', fee: 0.5 },
-  { id: 'erc20', name: 'ERC20 (ETH)', fee: 5 },
+// Country options
+const COUNTRIES = [
+  { id: 'vn', name: 'Việt Nam' },
+  { id: 'us', name: 'United States' },
+  { id: 'sg', name: 'Singapore' },
+  { id: 'jp', name: 'Japan' },
+  { id: 'kr', name: 'Korea' },
+  { id: 'cn', name: 'China' },
+] as const;
+
+// Currency options
+const CURRENCIES = [
+  { id: 'vnd', name: 'VND - Việt Nam Đồng' },
+  { id: 'usd', name: 'USD - US Dollar' },
+  { id: 'sgd', name: 'SGD - Singapore Dollar' },
+  { id: 'jpy', name: 'JPY - Japanese Yen' },
+  { id: 'krw', name: 'KRW - Korean Won' },
+  { id: 'cny', name: 'CNY - Chinese Yuan' },
 ] as const;
 
 export default function WithdrawPage() {
@@ -27,8 +40,9 @@ export default function WithdrawPage() {
   const { t } = useLanguage();
   
   const [amount, setAmount] = useState("");
-  const [network, setNetwork] = useState<string>("");
-  const [address, setAddress] = useState("");
+  const [country, setCountry] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("");
+  const [bankAccount, setBankAccount] = useState<string>("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,14 +53,10 @@ export default function WithdrawPage() {
   const availableBalance = externalBalance ?? 0;
   const maxWithdraw = availableBalance;
   
-  // Get selected network fee
-  const selectedNetwork = NETWORKS.find(n => n.id === network);
-  const networkFee = selectedNetwork?.fee ?? 0;
-  
   // Calculate amounts
   const amountNum = parseFloat(amount) || 0;
   const totalDeduction = amountNum + (amountNum * 0.01); // 1% fee from RPC
-  const netAmount = amountNum - networkFee;
+  const processingFee = amountNum * 0.01;
 
   // Convert to VND for display
   const balanceInVnd = convertCurrency(availableBalance, 'USD', 'VND');
@@ -64,21 +74,6 @@ export default function WithdrawPage() {
     setAmount(Math.floor(maxAfterFee).toString());
   };
 
-  // Validate wallet address format
-  const isValidAddress = (addr: string, net: string): boolean => {
-    if (!addr || !net) return false;
-    
-    switch (net) {
-      case 'trc20':
-        return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr);
-      case 'bep20':
-      case 'erc20':
-        return /^0x[0-9a-fA-F]{40}$/.test(addr);
-      default:
-        return false;
-    }
-  };
-
   const handleWithdraw = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
@@ -86,8 +81,18 @@ export default function WithdrawPage() {
     }
 
     // Client-side validations
-    if (!network) {
-      toast.error("Vui lòng chọn mạng lưới");
+    if (!country) {
+      toast.error("Vui lòng chọn quốc gia");
+      return;
+    }
+
+    if (!currency) {
+      toast.error("Vui lòng chọn tiền tệ");
+      return;
+    }
+
+    if (!bankAccount) {
+      toast.error("Vui lòng chọn tài khoản ngân hàng");
       return;
     }
 
@@ -98,16 +103,6 @@ export default function WithdrawPage() {
 
     if (totalDeduction > availableBalance) {
       toast.error("Số dư không đủ (bao gồm phí 1%)");
-      return;
-    }
-
-    if (!address.trim()) {
-      toast.error("Vui lòng nhập địa chỉ ví");
-      return;
-    }
-
-    if (!isValidAddress(address.trim(), network)) {
-      toast.error("Địa chỉ ví không hợp lệ cho mạng đã chọn");
       return;
     }
 
@@ -128,8 +123,8 @@ export default function WithdrawPage() {
       const { data, error } = await supabase.rpc('create_withdrawal_request', {
         _user_id: user.id,
         _amount: parseFloat(amount),
-        _network: network,
-        _wallet_address: address.trim(),
+        _network: currency, // Use currency as network for now
+        _wallet_address: bankAccount,
       });
 
       if (error) {
@@ -150,9 +145,10 @@ export default function WithdrawPage() {
       
       // Reset form
       setAmount("");
-      setAddress("");
+      setBankAccount("");
       setPassword("");
-      setNetwork("");
+      setCountry("");
+      setCurrency("");
       
       // Refetch balance
       refetchBalance();
@@ -212,18 +208,36 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Network Select */}
-        <div className="space-y-3">
+        {/* Country & Currency Select */}
+        <div className="bg-card rounded-lg p-4 border border-border space-y-4">
+          {/* Country Select */}
           <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Mạng lưới</Label>
-            <Select value={network} onValueChange={setNetwork}>
-              <SelectTrigger className="w-full bg-card border-b border-border rounded-none h-12 px-0 focus:ring-0 focus:border-primary">
-                <SelectValue placeholder="Vui lòng chọn mạng lưới" className="text-muted-foreground" />
+            <Label className="text-sm text-muted-foreground mb-2 block">Quốc gia</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary">
+                <SelectValue placeholder="Vui lòng chọn một quốc gia" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                {NETWORKS.map((net) => (
-                  <SelectItem key={net.id} value={net.id}>
-                    {net.name} - Phí: ${net.fee}
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Currency Select */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Tiền tệ</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary">
+                <SelectValue placeholder="Vui lòng chọn tiền tệ" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -231,20 +245,17 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Address Input */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Địa chỉ ví {network.toUpperCase()}</Label>
-          <Input
-            type="text"
-            placeholder={network === 'trc20' ? 'T...' : '0x...'}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground h-auto p-0 focus-visible:ring-0"
-          />
-          {address && network && !isValidAddress(address, network) && (
-            <p className="text-destructive text-xs mt-2">Địa chỉ không hợp lệ cho mạng {network.toUpperCase()}</p>
-          )}
-        </div>
+        {/* Bank Account Selection */}
+        <button
+          type="button"
+          onClick={() => toast.info("Tính năng chọn tài khoản ngân hàng đang được phát triển")}
+          className="w-full bg-card rounded-lg p-4 border border-border flex items-center justify-between hover:bg-muted/50 transition-colors"
+        >
+          <span className="text-muted-foreground">
+            {bankAccount || "Vui lòng chọn tài khoản ngân hàng"}
+          </span>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </button>
 
         {/* Amount Section */}
         <div className="bg-card rounded-lg p-4 border border-border">
@@ -281,29 +292,8 @@ export default function WithdrawPage() {
 
         {/* Fee Section */}
         <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Chi tiết phí</Label>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Phí xử lý (1%):</span>
-              <span className="text-foreground">{(amountNum * 0.01).toFixed(2)} USD</span>
-            </div>
-            {networkFee > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Phí mạng {network.toUpperCase()}:</span>
-                <span className="text-foreground">{networkFee.toFixed(2)} USD</span>
-              </div>
-            )}
-            <div className="border-t border-border pt-2 flex justify-between">
-              <span className="text-muted-foreground">Tổng trừ từ số dư:</span>
-              <span className="font-semibold text-foreground">{totalDeduction.toFixed(2)} USD</span>
-            </div>
-            {amountNum > 0 && netAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-500">
-                <span>Số tiền nhận được:</span>
-                <span className="font-semibold">{netAmount.toFixed(2)} USD</span>
-              </div>
-            )}
-          </div>
+          <Label className="text-sm text-foreground mb-2 block">Phí xử lý</Label>
+          <div className="text-foreground">{processingFee.toFixed(2)}</div>
         </div>
 
         {/* Password Input */}
