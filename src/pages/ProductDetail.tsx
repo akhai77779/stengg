@@ -87,6 +87,7 @@ const ProductDetail = () => {
   }, [timeframe]);
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
+  const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -730,6 +731,8 @@ const ProductDetail = () => {
                   navigate('/login');
                   return;
                 }
+                console.log('Clicked Buy Up - setting direction to buy');
+                setTradeDirection('buy');
                 setOptionsSheetOpen(true);
               }}
             >
@@ -743,6 +746,8 @@ const ProductDetail = () => {
                   navigate('/login');
                   return;
                 }
+                console.log('Clicked Buy Down - setting direction to sell');
+                setTradeDirection('sell');
                 setOptionsSheetOpen(true);
               }}
             >
@@ -762,6 +767,7 @@ const ProductDetail = () => {
               symbol: product.symbol,
               price: product.price,
             }}
+            initialDirection={tradeDirection}
             onSuccess={fetchProduct}
           />
         )}
