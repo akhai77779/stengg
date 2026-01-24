@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.create-wallet-address]
 verify_jwt = false
+
+[functions.sync-price-history]
+verify_jwt = false
