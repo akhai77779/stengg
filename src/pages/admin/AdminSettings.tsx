@@ -42,7 +42,7 @@ export default function AdminSettings() {
     withdrawalFeePercent: "1",
     bannersEnabled: true,
     supportEnabled: true,
-    liveChatUrl: "https://tawk.to/chat",
+    liveChatUrl: "https://direct.lc.chat/19460523/",
   });
 
   const parsed = useMemo(() => {
@@ -95,7 +95,7 @@ export default function AdminSettings() {
           withdrawalFeePercent: String(withdrawalFee?.percent ?? 1),
           bannersEnabled: Boolean(bannersEnabled?.enabled ?? true),
           supportEnabled: Boolean(supportEnabled?.enabled ?? true),
-          liveChatUrl: String(liveChatUrl?.url ?? "https://tawk.to/chat"),
+          liveChatUrl: String(liveChatUrl?.url ?? "https://direct.lc.chat/19460523/"),
         }));
       } catch (e) {
         console.error(e);
@@ -217,7 +217,7 @@ export default function AdminSettings() {
               onChange={(e) => setState((s) => ({ ...s, liveChatUrl: e.target.value }))}
             />
             <p className="text-xs text-muted-foreground">
-              Dùng cho nút CSKH trên mobile.
+              Dùng cho nút CSKH trên mobile. <span className="text-primary font-medium">Không bị ghi đè bởi API sync.</span>
             </p>
           </div>
 
