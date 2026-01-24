@@ -48,23 +48,51 @@ interface LineChartData {
   price: number;
 }
 
+// LocalStorage keys for persisting chart settings
+const CHART_SETTINGS_KEY = 'chart-settings';
+
+const loadChartSettings = () => {
+  try {
+    const saved = localStorage.getItem(CHART_SETTINGS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        timeframe: parsed.timeframe || '1h',
+        chartType: parsed.chartType || 'candle',
+        indicatorConfig: parsed.indicatorConfig || defaultIndicatorConfig,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to load chart settings:', e);
+  }
+  return {
+    timeframe: '1h' as const,
+    chartType: 'candle' as const,
+    indicatorConfig: defaultIndicatorConfig,
+  };
+};
+
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Load saved settings from localStorage
+  const savedSettings = useMemo(() => loadChartSettings(), []);
+  
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<LineChartData[]>([]);
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
-  const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
-  const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
+  const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">(savedSettings.timeframe);
+  const [chartType, setChartType] = useState<'candle' | 'line'>(savedSettings.chartType);
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [paging, setPaging] = useState(false);
-  const [indicatorConfig, setIndicatorConfig] = useState<IndicatorConfig>(defaultIndicatorConfig);
+  const [indicatorConfig, setIndicatorConfig] = useState<IndicatorConfig>(savedSettings.indicatorConfig);
   const [highPrice, setHighPrice] = useState<number | null>(null);
   const [lowPrice, setLowPrice] = useState<number | null>(null);
   const [activePositionCount, setActivePositionCount] = useState(0);
@@ -105,6 +133,19 @@ const ProductDetail = () => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
+
+  // Save chart settings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHART_SETTINGS_KEY, JSON.stringify({
+        timeframe,
+        chartType,
+        indicatorConfig,
+      }));
+    } catch (e) {
+      console.warn('Failed to save chart settings:', e);
+    }
+  }, [timeframe, chartType, indicatorConfig]);
 
   // Auto-sync external data every 15 seconds (reduced since realtime handles price updates)
   useAutoSync({ 
