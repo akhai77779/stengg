@@ -19,6 +19,7 @@ interface OptionsTradeSheetProps {
     symbol?: string | null;
     price: number | null;
   };
+  initialDirection?: 'buy' | 'sell';
   onSuccess?: () => void;
 }
 
@@ -40,10 +41,10 @@ const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
 const FEE_RATE = 0.002;
 const MIN_AMOUNT = 200;
 
-export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: OptionsTradeSheetProps) {
+export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection = 'buy', onSuccess }: OptionsTradeSheetProps) {
   const [amount, setAmount] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<DurationOption>(DURATION_OPTIONS[0]);
-  const [direction, setDirection] = useState<'buy' | 'sell'>('buy');
+  const [direction, setDirection] = useState<'buy' | 'sell'>(initialDirection);
   const [isLoading, setIsLoading] = useState(false);
   const [hasActiveTrade, setHasActiveTrade] = useState(false);
   const [checkingActiveTrade, setCheckingActiveTrade] = useState(false);
@@ -83,11 +84,17 @@ export function OptionsTradeSheet({ isOpen, onClose, product, onSuccess }: Optio
     }
   }, [isOpen, user, refetchBalance, checkActiveTrade]);
 
+  // Sync direction when sheet opens with new initialDirection
+  useEffect(() => {
+    if (isOpen) {
+      setDirection(initialDirection);
+    }
+  }, [isOpen, initialDirection]);
+
   useEffect(() => {
     if (!isOpen) {
       setAmount('');
       setSelectedDuration(DURATION_OPTIONS[0]);
-      setDirection('buy');
       setShowSuccessDialog(false);
     }
   }, [isOpen]);
