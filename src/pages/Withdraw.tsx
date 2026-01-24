@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Menu, Eye, EyeOff, Loader2, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,14 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface BankAccount {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  branch: string | null;
+}
 
 // Country options
 const COUNTRIES = [
@@ -34,6 +42,7 @@ const CURRENCIES = [
 
 export default function WithdrawPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const { balance: externalBalance, frozen: frozenBalance, isLoading: balanceLoading, refetch: refetchBalance } = useExternalBalance(user?.id);
   const { convertCurrency } = useCurrency();
@@ -42,7 +51,7 @@ export default function WithdrawPage() {
   const [amount, setAmount] = useState("");
   const [country, setCountry] = useState<string>("");
   const [currency, setCurrency] = useState<string>("");
-  const [bankAccount, setBankAccount] = useState<string>("");
+  const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +61,7 @@ export default function WithdrawPage() {
   // Use external balance, fallback to 0
   const availableBalance = externalBalance ?? 0;
   const maxWithdraw = availableBalance;
-  
+
   // Calculate amounts
   const amountNum = parseFloat(amount) || 0;
   const totalDeduction = amountNum + (amountNum * 0.01); // 1% fee from RPC
@@ -60,6 +69,16 @@ export default function WithdrawPage() {
 
   // Convert to VND for display
   const balanceInVnd = convertCurrency(availableBalance, 'USD', 'VND');
+
+  // Handle selected bank account from BankAccounts page
+  useEffect(() => {
+    const state = location.state as { selectedAccount?: BankAccount } | null;
+    if (state?.selectedAccount) {
+      setSelectedBankAccount(state.selectedAccount);
+      // Clear the state to prevent re-applying on future navigations
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -91,7 +110,7 @@ export default function WithdrawPage() {
       return;
     }
 
-    if (!bankAccount) {
+    if (!selectedBankAccount) {
       toast.error("Vui lòng chọn tài khoản ngân hàng");
       return;
     }
@@ -124,7 +143,7 @@ export default function WithdrawPage() {
         _user_id: user.id,
         _amount: parseFloat(amount),
         _network: currency, // Use currency as network for now
-        _wallet_address: bankAccount,
+        _wallet_address: `${selectedBankAccount.bank_name} - ${selectedBankAccount.account_number}`,
       });
 
       if (error) {
@@ -145,7 +164,7 @@ export default function WithdrawPage() {
       
       // Reset form
       setAmount("");
-      setBankAccount("");
+      setSelectedBankAccount(null);
       setPassword("");
       setCountry("");
       setCurrency("");
@@ -248,12 +267,21 @@ export default function WithdrawPage() {
         {/* Bank Account Selection */}
         <button
           type="button"
-          onClick={() => toast.info("Tính năng chọn tài khoản ngân hàng đang được phát triển")}
+          onClick={() => navigate('/bank-accounts', { state: { selectMode: true } })}
           className="w-full bg-card rounded-lg p-4 border border-border flex items-center justify-between hover:bg-muted/50 transition-colors"
         >
-          <span className="text-muted-foreground">
-            {bankAccount || "Vui lòng chọn tài khoản ngân hàng"}
-          </span>
+          {selectedBankAccount ? (
+            <div className="text-left space-y-1">
+              <div className="text-foreground font-medium">{selectedBankAccount.bank_name}</div>
+              <div className="text-sm text-muted-foreground">
+                {selectedBankAccount.account_holder} - ****{selectedBankAccount.account_number.slice(-4)}
+              </div>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">
+              Vui lòng chọn tài khoản ngân hàng
+            </span>
+          )}
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </button>
 
