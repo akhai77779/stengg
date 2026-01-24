@@ -37,7 +37,7 @@ export function GuestHeader() {
             <div className="flex items-center gap-4">
               <a href="#" className="hover:text-foreground">{t('guest.global')}</a>
               <a href="#" className="hover:text-foreground">{t('guest.contact')}</a>
-              <a href="#" className="hover:text-foreground">{t('guest.support')}</a>
+              <a href="https://direct.lc.chat/19460523/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{t('guest.support')}</a>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/login" className="hover:text-foreground">{t('nav.login')}</Link>
