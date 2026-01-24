@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff, Clock } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineIcon, FileText, Wifi, WifiOff, Clock, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -126,6 +126,18 @@ const ProductDetail = () => {
       setActivePositionCount(count);
     }
   }, [user, id]);
+
+  // Reset chart settings to default
+  const resetChartSettings = useCallback(() => {
+    setTimeframe('1h');
+    setChartType('candle');
+    setIndicatorConfig(defaultIndicatorConfig);
+    localStorage.removeItem(CHART_SETTINGS_KEY);
+    toast({
+      title: "Đã reset",
+      description: "Cấu hình chart đã được khôi phục về mặc định",
+    });
+  }, [toast]);
 
   // Validate UUID format
   const isValidUUID = (str: string | undefined): boolean => {
@@ -681,13 +693,30 @@ const ProductDetail = () => {
             );
           })}
           
-          {/* Indicators button */}
+          {/* Indicators button and Reset */}
           {chartType === 'candle' && (
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
               <ChartIndicators
                 config={indicatorConfig}
                 onChange={setIndicatorConfig}
               />
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={resetChartSettings}
+                      className="h-8 w-8 p-0"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">Reset về mặc định</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>
