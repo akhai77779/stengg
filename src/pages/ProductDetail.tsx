@@ -217,10 +217,15 @@ const ProductDetail = () => {
             setLowPrice(low);
 
             const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
-            setChartData(merged.map(d => ({
-              time: format(new Date(d.time), timeFmt),
-              price: Number(d.close),
-            })));
+            setChartData(merged.map(d => {
+              const dateObj = new Date(d.time);
+              // Validate date before formatting
+              const timeStr = isNaN(dateObj.getTime()) ? d.time : format(dateObj, timeFmt);
+              return {
+                time: timeStr,
+                price: Number(d.close),
+              };
+            }));
             
             return merged;
           });
