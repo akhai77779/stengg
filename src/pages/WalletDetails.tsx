@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -17,6 +18,36 @@ import {
   Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Skeleton component for balance card
+function BalanceCardSkeleton() {
+  return (
+    <Card className="bg-card border-border mb-6">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-4 rounded" />
+        </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="w-20 h-20 rounded-lg" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Skeleton component for income cards
+function IncomeCardSkeleton() {
+  return (
+    <Card className="bg-card border-border">
+      <CardContent className="p-4 flex items-center justify-between">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-5 w-16" />
+      </CardContent>
+    </Card>
+  );
+}
 
 interface Profile {
   id: string;
@@ -154,13 +185,16 @@ export default function WalletDetails() {
     return formatCurrency(amount);
   };
 
-  if (authLoading || isLoading || !user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  // Show skeleton while loading data
+  const showSkeleton = isLoading || externalLoading;
 
   return (
     <Layout hideFooter>
@@ -202,36 +236,36 @@ export default function WalletDetails() {
             {/* Overview Tab */}
             <TabsContent value="overview" className="mt-0">
               {/* Balance Card */}
-              <Card className="bg-card border-border mb-6">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      {t('wallet.valuation')} ({currency})
-                    </span>
-                    <button 
-                      onClick={() => setShowBalance(!showBalance)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {externalLoading ? (
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                      ) : (
+              {showSkeleton ? (
+                <BalanceCardSkeleton />
+              ) : (
+                <Card className="bg-card border-border mb-6">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-muted-foreground">
+                        {t('wallet.valuation')} ({currency})
+                      </span>
+                      <button 
+                        onClick={() => setShowBalance(!showBalance)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
                         <p className="text-3xl font-bold text-foreground">
                           {formatAmount(balance)}
                         </p>
-                      )}
+                      </div>
+                      <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
+                        <Wallet className="w-10 h-10 text-muted-foreground" />
+                      </div>
                     </div>
-                    <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
-                      <Wallet className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Today's Income */}
               <div className="mb-6">
@@ -239,30 +273,39 @@ export default function WalletDetails() {
                   {t('wallet.todayIncome')}
                 </h3>
                 
-                <Card className="bg-card border-border mb-3">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {t('wallet.productTrade')} ({currency})
-                    </span>
-                    <span className={cn(
-                      "font-mono font-medium",
-                      todayTradeIncome > 0 ? "text-green-500" : todayTradeIncome < 0 ? "text-red-500" : "text-foreground"
-                    )}>
-                      {showBalance ? todayTradeIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
-                    </span>
-                  </CardContent>
-                </Card>
+                {showSkeleton ? (
+                  <div className="space-y-3">
+                    <IncomeCardSkeleton />
+                    <IncomeCardSkeleton />
+                  </div>
+                ) : (
+                  <>
+                    <Card className="bg-card border-border mb-3">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          {t('wallet.productTrade')} ({currency})
+                        </span>
+                        <span className={cn(
+                          "font-mono font-medium",
+                          todayTradeIncome > 0 ? "text-green-500" : todayTradeIncome < 0 ? "text-red-500" : "text-foreground"
+                        )}>
+                          {showBalance ? todayTradeIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
+                        </span>
+                      </CardContent>
+                    </Card>
 
-                <Card className="bg-card border-border">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {t('wallet.charityTalent')} ({currency})
-                    </span>
-                    <span className="font-mono font-medium text-foreground">
-                      {showBalance ? charityIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
-                    </span>
-                  </CardContent>
-                </Card>
+                    <Card className="bg-card border-border">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          {t('wallet.charityTalent')} ({currency})
+                        </span>
+                        <span className="font-mono font-medium text-foreground">
+                          {showBalance ? charityIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
               </div>
 
               {/* Account Details */}
@@ -271,39 +314,48 @@ export default function WalletDetails() {
                   {t('wallet.accountDetails')}
                 </h3>
                 
-                <Card className="bg-card border-border mb-3">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {t('wallet.availableBalance')} ({currency})
-                    </span>
-                    <span className="font-mono font-medium text-primary">
-                      {formatAmount(balance)}
-                    </span>
-                  </CardContent>
-                </Card>
+                {showSkeleton ? (
+                  <div className="space-y-3">
+                    <IncomeCardSkeleton />
+                    <IncomeCardSkeleton />
+                  </div>
+                ) : (
+                  <>
+                    <Card className="bg-card border-border mb-3">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          {t('wallet.availableBalance')} ({currency})
+                        </span>
+                        <span className="font-mono font-medium text-primary">
+                          {formatAmount(balance)}
+                        </span>
+                      </CardContent>
+                    </Card>
 
-                <Card className="bg-card border-border">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {t('wallet.charityTalent')} ({currency})
-                    </span>
-                    <span className="font-mono font-medium text-foreground">
-                      {showBalance ? '0' : '****'}
-                    </span>
-                  </CardContent>
-                </Card>
+                    <Card className="bg-card border-border">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          {t('wallet.charityTalent')} ({currency})
+                        </span>
+                        <span className="font-mono font-medium text-foreground">
+                          {showBalance ? '0' : '****'}
+                        </span>
+                      </CardContent>
+                    </Card>
 
-                {frozenBalance !== null && frozenBalance > 0 && (
-                  <Card className="bg-card border-border mt-3">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        {t('wallet.frozenBalance')} ({currency})
-                      </span>
-                      <span className="font-mono font-medium text-orange-500">
-                        {formatAmount(frozenBalance)}
-                      </span>
-                    </CardContent>
-                  </Card>
+                    {frozenBalance !== null && frozenBalance > 0 && (
+                      <Card className="bg-card border-border mt-3">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            {t('wallet.frozenBalance')} ({currency})
+                          </span>
+                          <span className="font-mono font-medium text-orange-500">
+                            {formatAmount(frozenBalance)}
+                          </span>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
