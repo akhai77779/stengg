@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,14 @@ interface Profile {
 interface UserRole {
   user_id: string;
   role: AppRole;
+}
+
+interface BankAccount {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  branch: string | null;
 }
 
 export function DashboardUsers() {
@@ -77,6 +85,10 @@ export function DashboardUsers() {
 
   // Copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Bank accounts for selected user
+  const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
+  const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -134,6 +146,28 @@ export function DashboardUsers() {
     await navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const fetchUserBankAccounts = async (userId: string) => {
+    setIsLoadingBankAccounts(true);
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching bank accounts:', error);
+    } else {
+      setUserBankAccounts(data || []);
+    }
+    setIsLoadingBankAccounts(false);
+  };
+
+  const handleShowUserDetail = (profile: Profile) => {
+    setSelectedUser(profile);
+    setShowDetailDialog(true);
+    fetchUserBankAccounts(profile.id);
   };
 
   const handleAddBalance = async () => {
@@ -486,10 +520,7 @@ export function DashboardUsers() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => {
-                              setSelectedUser(profile);
-                              setShowDetailDialog(true);
-                            }}
+                            onClick={() => handleShowUserDetail(profile)}
                             title="Chi tiết"
                           >
                             <Eye className="w-4 h-4" />
@@ -635,10 +666,45 @@ export function DashboardUsers() {
                 )}
               </div>
 
+              {/* Bank Accounts Section */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Tài khoản ngân hàng đã lưu
+                </p>
+                {isLoadingBankAccounts ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : userBankAccounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Chưa có tài khoản ngân hàng nào</p>
+                ) : (
+                  <div className="space-y-2">
+                    {userBankAccounts.map((account) => (
+                      <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm">
+                        <div className="font-medium">{account.bank_name}</div>
+                        <div className="text-muted-foreground">
+                          STK: <span className="font-mono">{account.account_number}</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          Chủ TK: {account.account_holder}
+                        </div>
+                        {account.branch && (
+                          <div className="text-muted-foreground text-xs">
+                            Chi nhánh: {account.branch}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Wallet Addresses Section */}
               <div className="border-t pt-4">
                 <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
                   <Landmark className="w-4 h-4" />
-                  Thông tin ngân hàng
+                  Địa chỉ ví USDT
                 </p>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
