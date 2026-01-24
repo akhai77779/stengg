@@ -561,13 +561,13 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Chart Type and Timeframe Controls */}
-        <div className="flex items-center gap-2 px-1">
+        {/* Chart Type and Timeframe Controls - Mobile optimized with larger touch targets */}
+        <div className="flex items-center gap-1.5 px-1 overflow-x-auto scrollbar-hide">
           <Button
             variant={chartType === 'line' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setChartType('line')}
-            className="h-7 px-2 text-xs"
+            className="min-h-[36px] h-9 min-w-[44px] px-3 text-xs font-medium touch-action-manipulation"
           >
             Line
           </Button>
@@ -582,7 +582,7 @@ const ProductDetail = () => {
                   setChartType('candle');
                   setTimeframe(tf);
                 }}
-                className="h-7 px-2 text-xs"
+                className="min-h-[36px] h-9 min-w-[40px] px-2.5 text-xs font-medium touch-action-manipulation"
               >
                 {displayLabel}
               </Button>
@@ -591,7 +591,7 @@ const ProductDetail = () => {
           
           {/* Indicators button */}
           {chartType === 'candle' && (
-            <div className="ml-auto">
+            <div className="ml-auto flex-shrink-0">
               <ChartIndicators
                 config={indicatorConfig}
                 onChange={setIndicatorConfig}
@@ -616,7 +616,7 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* Chart */}
+        {/* Chart - optimized for touch interactions */}
         <Card className={`bg-card border-border transition-shadow duration-300 ${candleFlash ? 'animate-candle-flash' : ''}`}>
           <CardContent className="p-2">
             {/* Live indicator and countdown */}
@@ -639,7 +639,8 @@ const ProductDetail = () => {
                 />
               </div>
             )}
-            <div className="h-64">
+            {/* Chart container with touch optimization */}
+            <div className="h-64 touch-action-chart gpu-accelerate">
               {priceHistoryLoading ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -718,11 +719,11 @@ const ProductDetail = () => {
           )}
         </div>
 
-        {/* Buy Up / Buy Down Buttons */}
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50">
+        {/* Buy Up / Buy Down Buttons - Large touch targets for mobile */}
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50 safe-area-margin-bottom">
           <div className="max-w-md mx-auto flex gap-3">
             <Button 
-              className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white text-base font-semibold rounded-lg"
+              className="flex-1 min-h-[48px] h-12 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
               onClick={() => {
                 if (!user) {
                   toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
@@ -735,7 +736,7 @@ const ProductDetail = () => {
               Buy Up
             </Button>
             <Button 
-              className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-lg"
+              className="flex-1 min-h-[48px] h-12 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
               onClick={() => {
                 if (!user) {
                   toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });

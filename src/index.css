@@ -196,6 +196,11 @@
   @apply min-h-[44px] min-w-[44px];
 }
 
+/* Large tap targets class */
+.touch-target-lg {
+  @apply min-h-[48px] min-w-[48px];
+}
+
 /* Larger tap targets for mobile */
 @media (max-width: 768px) {
   /* Form inputs */
@@ -213,6 +218,19 @@
   /* Cards clickable area */
   .card-interactive {
     @apply active:scale-[0.98] transition-transform duration-150;
+  }
+
+  /* Buttons on mobile should be larger */
+  .btn-mobile {
+    @apply min-h-[48px] text-base;
+  }
+
+  /* Chart container touch optimization */
+  .chart-touch-container {
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
@@ -247,6 +265,11 @@
   padding-top: env(safe-area-inset-top, 0);
 }
 
+/* Safe area margins */
+.safe-area-margin-bottom {
+  margin-bottom: env(safe-area-inset-bottom, 0);
+}
+
 /* Responsive typography */
 @media (max-width: 640px) {
   html {
@@ -254,9 +277,22 @@
   }
 }
 
+/* Font readability - minimum 14px for mobile */
+.text-readable {
+  @apply text-sm leading-relaxed;
+  min-height: 1.25rem;
+}
+
 /* Performance: will-change for animated elements */
 .will-animate {
   will-change: transform, opacity;
+}
+
+/* GPU acceleration for animations */
+.gpu-accelerate {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Reduce motion for accessibility */
@@ -273,11 +309,34 @@
   .touch-active:active {
     @apply bg-muted/50;
   }
+
+  /* Immediate feedback without 300ms delay */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
 }
 
 /* Touch action optimization */
 .touch-action-manipulation {
   touch-action: manipulation;
+}
+
+/* Touch action for chart panning/zooming */
+.touch-action-chart {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Network status indicator styles */
+.network-offline {
+  @apply bg-destructive/10 text-destructive;
+}
+
+.network-online {
+  @apply bg-green-500/10 text-green-500;
+}
+
+.network-slow {
+  @apply bg-yellow-500/10 text-yellow-500;
 }
 
 /* Realtime connection status indicator */
