@@ -45,5 +45,3 @@ const Maintenance = () => {
 };
 
 export default Maintenance;
-
-export default Deposit;
