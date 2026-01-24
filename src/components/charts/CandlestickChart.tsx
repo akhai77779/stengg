@@ -159,6 +159,16 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
       candleSeries.setData(formattedData);
       
+      // Helper to deduplicate and sort indicator data
+      const dedupeAndSort = (indicatorData: { time: string; value: number }[]): LineData<UTCTimestamp>[] => {
+        const timeMap = new Map<number, LineData<UTCTimestamp>>();
+        indicatorData.forEach((d) => {
+          const time = Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp;
+          timeMap.set(time, { time, value: d.value });
+        });
+        return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+      };
+
       // Add MA line if enabled
       if (indicatorConfig.ma.enabled && maData.length > 0) {
         const maSeries = chart.addSeries(LineSeries, {
@@ -167,11 +177,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
           priceLineVisible: false,
           lastValueVisible: false,
         });
-        const maFormatted: LineData<UTCTimestamp>[] = maData.map((d) => ({
-          time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
-          value: d.value,
-        }));
-        maSeries.setData(maFormatted);
+        maSeries.setData(dedupeAndSort(maData));
       }
       
       // Add EMA line if enabled
@@ -182,11 +188,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
           priceLineVisible: false,
           lastValueVisible: false,
         });
-        const emaFormatted: LineData<UTCTimestamp>[] = emaData.map((d) => ({
-          time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
-          value: d.value,
-        }));
-        emaSeries.setData(emaFormatted);
+        emaSeries.setData(dedupeAndSort(emaData));
       }
       
       chart.timeScale().fitContent();
