@@ -97,7 +97,7 @@ export default function Login() {
               />
             </Link>
             <div className="flex items-center gap-3">
-              <a href="#" className="text-red-500 hover:text-red-400" title="Support">
+              <a href="https://direct.lc.chat/19460523/" target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-400" title="Support">
                 <Headphones className="h-4 w-4" />
               </a>
               <LanguageSelect />

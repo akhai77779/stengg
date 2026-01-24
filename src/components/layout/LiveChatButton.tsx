@@ -6,8 +6,7 @@ export function LiveChatButton() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleOpenChat = () => {
-    // You can replace this URL with your actual livechat service URL
-    window.open('https://tawk.to/chat', '_blank', 'width=400,height=600');
+    window.open('https://direct.lc.chat/19460523/', '_blank', 'width=400,height=600');
   };
 
   return (

@@ -19,7 +19,7 @@ export function SupportMenuButton() {
   const [open, setOpen] = useState(false);
   const [supportEnabled, setSupportEnabled] = useState(true);
   const [liveChatUrl, setLiveChatUrl] = useState<string>(() => {
-    return localStorage.getItem("live_chat_url") || "https://tawk.to/chat";
+    return localStorage.getItem("live_chat_url") || "https://direct.lc.chat/19460523/";
   });
   const [unreadCount, setUnreadCount] = useState<number>(() => {
     const raw = localStorage.getItem("support_unread_count");
