@@ -143,13 +143,19 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       });
 
       // Convert data to proper format - use Unix timestamp (seconds)
-      const formattedData: CandlestickData<UTCTimestamp>[] = data.map((d) => ({
-        time: Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }));
+      // Deduplicate by timestamp (keep latest for each time) and ensure ascending order
+      const timeMap = new Map<number, CandlestickData<UTCTimestamp>>();
+      data.forEach((d) => {
+        const time = Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp;
+        timeMap.set(time, {
+          time,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        });
+      });
+      const formattedData = Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
 
       candleSeries.setData(formattedData);
       
