@@ -639,6 +639,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_approve_deposit: {
+        Args: { _admin_id: string; _notes?: string; _transaction_id: string }
+        Returns: Json
+      }
+      admin_approve_withdrawal: {
+        Args: { _admin_id: string; _notes?: string; _transaction_id: string }
+        Returns: Json
+      }
+      admin_reject_transaction: {
+        Args: { _admin_id: string; _notes?: string; _transaction_id: string }
+        Returns: Json
+      }
       check_rate_limit: {
         Args: {
           _action_type: string
