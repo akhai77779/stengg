@@ -185,7 +185,8 @@ export default function Profile() {
     icon: Headphones,
     label: t('profile.customerService'),
     color: 'text-purple-400',
-    href: '#'
+    href: 'https://direct.lc.chat/19460523/',
+    external: true
   }];
   const accountSettings = [{
     icon: Wallet,
@@ -316,12 +317,29 @@ export default function Profile() {
 
               {/* Quick Actions */}
               <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-border">
-                {quickActions.map(action => <Link key={action.label} to={action.href} className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white">
-                    <div className={cn('p-2 rounded-full bg-card', action.color)}>
-                      <action.icon className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
-                  </Link>)}
+                {quickActions.map(action => 
+                  action.external ? (
+                    <a 
+                      key={action.label} 
+                      href={action.href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white"
+                    >
+                      <div className={cn('p-2 rounded-full bg-card', action.color)}>
+                        <action.icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
+                    </a>
+                  ) : (
+                    <Link key={action.label} to={action.href} className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white">
+                      <div className={cn('p-2 rounded-full bg-card', action.color)}>
+                        <action.icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
+                    </Link>
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
