@@ -75,7 +75,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<LineChartData[]>([]);
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
-  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "30m" | "1h" | "1d">("1h");
+  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "30m" | "1h" | "1d">("1m");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
