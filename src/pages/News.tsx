@@ -13,6 +13,7 @@ import { vi, enUS, zhCN, th, ja, ko, id as idLocale, ms, type Locale } from 'dat
 import { Calendar, Eye, Search, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 type NewsCategory = Database['public']['Enums']['news_category'];
 
@@ -112,19 +113,19 @@ export default function News() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 md:px-4 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-bold mb-2">
             <span className="text-gradient">{t('news.title')}</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             {t('news.subtitle')}
           </p>
         </div>
 
         {/* Search and Filter */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="flex flex-col gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -134,11 +135,14 @@ export default function News() {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'outline'}
               onClick={() => setSelectedCategory('all')}
-              className={selectedCategory === 'all' ? 'bg-gradient-primary' : ''}
+              className={cn(
+                "shrink-0 text-xs md:text-sm h-9 md:h-11",
+                selectedCategory === 'all' ? 'bg-gradient-primary' : ''
+              )}
             >
               {t('common.all')}
             </Button>
@@ -147,7 +151,10 @@ export default function News() {
                 key={cat}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 onClick={() => setSelectedCategory(cat)}
-                className={selectedCategory === cat ? 'bg-gradient-primary' : ''}
+                className={cn(
+                  "shrink-0 text-xs md:text-sm h-9 md:h-11",
+                  selectedCategory === cat ? 'bg-gradient-primary' : ''
+                )}
               >
                 {categoryLabels[cat]}
               </Button>
@@ -165,15 +172,17 @@ export default function News() {
             <p className="text-muted-foreground">{t('news.noNews')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredNews.map((item) => (
               <Link key={item.id} to={`/news/${item.id}`}>
-                <Card className="group bg-card border-border hover:border-primary/50 transition-all duration-300 overflow-hidden h-full">
-                  <div className="relative h-48 overflow-hidden">
+                <Card className="group bg-card border-border hover:border-primary/50 transition-all duration-200 overflow-hidden h-full active:scale-[0.99] touch-action-manipulation">
+                  <div className="relative h-40 md:h-48 overflow-hidden">
                     <img
                       src={item.image_url || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=250&fit=crop'}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
                     <Badge 
@@ -184,18 +193,18 @@ export default function News() {
                     </Badge>
                   </div>
 
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                  <CardContent className="p-3 md:p-4">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
                       {item.title}
                     </h3>
                     {item.summary && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                         {item.summary}
                       </p>
                     )}
                   </CardContent>
 
-                  <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between text-xs text-muted-foreground">
+                  <CardFooter className="px-3 md:px-4 pb-3 md:pb-4 pt-0 flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })}

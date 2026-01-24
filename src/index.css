@@ -188,3 +188,94 @@
     opacity: 0.35;
   }
 }
+
+/* ===== MOBILE OPTIMIZATION ===== */
+
+/* Touch-friendly minimum sizes - 44px Apple HIG recommendation */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Larger tap targets for mobile */
+@media (max-width: 768px) {
+  /* Form inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  textarea,
+  select {
+    min-height: 48px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Cards clickable area */
+  .card-interactive {
+    @apply active:scale-[0.98] transition-transform duration-150;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth scrolling for touch */
+.scroll-smooth-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area padding for notched devices */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+/* Performance: will-change for animated elements */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Active states for touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  .touch-active:active {
+    @apply bg-muted/50;
+  }
+}
+
+/* Touch action optimization */
+.touch-action-manipulation {
+  touch-action: manipulation;
+}
