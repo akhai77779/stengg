@@ -69,6 +69,7 @@ const ProductDetail = () => {
   const [activePositionCount, setActivePositionCount] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [candleFlash, setCandleFlash] = useState(false);
+  const [realtimeUpdateCount, setRealtimeUpdateCount] = useState(0);
   const lastCandleTimeRef = useRef<string | null>(null);
 
   // Get latest price from candle data (synced with chart)
@@ -162,10 +163,11 @@ const ProductDetail = () => {
             close: newRecord.close_price,
           };
 
-          // Trigger flash animation if it's a new candle
+          // Trigger flash animation and increment counter
           if (lastCandleTimeRef.current !== newCandle.time) {
             lastCandleTimeRef.current = newCandle.time;
             setCandleFlash(true);
+            setRealtimeUpdateCount(prev => prev + 1);
             setTimeout(() => setCandleFlash(false), 600);
           }
 
@@ -557,7 +559,7 @@ const ProductDetail = () => {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p className="text-xs">
-                    {realtimeStatus === 'connected' && 'Realtime: Đang kết nối'}
+                    {realtimeStatus === 'connected' && `Realtime: Đang kết nối (${realtimeUpdateCount} updates)`}
                     {realtimeStatus === 'connecting' && 'Realtime: Đang kết nối...'}
                     {realtimeStatus === 'disconnected' && 'Realtime: Mất kết nối'}
                   </p>
