@@ -213,20 +213,22 @@ export default function WithdrawPage() {
         </div>
 
         {/* Network Select */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Mạng lưới</Label>
-          <Select value={network} onValueChange={setNetwork}>
-            <SelectTrigger className="w-full bg-transparent border-0 text-muted-foreground h-auto p-0 focus:ring-0">
-              <SelectValue placeholder="Chọn mạng lưới blockchain" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              {NETWORKS.map((net) => (
-                <SelectItem key={net.id} value={net.id}>
-                  {net.name} - Phí: ${net.fee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Mạng lưới</Label>
+            <Select value={network} onValueChange={setNetwork}>
+              <SelectTrigger className="w-full bg-card border-b border-border rounded-none h-12 px-0 focus:ring-0 focus:border-primary">
+                <SelectValue placeholder="Vui lòng chọn mạng lưới" className="text-muted-foreground" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {NETWORKS.map((net) => (
+                  <SelectItem key={net.id} value={net.id}>
+                    {net.name} - Phí: ${net.fee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Address Input */}
