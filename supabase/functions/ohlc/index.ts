@@ -35,6 +35,8 @@ const cache = new Map<string, CacheEntry>();
 function getCacheTTL(timeframe: string): number {
   switch (timeframe) {
     case "1m": return 10 * 1000;      // 10 seconds for 1-minute chart
+    case "5m": return 15 * 1000;      // 15 seconds for 5-minute chart
+    case "15m": return 20 * 1000;     // 20 seconds for 15-minute chart
     case "30m": return 30 * 1000;     // 30 seconds for 30-minute chart
     case "1h": return 60 * 1000;      // 1 minute for 1-hour chart
     case "1d": return 5 * 60 * 1000;  // 5 minutes for daily chart
@@ -76,7 +78,7 @@ function setCacheData(key: string, data: CacheEntry["data"]): void {
   }
 }
 
-type Timeframe = "1m" | "30m" | "1h" | "1d";
+type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 
 interface KlineItem {
   time?: number;
@@ -108,6 +110,8 @@ interface KlineApiResponse {
 function timeframeToPeriod(tf: Timeframe): string {
   switch (tf) {
     case "1m": return "1min";
+    case "5m": return "5min";
+    case "15m": return "15min";
     case "30m": return "30min";
     case "1h": return "1hour";
     case "1d": return "1day";
@@ -118,9 +122,12 @@ function timeframeToPeriod(tf: Timeframe): string {
 function timeframeToSeconds(tf: Timeframe): number {
   switch (tf) {
     case "1m": return 60;
+    case "5m": return 5 * 60;
+    case "15m": return 15 * 60;
     case "30m": return 30 * 60;
     case "1h": return 60 * 60;
     case "1d": return 24 * 60 * 60;
+    default: return 60 * 60;
   }
 }
 

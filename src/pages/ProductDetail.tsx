@@ -24,6 +24,8 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 const candleCache = new Map<string, { data: OHLCData[]; timestamp: number; nextCursor: string | null }>();
 const CACHE_TTL: Record<string, number> = {
   "1m": 500,   // 500ms for 1m timeframe
+  "5m": 2000,  // 2s for 5m
+  "15m": 4000, // 4s for 15m
   "30m": 5000, // 5s for 30m
   "1h": 10000, // 10s for 1h
   "1d": 30000, // 30s for 1d
@@ -58,7 +60,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<LineChartData[]>([]);
   const [candleData, setCandleData] = useState<OHLCData[]>([]);
-  const [timeframe, setTimeframe] = useState<"1m" | "30m" | "1h" | "1d">("1h");
+  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "30m" | "1h" | "1d">("1h");
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
@@ -131,141 +133,100 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Subscribe to realtime price_history updates (replaces polling)
+  // Consolidated realtime subscriptions - use single channel to avoid rate limits
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     if (!isValidUUID(id)) return;
 
+    // Cleanup previous channel if exists
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+    
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current);
+      fallbackIntervalRef.current = null;
+    }
+
     setRealtimeStatus('connecting');
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
-    let fallbackInterval: NodeJS.Timeout | null = null;
 
-    const subscribe = () => {
-      const priceHistoryChannel = supabase
-        .channel(`price_history_${id}_${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'price_history',
-            filter: `product_id=eq.${id}`,
-          },
-          (payload) => {
-            console.log('Realtime candle update:', payload.eventType, payload.new);
-            const newRecord = payload.new as {
-              recorded_at: string;
-              open_price: number;
-              high_price: number;
-              low_price: number;
-              close_price: number;
-            };
+    // Create single consolidated channel for all product-related updates
+    const channelName = `product_updates_${id}`;
+    const channel = supabase
+      .channel(channelName)
+      // Subscribe to price_history changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'price_history',
+          filter: `product_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Realtime candle update:', payload.eventType);
+          const newRecord = payload.new as {
+            recorded_at: string;
+            open_price: number;
+            high_price: number;
+            low_price: number;
+            close_price: number;
+          };
 
-            // Convert to OHLCData format
-            const newCandle: OHLCData = {
-              time: newRecord.recorded_at,
-              open: newRecord.open_price,
-              high: newRecord.high_price,
-              low: newRecord.low_price,
-              close: newRecord.close_price,
-            };
+          const newCandle: OHLCData = {
+            time: newRecord.recorded_at,
+            open: newRecord.open_price,
+            high: newRecord.high_price,
+            low: newRecord.low_price,
+            close: newRecord.close_price,
+          };
 
-            // Trigger flash animation for new candles
-            if (lastCandleTimeRef.current !== newCandle.time) {
-              lastCandleTimeRef.current = newCandle.time;
-              setCandleFlash(true);
-              setTimeout(() => setCandleFlash(false), 600);
-            }
-            
-            // Always increment update counter
-            setRealtimeUpdateCount(prev => prev + 1);
-
-            // Merge with existing candles efficiently
-            setCandleData(prev => {
-              if (prev.length === 0) return [newCandle];
-              
-              const candleMap = new Map(prev.map(c => [c.time, c]));
-              const existing = candleMap.get(newCandle.time);
-              
-              // Only update if values changed
-              if (existing && 
-                  existing.open === newCandle.open && 
-                  existing.high === newCandle.high &&
-                  existing.low === newCandle.low &&
-                  existing.close === newCandle.close) {
-                return prev; // No changes, skip re-render
-              }
-              
-              candleMap.set(newCandle.time, newCandle);
-              
-              const merged = Array.from(candleMap.values())
-                .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-              
-              // Update high/low
-              const high = Math.max(...merged.map(c => c.high));
-              const low = Math.min(...merged.map(c => c.low));
-              setHighPrice(high);
-              setLowPrice(low);
-
-              // Update line chart data
-              const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
-              setChartData(merged.map(d => ({
-                time: format(new Date(d.time), timeFmt),
-                price: Number(d.close),
-              })));
-              
-              return merged;
-            });
+          if (lastCandleTimeRef.current !== newCandle.time) {
+            lastCandleTimeRef.current = newCandle.time;
+            setCandleFlash(true);
+            setTimeout(() => setCandleFlash(false), 600);
           }
-        )
-        .subscribe((status, err) => {
-          console.log('Realtime subscription status:', status, err?.message);
           
-          if (status === 'SUBSCRIBED') {
-            setRealtimeStatus('connected');
-            reconnectAttempts = 0;
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            setRealtimeStatus('disconnected');
+          setRealtimeUpdateCount(prev => prev + 1);
+
+          setCandleData(prev => {
+            if (prev.length === 0) return [newCandle];
             
-            // Auto-reconnect with exponential backoff
-            if (reconnectAttempts < maxReconnectAttempts) {
-              const delay = 3000 * Math.pow(2, reconnectAttempts);
-              console.log(`Realtime reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-              
-              reconnectTimeout = setTimeout(() => {
-                reconnectAttempts++;
-                supabase.removeChannel(priceHistoryChannel);
-                subscribe();
-              }, delay);
+            const candleMap = new Map(prev.map(c => [c.time, c]));
+            const existing = candleMap.get(newCandle.time);
+            
+            if (existing && 
+                existing.open === newCandle.open && 
+                existing.high === newCandle.high &&
+                existing.low === newCandle.low &&
+                existing.close === newCandle.close) {
+              return prev;
             }
-          }
-        });
+            
+            candleMap.set(newCandle.time, newCandle);
+            
+            const merged = Array.from(candleMap.values())
+              .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+            
+            const high = Math.max(...merged.map(c => c.high));
+            const low = Math.min(...merged.map(c => c.low));
+            setHighPrice(high);
+            setLowPrice(low);
 
-      return priceHistoryChannel;
-    };
-
-    const channel = subscribe();
-
-    // Fallback polling every 5 seconds
-    fallbackInterval = setInterval(() => {
-      refreshLatestCandles();
-    }, 5000);
-
-    return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (fallbackInterval) clearInterval(fallbackInterval);
-      supabase.removeChannel(channel);
-      setRealtimeStatus('disconnected');
-    };
-  }, [id, timeframe]);
-
-  // Subscribe to realtime product price updates
-  useEffect(() => {
-    if (!id || !isValidUUID(id)) return;
-
-    const productChannel = supabase
-      .channel(`product_price_${id}`)
+            const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+            setChartData(merged.map(d => ({
+              time: format(new Date(d.time), timeFmt),
+              price: Number(d.close),
+            })));
+            
+            return merged;
+          });
+        }
+      )
+      // Subscribe to product price updates  
       .on(
         'postgres_changes',
         {
@@ -279,27 +240,49 @@ const ProductDetail = () => {
           const newProduct = payload.new as Product;
           setProduct(prev => prev ? { ...prev, ...newProduct } : newProduct);
           
-          // Update high/low if available from product
           if (newProduct.high_24h) setHighPrice(newProduct.high_24h);
           if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('Realtime subscription status:', status, err?.message);
+        
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected');
+        }
+      });
+
+    channelRef.current = channel;
+
+    // Fallback polling every 5 seconds
+    fallbackIntervalRef.current = setInterval(() => {
+      refreshLatestCandles();
+    }, 5000);
 
     return () => {
-      supabase.removeChannel(productChannel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (fallbackIntervalRef.current) {
+        clearInterval(fallbackIntervalRef.current);
+        fallbackIntervalRef.current = null;
+      }
+      setRealtimeStatus('disconnected');
     };
-  }, [id]);
+  }, [id, timeframe]);
 
-  // Fetch and subscribe to position count
+  // Separate subscription for option trades (user-specific)
   useEffect(() => {
-    if (!user || !id) return;
+    if (!user || !id || !isValidUUID(id)) return;
 
     fetchActivePositionCount();
 
-    // Subscribe to realtime updates
+    const channelName = `option_trades_user_${user.id}_${id}`;
     const channel = supabase
-      .channel(`option_trades_${id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -334,7 +317,7 @@ const ProductDetail = () => {
     setLoading(false);
   };
 
-  const fetchPriceHistory = async (tf: "1m" | "30m" | "1h" | "1d") => {
+  const fetchPriceHistory = async (tf: "1m" | "5m" | "15m" | "30m" | "1h" | "1d") => {
     if (!id) return;
     setPriceHistoryLoading(true);
     setNextCursor(null);
@@ -366,7 +349,7 @@ const ProductDetail = () => {
       setHighPrice(high);
       setLowPrice(low);
 
-      const timeFmt = tf === "1m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
+      const timeFmt = tf === "1m" || tf === "5m" || tf === "15m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
       setChartData(
         candles.map((d) => ({
           time: format(new Date(d.time), timeFmt),
@@ -426,7 +409,7 @@ const ProductDetail = () => {
       nextCursor: null,
     });
 
-    const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+    const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
     setCandleData((prev) => {
       // Only update/add the latest candles, don't rebuild the entire array
@@ -492,7 +475,7 @@ const ProductDetail = () => {
     setNextCursor(newCursor);
 
     if (candles.length > 0) {
-      const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+      const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
       setCandleData((prev) => {
         const map = new Map<string, OHLCData>();
@@ -661,16 +644,15 @@ const ProductDetail = () => {
             Line
           </Button>
           {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => {
-            const mappedTf = tf === "5m" || tf === "15m" ? "1m" : tf as "1m" | "30m" | "1h" | "1d";
-            const displayLabel = tf === "1m" ? "1M" : tf === "5m" ? "5M" : tf === "15m" ? "15M" : tf === "30m" ? "30M" : tf === "1h" ? "1H" : "1D";
+            const displayLabel = tf.toUpperCase();
             return (
               <Button
                 key={tf}
-                variant={timeframe === mappedTf && chartType === 'candle' && (tf === "1m" || tf === "30m" || tf === "1h" || tf === "1d") ? "default" : "ghost"}
+                variant={timeframe === tf && chartType === 'candle' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => {
                   setChartType('candle');
-                  setTimeframe(mappedTf);
+                  setTimeframe(tf);
                 }}
                 className="h-7 px-2 text-xs"
               >
