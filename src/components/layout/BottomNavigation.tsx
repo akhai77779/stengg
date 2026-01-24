@@ -14,7 +14,7 @@ export function BottomNavigation() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
       {/* Gradient border top */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
       
@@ -29,26 +29,26 @@ export function BottomNavigation() {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-300',
+                  'flex flex-col items-center justify-center flex-1 h-full min-h-[56px] gap-1 transition-all duration-200 touch-target no-select',
                   isActive 
                     ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground active:text-foreground'
                 )}
               >
                 <div className={cn(
-                  'relative p-1.5 rounded-lg transition-all duration-300',
+                  'relative p-2 rounded-xl transition-all duration-200',
                   isActive && 'bg-primary/10'
                 )}>
                   <item.icon className={cn(
-                    'w-5 h-5 transition-all duration-300',
+                    'w-5 h-5 transition-all duration-200',
                     isActive && 'drop-shadow-[0_0_8px_hsl(var(--primary))]'
                   )} />
                   {isActive && (
-                    <div className="absolute inset-0 rounded-lg animate-pulse bg-primary/5" />
+                    <div className="absolute inset-0 rounded-xl animate-pulse bg-primary/5" />
                   )}
                 </div>
                 <span className={cn(
-                  'text-[10px] font-medium transition-all duration-300',
+                  'text-[10px] font-medium transition-all duration-200',
                   isActive && 'text-primary'
                 )}>
                   {item.label}
@@ -59,8 +59,7 @@ export function BottomNavigation() {
         </div>
       </div>
       
-      {/* Safe area for iOS */}
-      <div className="h-safe-area-inset-bottom bg-card" />
+      {/* Safe area for iOS - now handled by parent class */}
     </nav>
   );
 }

@@ -123,39 +123,39 @@ export default function Charity() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 md:px-4 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-500/20 mb-4">
-            <Heart className="w-8 h-8 text-pink-400" />
+        <div className="mb-6 md:mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-pink-500/20 mb-4">
+            <Heart className="w-7 h-7 md:w-8 md:h-8 text-pink-400" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+          <h1 className="text-2xl md:text-4xl font-bold mb-2">
             <span className="text-gradient">{t('charity.title')}</span>
           </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
             {t('charity.description')}
           </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="bg-card border-border text-center p-6">
-            <div className="text-3xl font-bold text-primary mb-2">
+        <div className="grid grid-cols-3 gap-3 md:gap-6 mb-8 md:mb-12">
+          <Card className="bg-card border-border text-center p-3 md:p-6">
+            <div className="text-xl md:text-3xl font-bold text-primary mb-1 md:mb-2">
               {displayPrograms.filter(p => p.is_active).length}
             </div>
-            <div className="text-muted-foreground">{t('charity.activePrograms')}</div>
+            <div className="text-xs md:text-sm text-muted-foreground">{t('charity.activePrograms')}</div>
           </Card>
-          <Card className="bg-card border-border text-center p-6">
-            <div className="text-3xl font-bold text-secondary mb-2">
+          <Card className="bg-card border-border text-center p-3 md:p-6">
+            <div className="text-sm md:text-3xl font-bold text-secondary mb-1 md:mb-2 truncate">
               {formatCurrency(displayPrograms.reduce((sum, p) => sum + p.current_amount, 0))}
             </div>
-            <div className="text-muted-foreground">{t('charity.totalDonations')}</div>
+            <div className="text-xs md:text-sm text-muted-foreground">{t('charity.totalDonations')}</div>
           </Card>
-          <Card className="bg-card border-border text-center p-6">
-            <div className="text-3xl font-bold text-pink-400 mb-2">
+          <Card className="bg-card border-border text-center p-3 md:p-6">
+            <div className="text-xl md:text-3xl font-bold text-pink-400 mb-1 md:mb-2">
               1,234+
             </div>
-            <div className="text-muted-foreground">{t('charity.peopleHelped')}</div>
+            <div className="text-xs md:text-sm text-muted-foreground">{t('charity.peopleHelped')}</div>
           </Card>
         </div>
 
@@ -165,17 +165,19 @@ export default function Charity() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {displayPrograms.map((program) => (
               <Card 
                 key={program.id} 
-                className="bg-card border-border overflow-hidden hover:border-primary/50 transition-all duration-300"
+                className="bg-card border-border overflow-hidden hover:border-primary/50 transition-all duration-200 active:scale-[0.99] touch-action-manipulation"
               >
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-40 md:h-48 overflow-hidden">
                   <img
                     src={program.image_url || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=400&h=300&fit=crop'}
                     alt={program.title}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
                   <Badge 
@@ -190,19 +192,19 @@ export default function Charity() {
                   </Badge>
                 </div>
 
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg text-foreground mb-2">
+                <CardContent className="p-3 md:p-4">
+                  <h3 className="font-semibold text-base md:text-lg text-foreground mb-2">
                     {program.title}
                   </h3>
                   {program.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mb-4">
                       {program.description}
                     </p>
                   )}
 
                   {/* Progress */}
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs md:text-sm">
                       <span className="text-muted-foreground">{t('charity.progress')}</span>
                       <span className="text-primary font-medium">
                         {getProgress(program.current_amount, program.target_amount).toFixed(0)}%
@@ -212,7 +214,7 @@ export default function Charity() {
                       value={getProgress(program.current_amount, program.target_amount)} 
                       className="h-2"
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground">
+                    <div className="flex justify-between text-[10px] md:text-xs text-muted-foreground">
                       <span>{formatCurrency(program.current_amount)}</span>
                       <span className="flex items-center gap-1">
                         <Target className="w-3 h-3" />
@@ -222,9 +224,9 @@ export default function Charity() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="px-4 pb-4 pt-0">
+                <CardFooter className="px-3 md:px-4 pb-3 md:pb-4 pt-0">
                   {program.start_date && program.end_date && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {format(new Date(program.start_date), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })} - {format(new Date(program.end_date), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })}
                     </span>

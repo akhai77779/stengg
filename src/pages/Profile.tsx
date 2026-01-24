@@ -237,24 +237,24 @@ export default function Profile() {
   }];
   return <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8 rounded-xl">
-        <div className="container mx-auto px-4 py-6 max-w-lg text-[#0a1942]/95">
+        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg text-[#0a1942]/95">
           
           {/* User Card */}
-          <Card className="bg-card border-border mb-6 overflow-hidden">
-            <div className="relative h-20 bg-gradient-to-r from-primary/20 to-secondary/20" />
-            <CardContent className="relative pt-0 pb-6 px-4">
-              <div className="flex items-end gap-4 -mt-10">
-                <Avatar className="w-20 h-20 border-4 border-card shadow-lg">
+          <Card className="bg-card border-border mb-4 md:mb-6 overflow-hidden">
+            <div className="relative h-16 md:h-20 bg-gradient-to-r from-primary/20 to-secondary/20" />
+            <CardContent className="relative pt-0 pb-4 md:pb-6 px-3 md:px-4">
+              <div className="flex items-end gap-3 md:gap-4 -mt-8 md:-mt-10">
+                <Avatar className="w-16 h-16 md:w-20 md:h-20 border-4 border-card shadow-lg">
                   <AvatarImage src={profile?.avatar_url || ''} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-xl font-bold">
+                  <AvatarFallback className="bg-primary/20 text-primary text-lg md:text-xl font-bold">
                     {getInitials(profile?.full_name || null, user.email || '')}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 pb-2">
-                  <h2 className="text-lg font-bold text-foreground">
+                  <h2 className="text-base md:text-lg font-bold text-foreground">
                     {profile?.full_name || user.email?.split('@')[0] || t('profile.defaultUser')}
                   </h2>
-                  <button onClick={copyUID} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={copyUID} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors min-h-[44px] -my-2">
                     <span>ID: {uid}</span>
                     <Copy className="w-3 h-3" />
                     <span className="text-destructive">{t('common.copy')}</span>
@@ -265,45 +265,45 @@ export default function Profile() {
           </Card>
 
           {/* Balance Card */}
-          <Card className="bg-card border-border mb-6">
-            <CardContent className="p-4">
+          <Card className="bg-card border-border mb-4 md:mb-6">
+            <CardContent className="p-3 md:p-4">
               {/* Balance Row */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
                 {/* Available Balance */}
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <button onClick={() => setShowBalance(!showBalance)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <button onClick={() => setShowBalance(!showBalance)} className="text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center -m-2">
                       {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    <p className="text-xs text-muted-foreground">{t('wallet.availableBalance')} ({currency})</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{t('wallet.availableBalance')} ({currency})</p>
                   </div>
-                  {externalLoading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <p className="text-2xl font-bold text-primary">
+                  {externalLoading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <p className="text-xl md:text-2xl font-bold text-primary">
                       {showBalance ? formatCurrency(balance) : '****'}
                     </p>}
                 </div>
                 
                 {/* Talent Charity */}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('wallet.charityTalent')} ({currency})</p>
-                  <p className="text-2xl font-bold text-[#00bdd6]">
+                  <p className="text-[10px] md:text-xs text-muted-foreground mb-1">{t('wallet.charityTalent')} ({currency})</p>
+                  <p className="text-xl md:text-2xl font-bold text-[#00bdd6]">
                     {showBalance ? '0' : '****'}
                   </p>
                 </div>
               </div>
 
               {/* Today Earnings */}
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-2">{t('wallet.todayIncome')}</p>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="mb-3 md:mb-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-2">{t('wallet.todayIncome')}</p>
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">{t('wallet.productTrade')} ({currency})</p>
-                    <p className="text-lg font-semibold text-[#26e36b]">
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{t('wallet.productTrade')} ({currency})</p>
+                    <p className="text-base md:text-lg font-semibold text-[#26e36b]">
                       {showBalance ? '0' : '****'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">{t('wallet.charityTalent')} ({currency})</p>
-                    <p className="text-lg font-semibold bg-[#0b111e] text-[#11df6e]">
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{t('wallet.charityTalent')} ({currency})</p>
+                    <p className="text-base md:text-lg font-semibold bg-[#0b111e] text-[#11df6e]">
                       {showBalance ? '0' : '****'}
                     </p>
                   </div>
@@ -316,7 +316,7 @@ export default function Profile() {
                 </p>}
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-border">
+              <div className="grid grid-cols-4 gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
                 {quickActions.map(action => 
                   action.external ? (
                     <a 
@@ -324,19 +324,19 @@ export default function Profile() {
                       href={action.href} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white"
+                      className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation"
                     >
-                      <div className={cn('p-2 rounded-full bg-card', action.color)}>
-                        <action.icon className="w-5 h-5" />
+                      <div className={cn('p-1.5 md:p-2 rounded-full bg-card', action.color)}>
+                        <action.icon className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
-                      <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
+                      <span className="text-[9px] md:text-[10px] text-muted-foreground text-center leading-tight">{action.label}</span>
                     </a>
                   ) : (
-                    <Link key={action.label} to={action.href} className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white">
-                      <div className={cn('p-2 rounded-full bg-card', action.color)}>
-                        <action.icon className="w-5 h-5" />
+                    <Link key={action.label} to={action.href} className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation">
+                      <div className={cn('p-1.5 md:p-2 rounded-full bg-card', action.color)}>
+                        <action.icon className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
-                      <span className="text-[10px] text-muted-foreground text-center">{action.label}</span>
+                      <span className="text-[9px] md:text-[10px] text-muted-foreground text-center leading-tight">{action.label}</span>
                     </Link>
                   )
                 )}
@@ -346,11 +346,11 @@ export default function Profile() {
 
 
           {/* Account Section */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.account')}</h3>
+          <div className="mb-4 md:mb-6">
+            <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2 md:mb-3 px-1">{t('profile.account')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
-                {accountSettings.map(item => <Link key={item.label} to={item.href} onClick={e => handleAccountItemClick(item, e)} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-2xl">
+                {accountSettings.map(item => <Link key={item.label} to={item.href} onClick={e => handleAccountItemClick(item, e)} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-colors rounded-2xl min-h-[52px] active:bg-muted/50 touch-action-manipulation">
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
@@ -367,12 +367,12 @@ export default function Profile() {
           </div>
 
           {/* System Section */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">{t('profile.system')}</h3>
+          <div className="mb-4 md:mb-6">
+            <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2 md:mb-3 px-1">{t('profile.system')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
               {/* Language Selector */}
-                <div className="flex items-center justify-between p-4 rounded-xl">
+                <div className="flex items-center justify-between p-3 md:p-4 rounded-xl min-h-[52px]">
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm text-foreground">{t('settings.language')}</span>
@@ -380,7 +380,7 @@ export default function Profile() {
                   <LanguageSelect />
                 </div>
                 
-                {systemSettings.map(item => <Link key={item.label} to={item.href} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-xl">
+                {systemSettings.map(item => <Link key={item.label} to={item.href} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-colors rounded-xl min-h-[52px] active:bg-muted/50 touch-action-manipulation">
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
@@ -392,7 +392,7 @@ export default function Profile() {
                   </Link>)}
                 
                 {/* Sign Out */}
-                <button onClick={handleSignOut} className="p-4 w-full transition-colors flex items-center justify-center text-white bg-[#cc0000] gap-[10px] text-base font-sans font-medium border-double rounded-3xl">
+                <button onClick={handleSignOut} className="p-3 md:p-4 w-full transition-colors flex items-center justify-center text-white bg-[#cc0000] gap-[10px] text-base font-sans font-medium border-double rounded-3xl min-h-[52px] active:bg-[#aa0000] touch-action-manipulation">
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm">{t('nav.logout')}</span>
                 </button>
@@ -401,7 +401,7 @@ export default function Profile() {
           </div>
 
           {/* Security Notice */}
-          <p className="text-xs text-center text-muted-foreground px-4">
+          <p className="text-[10px] md:text-xs text-center text-muted-foreground px-4">
             {t('profile.securityNotice')}
           </p>
         </div>

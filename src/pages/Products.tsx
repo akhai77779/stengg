@@ -150,18 +150,16 @@ export default function Products() {
   return <Layout>
       <div className="min-h-screen pb-20 md:pb-8 my-0">
         {/* Header */}
-        <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-16 z-10">
-          <div className="container mx-auto rounded-none shadow-none opacity-100 border-0 border-none px-[18px] py-0 my-[35px]">
-            <h1 className="text-xl font-bold text-gradient mb-2 my-0 py-0 mx-0 text-center">{t('products.title')}</h1>
+        <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-0 md:top-16 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <h1 className="text-lg md:text-xl font-bold text-gradient mb-2 text-center">{t('products.title')}</h1>
             
             {/* Stock ticker info */}
             <div className="gap-2 text-xs text-muted-foreground mb-2 flex items-center justify-center">
-              
               <span>Singapore Technologies Engineering</span>
             </div>
             
             <div className="flex-wrap gap-4 text-sm text-muted-foreground items-center justify-center flex flex-row">
-              
               <span className="flex items-center gap-1">
                 <Activity className="w-4 h-4 text-primary" />
                 {t('products.transactions')}: {totalVolume.toLocaleString()}
@@ -171,7 +169,7 @@ export default function Products() {
         </div>
 
         {/* Products List */}
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 md:px-4 py-4">
           {isLoading ? <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div> : products.length === 0 ? <div className="text-center py-12">
@@ -179,16 +177,22 @@ export default function Products() {
             </div> : <div className="grid gap-3">
               {products.map(product => {
             const isPositive = (product.price_change || 0) >= 0;
-            return <Card key={product.id} className="group bg-card border-border hover:border-primary/30 transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => navigate(`/products/${product.id}`)}>
+            return <Card key={product.id} className="group bg-card border-border hover:border-primary/30 transition-all duration-200 overflow-hidden cursor-pointer active:scale-[0.99] touch-action-manipulation" onClick={() => navigate(`/products/${product.id}`)}>
                     {/* Product Image - Full Width with Hover Zoom */}
-                    {product.image_url ? <div className="w-full h-32 md:h-40 overflow-hidden">
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                      </div> : <div className="w-full h-32 md:h-40 bg-muted/30 flex items-center justify-center">
+                    {product.image_url ? <div className="w-full h-28 md:h-40 overflow-hidden">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name} 
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div> : <div className="w-full h-28 md:h-40 bg-muted/30 flex items-center justify-center">
                         {getCategoryIcon(product.name, product.category)}
                       </div>}
                     
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-center gap-3 md:gap-4">
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground text-sm md:text-base line-clamp-1 mb-1">
@@ -202,7 +206,7 @@ export default function Products() {
                         
                         {/* Price & Change */}
                         <div className="flex flex-col items-end gap-1">
-                          <span className="text-lg font-bold text-foreground">
+                          <span className="text-base md:text-lg font-bold text-foreground">
                             {formatPrice(product.price)}
                           </span>
                           <div className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium', isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400')}>
