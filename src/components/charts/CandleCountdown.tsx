@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Clock } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Clock, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CandleCountdownProps {
   timeframe: '1m' | '30m' | '1h' | '1d';
   lastCandleTime?: string;
+  onCandleClose?: () => void;
 }
 
 // Get interval in milliseconds for each timeframe
@@ -14,34 +16,43 @@ const TIMEFRAME_MS: Record<string, number> = {
   '1d': 24 * 60 * 60 * 1000,
 };
 
-export const CandleCountdown = ({ timeframe, lastCandleTime }: CandleCountdownProps) => {
+export const CandleCountdown = ({ timeframe, lastCandleTime, onCandleClose }: CandleCountdownProps) => {
   const [countdown, setCountdown] = useState(0);
-  const [isActive, setIsActive] = useState(false);
+  const [prevCountdown, setPrevCountdown] = useState(0);
   
   const intervalMs = TIMEFRAME_MS[timeframe] || 60000;
+  const intervalSec = intervalMs / 1000;
+
+  const updateCountdown = useCallback(() => {
+    const now = Date.now();
+    const currentPeriod = Math.floor(now / intervalMs);
+    const nextPeriodStart = (currentPeriod + 1) * intervalMs;
+    const remainingMs = nextPeriodStart - now;
+    const remainingSec = Math.ceil(remainingMs / 1000);
+    
+    return remainingSec;
+  }, [intervalMs]);
 
   useEffect(() => {
-    const updateCountdown = () => {
-      const now = Date.now();
-      // Calculate time until next candle closes
-      // For 1m: next candle closes at the start of the next minute
-      const intervalSec = intervalMs / 1000;
-      const currentPeriod = Math.floor(now / intervalMs);
-      const nextPeriodStart = (currentPeriod + 1) * intervalMs;
-      const remainingMs = nextPeriodStart - now;
-      const remainingSec = Math.ceil(remainingMs / 1000);
+    const tick = () => {
+      const newCountdown = updateCountdown();
       
-      setCountdown(remainingSec);
-      setIsActive(remainingSec <= intervalSec);
+      // Detect candle close (countdown reset to full interval)
+      if (prevCountdown > 0 && prevCountdown <= 1 && newCountdown >= intervalSec - 1) {
+        onCandleClose?.();
+      }
+      
+      setPrevCountdown(countdown);
+      setCountdown(newCountdown);
     };
 
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 1000);
+    tick();
+    const timer = setInterval(tick, 1000);
     
     return () => clearInterval(timer);
-  }, [intervalMs, lastCandleTime]);
+  }, [intervalMs, lastCandleTime, updateCountdown, onCandleClose, countdown, prevCountdown, intervalSec]);
 
-  const formatTime = (seconds: number) => {
+  const formatTime = useCallback((seconds: number) => {
     if (seconds >= 3600) {
       const h = Math.floor(seconds / 3600);
       const m = Math.floor((seconds % 3600) / 60);
@@ -51,40 +62,91 @@ export const CandleCountdown = ({ timeframe, lastCandleTime }: CandleCountdownPr
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
   // Calculate progress percentage (how much of the candle period has passed)
   const progress = useMemo(() => {
-    const totalSec = intervalMs / 1000;
-    return ((totalSec - countdown) / totalSec) * 100;
-  }, [countdown, intervalMs]);
+    return ((intervalSec - countdown) / intervalSec) * 100;
+  }, [countdown, intervalSec]);
 
-  // Determine urgency color
-  const urgencyColor = useMemo(() => {
-    const totalSec = intervalMs / 1000;
-    const percentRemaining = (countdown / totalSec) * 100;
+  // Determine urgency level
+  const urgencyLevel = useMemo(() => {
+    const percentRemaining = (countdown / intervalSec) * 100;
     
-    if (percentRemaining <= 10) return 'text-red-500';
-    if (percentRemaining <= 25) return 'text-yellow-500';
-    return 'text-muted-foreground';
-  }, [countdown, intervalMs]);
+    if (percentRemaining <= 5) return 'critical';
+    if (percentRemaining <= 15) return 'warning';
+    if (percentRemaining <= 30) return 'attention';
+    return 'normal';
+  }, [countdown, intervalSec]);
+
+  // Urgency styling
+  const urgencyStyles = {
+    critical: {
+      text: 'text-red-500',
+      bg: 'bg-red-500',
+      icon: true,
+      pulse: true,
+    },
+    warning: {
+      text: 'text-orange-500',
+      bg: 'bg-orange-500',
+      icon: false,
+      pulse: true,
+    },
+    attention: {
+      text: 'text-yellow-500',
+      bg: 'bg-yellow-500',
+      icon: false,
+      pulse: false,
+    },
+    normal: {
+      text: 'text-muted-foreground',
+      bg: 'bg-primary',
+      icon: false,
+      pulse: false,
+    },
+  };
+
+  const style = urgencyStyles[urgencyLevel];
 
   return (
     <div className="flex items-center gap-2 text-xs">
       <div className="flex items-center gap-1.5">
-        <Clock className={`h-3 w-3 ${urgencyColor} ${countdown <= 5 ? 'animate-pulse' : ''}`} />
-        <span className={`font-mono font-medium ${urgencyColor}`}>
+        {style.icon ? (
+          <AlertCircle className={cn("h-3 w-3", style.text, style.pulse && "animate-pulse")} />
+        ) : (
+          <Clock className={cn("h-3 w-3", style.text, style.pulse && "animate-pulse")} />
+        )}
+        <span className={cn(
+          "font-mono font-medium tabular-nums",
+          style.text,
+          urgencyLevel === 'critical' && "animate-pulse"
+        )}>
           {formatTime(countdown)}
         </span>
       </div>
       
-      {/* Mini progress bar */}
-      <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+      {/* Progress bar */}
+      <div className="relative w-16 h-1.5 bg-muted rounded-full overflow-hidden">
         <div 
-          className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear"
+          className={cn(
+            "absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ease-linear",
+            style.bg
+          )}
           style={{ width: `${progress}%` }}
         />
+        {/* Glow effect when critical */}
+        {urgencyLevel === 'critical' && (
+          <div 
+            className="absolute right-0 top-0 h-full w-2 bg-red-500/50 animate-pulse rounded-full"
+          />
+        )}
       </div>
+
+      {/* Timeframe label */}
+      <span className="text-[10px] text-muted-foreground uppercase">
+        {timeframe}
+      </span>
     </div>
   );
 };
