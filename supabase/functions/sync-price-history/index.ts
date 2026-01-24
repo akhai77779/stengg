@@ -35,7 +35,29 @@ interface KlineApiResponse {
   };
 }
 
-// Fetch with retry for resilience
+interface PriceHistoryRecord {
+  product_id: string;
+  recorded_at: string;
+  open_price: number;
+  high_price: number;
+  low_price: number;
+  close_price: number;
+  volume: number;
+}
+
+interface SyncStats {
+  productsTotal: number;
+  productsSynced: number;
+  productsErrored: number;
+  recordsInserted: number;
+  recordsUpdated: number;
+  apiCallsTotal: number;
+  apiCallsFailed: number;
+  startTime: number;
+  endTime?: number;
+}
+
+// Fetch with exponential backoff retry
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -44,21 +66,138 @@ async function fetchWithRetry(
 ): Promise<Response> {
   let lastError: Error | null = null;
   
-  for (let i = 0; i < retries; i++) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(url, options);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok && attempt < retries) {
+        console.warn(`[Attempt ${attempt}/${retries}] HTTP ${response.status} for ${url}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+      
       return response;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      console.warn(`Fetch attempt ${i + 1}/${retries} failed:`, lastError.message);
+      console.warn(`[Attempt ${attempt}/${retries}] Fetch error:`, lastError.message);
       
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, i)));
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, attempt - 1)));
       }
     }
   }
   
   throw lastError || new Error("Fetch failed after retries");
+}
+
+// Parse kline data from various response formats
+function parseKlineList(apiData: KlineApiResponse): KlineItem[] {
+  if (Array.isArray(apiData.data)) {
+    return apiData.data;
+  }
+  
+  if (apiData.data && typeof apiData.data === 'object') {
+    if ('data' in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
+      return (apiData.data as { data: KlineItem[] }).data;
+    }
+    if (apiData.data?.list && Array.isArray(apiData.data.list)) {
+      return apiData.data.list;
+    }
+  }
+  
+  return [];
+}
+
+// Convert kline item to price history record
+function klineToRecord(item: KlineItem, productId: string): PriceHistoryRecord | null {
+  const timestamp = item.ts ?? item.time ?? item.t ?? 0;
+  if (timestamp === 0) return null;
+
+  const open = Number(item.open ?? item.o ?? 0);
+  const high = Number(item.high ?? item.h ?? 0);
+  const low = Number(item.low ?? item.l ?? 0);
+  const close = Number(item.close ?? item.c ?? 0);
+  const volume = Number(item.vol ?? item.v ?? 0);
+
+  if (open <= 0 && close <= 0) return null;
+
+  return {
+    product_id: productId,
+    recorded_at: new Date(timestamp * 1000).toISOString(),
+    open_price: open,
+    high_price: high,
+    low_price: low,
+    close_price: close,
+    volume: volume,
+  };
+}
+
+// Batch upsert records with conflict handling
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function batchUpsertRecords(
+  supabase: any,
+  records: PriceHistoryRecord[]
+): Promise<{ inserted: number; updated: number; errors: number }> {
+  if (records.length === 0) {
+    return { inserted: 0, updated: 0, errors: 0 };
+  }
+
+  // Deduplicate by (product_id, recorded_at) - keep latest
+  const deduped = new Map<string, PriceHistoryRecord>();
+  for (const record of records) {
+    const key = `${record.product_id}_${record.recorded_at}`;
+    deduped.set(key, record);
+  }
+  
+  const uniqueRecords = Array.from(deduped.values());
+  console.log(`[Batch] Upserting ${uniqueRecords.length} unique records (deduped from ${records.length})`);
+
+  // Use upsert with onConflict to trigger UPDATE events for realtime
+  const { data, error } = await supabase
+    .from("price_history")
+    .upsert(uniqueRecords, {
+      onConflict: "product_id,recorded_at",
+      ignoreDuplicates: false, // Important: trigger UPDATE for realtime
+    })
+    .select("id");
+
+  if (error) {
+    console.error("[Batch] Upsert error:", error.message);
+    
+    // Fallback: try individual inserts for failed batch
+    let fallbackInserted = 0;
+    let fallbackErrors = 0;
+    
+    for (const record of uniqueRecords) {
+      const { error: insertError } = await supabase
+        .from("price_history")
+        .upsert(record, {
+          onConflict: "product_id,recorded_at",
+          ignoreDuplicates: false,
+        });
+      
+      if (insertError) {
+        fallbackErrors++;
+      } else {
+        fallbackInserted++;
+      }
+    }
+    
+    console.log(`[Batch Fallback] Inserted: ${fallbackInserted}, Errors: ${fallbackErrors}`);
+    return { inserted: fallbackInserted, updated: 0, errors: fallbackErrors };
+  }
+
+  const count = data?.length || uniqueRecords.length;
+  console.log(`[Batch] Successfully upserted ${count} records`);
+  return { inserted: count, updated: 0, errors: 0 };
 }
 
 Deno.serve(async (req) => {
@@ -67,41 +206,69 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const stats: SyncStats = {
+    productsTotal: 0,
+    productsSynced: 0,
+    productsErrored: 0,
+    recordsInserted: 0,
+    recordsUpdated: 0,
+    apiCallsTotal: 0,
+    apiCallsFailed: 0,
+    startTime: Date.now(),
+  };
+
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("Missing Supabase credentials");
+      console.error("[Config] Missing Supabase credentials");
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use service role key to bypass RLS for inserts
+    // Parse optional request body
+    let targetProductId: string | null = null;
+    try {
+      const body = await req.json();
+      targetProductId = body?.productId || null;
+    } catch {
+      // No body or invalid JSON - sync all products
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get all active products
-    const { data: products, error: productsError } = await supabase
+    // Build query for products
+    let query = supabase
       .from("products")
       .select("id, symbol, name")
       .eq("status", "available");
+    
+    if (targetProductId) {
+      query = query.eq("id", targetProductId);
+    }
+
+    const { data: products, error: productsError } = await query;
 
     if (productsError || !products) {
-      console.error("Failed to fetch products:", productsError);
+      console.error("[DB] Failed to fetch products:", productsError?.message);
       return new Response(JSON.stringify({ error: "Failed to fetch products" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`Syncing price history for ${products.length} products`);
+    stats.productsTotal = products.length;
+    console.log(`[Sync] Starting sync for ${products.length} products`);
 
     const now = Math.floor(Date.now() / 1000);
-    const from = now - 120; // Last 2 minutes
-    let syncedCount = 0;
-    let insertedCount = 0;
+    const from = now - 180; // Last 3 minutes for better coverage
+    
+    // Collect all records for batch upsert
+    const allRecords: PriceHistoryRecord[] = [];
+    const productErrors: string[] = [];
 
     for (const product of products) {
       try {
@@ -112,117 +279,122 @@ Deno.serve(async (req) => {
           if (name.toLowerCase().includes("wing") || name.toLowerCase().includes("wig")) {
             symbol = "WIG/USDT";
           } else {
-            symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase() + "/USDT";
+            symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 6).toUpperCase() + "/USDT";
           }
         }
 
         const encodedSymbol = encodeURIComponent(symbol);
-        const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=1min&size=2&from=${from}&to=${now}&zip=0`;
+        const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=1min&size=3&from=${from}&to=${now}&zip=0`;
+
+        stats.apiCallsTotal++;
+        console.log(`[API] Fetching ${product.name} (${symbol})`);
 
         const response = await fetchWithRetry(apiUrl, {
           method: "GET",
           headers: {
             "Accept": "application/json",
-            "User-Agent": "ST-Engineering-Sync/1.0",
+            "User-Agent": "ST-Engineering-Sync/2.0",
           },
-        }, 2, 200);
+        }, 3, 300);
 
         if (!response.ok) {
-          console.warn(`API error for ${product.name}: ${response.status}`);
+          stats.apiCallsFailed++;
+          console.warn(`[API] HTTP ${response.status} for ${product.name}`);
+          productErrors.push(`${product.name}: HTTP ${response.status}`);
           continue;
         }
 
         const apiData: KlineApiResponse = await response.json();
-        
-        // Extract kline data
-        let klineList: KlineItem[] = [];
-        if (Array.isArray(apiData.data)) {
-          klineList = apiData.data;
-        } else if (apiData.data && typeof apiData.data === 'object') {
-          if ('data' in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
-            klineList = (apiData.data as { data: KlineItem[] }).data;
-          } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
-            klineList = apiData.data.list;
-          }
-        }
+        const klineList = parseKlineList(apiData);
 
         if (klineList.length === 0) {
+          console.log(`[API] No candles for ${product.name}`);
           continue;
         }
 
-        // Convert and insert price history
+        console.log(`[API] Got ${klineList.length} candles for ${product.name}`);
+
+        // Convert to records
         for (const item of klineList) {
-          const timestamp = item.ts ?? item.time ?? item.t ?? 0;
-          if (timestamp === 0) continue;
-
-          const open = Number(item.open ?? item.o ?? 0);
-          const high = Number(item.high ?? item.h ?? 0);
-          const low = Number(item.low ?? item.l ?? 0);
-          const close = Number(item.close ?? item.c ?? 0);
-          const volume = Number(item.vol ?? item.v ?? 0);
-
-          if (open <= 0 && close <= 0) continue;
-
-          const recordedAt = new Date(timestamp * 1000).toISOString();
-
-          // Upsert with update on conflict to trigger realtime UPDATE events
-          const { error: insertError } = await supabase
-            .from("price_history")
-            .upsert({
-              product_id: product.id,
-              recorded_at: recordedAt,
-              open_price: open,
-              high_price: high,
-              low_price: low,
-              close_price: close,
-              volume: volume,
-            }, {
-              onConflict: "product_id,recorded_at",
-              ignoreDuplicates: false,
-            });
-
-          if (insertError) {
-            // Try insert without upsert if conflict constraint doesn't exist
-            const { error: plainInsertError } = await supabase
-              .from("price_history")
-              .insert({
-                product_id: product.id,
-                recorded_at: recordedAt,
-                open_price: open,
-                high_price: high,
-                low_price: low,
-                close_price: close,
-                volume: volume,
-              });
-            
-            if (!plainInsertError) {
-              insertedCount++;
-            }
-          } else {
-            insertedCount++;
+          const record = klineToRecord(item, product.id);
+          if (record) {
+            allRecords.push(record);
           }
         }
 
-        syncedCount++;
+        stats.productsSynced++;
       } catch (productError) {
-        console.error(`Error syncing ${product.name}:`, productError);
+        stats.apiCallsFailed++;
+        stats.productsErrored++;
+        const errMsg = productError instanceof Error ? productError.message : String(productError);
+        console.error(`[Error] ${product.name}:`, errMsg);
+        productErrors.push(`${product.name}: ${errMsg}`);
       }
     }
 
-    console.log(`Synced ${syncedCount} products, inserted ${insertedCount} price records`);
+    // Batch upsert all collected records
+    if (allRecords.length > 0) {
+      console.log(`[Batch] Total records to upsert: ${allRecords.length}`);
+      const result = await batchUpsertRecords(supabase, allRecords);
+      stats.recordsInserted = result.inserted;
+      stats.recordsUpdated = result.updated;
+    }
+
+    stats.endTime = Date.now();
+    const duration = stats.endTime - stats.startTime;
+
+    console.log(`[Sync Complete] Duration: ${duration}ms`);
+    console.log(`[Sync Stats] Products: ${stats.productsSynced}/${stats.productsTotal} synced, ${stats.productsErrored} errors`);
+    console.log(`[Sync Stats] Records: ${stats.recordsInserted} inserted/updated`);
+    console.log(`[Sync Stats] API calls: ${stats.apiCallsTotal} total, ${stats.apiCallsFailed} failed`);
+
+    if (productErrors.length > 0) {
+      console.log(`[Errors Summary] ${productErrors.join('; ')}`);
+    }
 
     return new Response(JSON.stringify({ 
-      success: true, 
-      syncedProducts: syncedCount,
-      insertedRecords: insertedCount 
+      success: true,
+      stats: {
+        duration: `${duration}ms`,
+        products: {
+          total: stats.productsTotal,
+          synced: stats.productsSynced,
+          errored: stats.productsErrored,
+        },
+        records: {
+          inserted: stats.recordsInserted,
+          updated: stats.recordsUpdated,
+        },
+        api: {
+          calls: stats.apiCallsTotal,
+          failed: stats.apiCallsFailed,
+        },
+      },
+      errors: productErrors.length > 0 ? productErrors : undefined,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (e) {
-    console.error("sync-price-history error:", e);
-    return new Response(JSON.stringify({ error: "Unexpected error" }), {
+    stats.endTime = Date.now();
+    const duration = stats.endTime - stats.startTime;
+    const errMsg = e instanceof Error ? e.message : String(e);
+    
+    console.error(`[Fatal Error] After ${duration}ms:`, errMsg);
+    
+    return new Response(JSON.stringify({ 
+      error: "Unexpected error",
+      message: errMsg,
+      stats: {
+        duration: `${duration}ms`,
+        products: {
+          total: stats.productsTotal,
+          synced: stats.productsSynced,
+          errored: stats.productsErrored,
+        },
+      },
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

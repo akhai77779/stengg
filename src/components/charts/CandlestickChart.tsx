@@ -1,5 +1,5 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData } from 'lightweight-charts';
+import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
@@ -17,18 +17,59 @@ interface CandlestickChartProps {
   data: OHLCData[];
   height?: number;
   indicatorConfig?: IndicatorConfig;
+  onCandleUpdate?: (candle: OHLCData) => void;
 }
 
 export interface CandlestickChartRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+  updateCandle: (candle: OHLCData) => void;
 }
 
+// Convert ISO time to UTC timestamp
+const toTimestamp = (isoTime: string): UTCTimestamp => {
+  return Math.floor(new Date(isoTime).getTime() / 1000) as UTCTimestamp;
+};
+
+// Deduplicate and sort OHLC data
+const dedupeAndSortOHLC = (data: OHLCData[]): CandlestickData<UTCTimestamp>[] => {
+  const timeMap = new Map<number, CandlestickData<UTCTimestamp>>();
+  
+  for (const d of data) {
+    const time = toTimestamp(d.time);
+    timeMap.set(time, {
+      time,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+    });
+  }
+  
+  return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+};
+
+// Deduplicate and sort indicator data
+const dedupeAndSortIndicator = (indicatorData: { time: string; value: number }[]): LineData<UTCTimestamp>[] => {
+  const timeMap = new Map<number, LineData<UTCTimestamp>>();
+  
+  for (const d of indicatorData) {
+    const time = toTimestamp(d.time);
+    timeMap.set(time, { time, value: d.value });
+  }
+  
+  return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+};
+
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
-  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig }, ref) => {
+  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
+    const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+    const maSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const lastDataRef = useRef<string>('');
     
     // Calculate indicators
     const maData = useMemo(() => {
@@ -41,13 +82,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       return calculateEMA(data, indicatorConfig.ema.period);
     }, [data, indicatorConfig.ema.enabled, indicatorConfig.ema.period]);
 
-    useImperativeHandle(ref, () => ({
-      zoomIn: handleZoomIn,
-      zoomOut: handleZoomOut,
-      resetZoom: handleResetZoom,
-    }));
-
-    const handleZoomIn = () => {
+    const handleZoomIn = useCallback(() => {
       if (chartRef.current) {
         const timeScale = chartRef.current.timeScale();
         const visibleRange = timeScale.getVisibleLogicalRange();
@@ -60,9 +95,9 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
           timeScale.setVisibleLogicalRange(newRange);
         }
       }
-    };
+    }, []);
 
-    const handleZoomOut = () => {
+    const handleZoomOut = useCallback(() => {
       if (chartRef.current) {
         const timeScale = chartRef.current.timeScale();
         const visibleRange = timeScale.getVisibleLogicalRange();
@@ -75,20 +110,43 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
           timeScale.setVisibleLogicalRange(newRange);
         }
       }
-    };
+    }, []);
 
-    const handleResetZoom = () => {
+    const handleResetZoom = useCallback(() => {
       if (chartRef.current) {
         chartRef.current.timeScale().fitContent();
       }
-    };
+    }, []);
 
+    // Incremental update for single candle - much faster than setData()
+    const updateCandle = useCallback((candle: OHLCData) => {
+      if (!candleSeriesRef.current) return;
+      
+      const candleData: CandlestickData<UTCTimestamp> = {
+        time: toTimestamp(candle.time),
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      };
+      
+      // Use update() for incremental updates - much more efficient
+      candleSeriesRef.current.update(candleData);
+      onCandleUpdate?.(candle);
+    }, [onCandleUpdate]);
+
+    useImperativeHandle(ref, () => ({
+      zoomIn: handleZoomIn,
+      zoomOut: handleZoomOut,
+      resetZoom: handleResetZoom,
+      updateCandle,
+    }), [handleZoomIn, handleZoomOut, handleResetZoom, updateCandle]);
+
+    // Initialize chart only once
     useEffect(() => {
-      if (!chartContainerRef.current || data.length === 0) return;
+      if (!chartContainerRef.current) return;
 
-      // Clear previous chart
-      chartContainerRef.current.innerHTML = '';
-
+      // Create chart
       const chart = createChart(chartContainerRef.current, {
         layout: {
           background: { type: ColorType.Solid, color: 'transparent' },
@@ -134,6 +192,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         },
       });
 
+      // Add candlestick series
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
@@ -142,74 +201,79 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         wickDownColor: '#ef4444',
       });
 
-      // Convert data to proper format - use Unix timestamp (seconds)
-      // Deduplicate by timestamp (keep latest for each time) and ensure ascending order
-      const timeMap = new Map<number, CandlestickData<UTCTimestamp>>();
-      data.forEach((d) => {
-        const time = Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp;
-        timeMap.set(time, {
-          time,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-        });
-      });
-      const formattedData = Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
-
-      candleSeries.setData(formattedData);
-      
-      // Helper to deduplicate and sort indicator data
-      const dedupeAndSort = (indicatorData: { time: string; value: number }[]): LineData<UTCTimestamp>[] => {
-        const timeMap = new Map<number, LineData<UTCTimestamp>>();
-        indicatorData.forEach((d) => {
-          const time = Math.floor(new Date(d.time).getTime() / 1000) as UTCTimestamp;
-          timeMap.set(time, { time, value: d.value });
-        });
-        return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
-      };
-
-      // Add MA line if enabled
-      if (indicatorConfig.ma.enabled && maData.length > 0) {
-        const maSeries = chart.addSeries(LineSeries, {
-          color: indicatorConfig.ma.color,
-          lineWidth: 2,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-        maSeries.setData(dedupeAndSort(maData));
-      }
-      
-      // Add EMA line if enabled
-      if (indicatorConfig.ema.enabled && emaData.length > 0) {
-        const emaSeries = chart.addSeries(LineSeries, {
-          color: indicatorConfig.ema.color,
-          lineWidth: 2,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-        emaSeries.setData(dedupeAndSort(emaData));
-      }
-      
-      chart.timeScale().fitContent();
       chartRef.current = chart;
+      candleSeriesRef.current = candleSeries;
 
       // Responsive resize
       const handleResize = () => {
-        if (chartContainerRef.current) {
-          chart.applyOptions({
+        if (chartContainerRef.current && chartRef.current) {
+          chartRef.current.applyOptions({
             width: chartContainerRef.current.clientWidth,
           });
         }
       };
+      
       window.addEventListener('resize', handleResize);
 
       return () => {
         window.removeEventListener('resize', handleResize);
         chart.remove();
         chartRef.current = null;
+        candleSeriesRef.current = null;
+        maSeriesRef.current = null;
+        emaSeriesRef.current = null;
       };
-    }, [data, height, indicatorConfig, maData, emaData]);
+    }, [height]);
+
+    // Update data when it changes - use efficient comparison
+    useEffect(() => {
+      if (!candleSeriesRef.current || !chartRef.current || data.length === 0) return;
+
+      // Create a simple hash to detect actual data changes
+      const dataHash = data.length + '_' + (data[data.length - 1]?.time || '') + '_' + (data[data.length - 1]?.close || '');
+      
+      if (dataHash === lastDataRef.current) {
+        return; // No actual changes
+      }
+      lastDataRef.current = dataHash;
+
+      const formattedData = dedupeAndSortOHLC(data);
+      candleSeriesRef.current.setData(formattedData);
+
+      // Update MA series
+      if (indicatorConfig.ma.enabled && maData.length > 0) {
+        if (!maSeriesRef.current) {
+          maSeriesRef.current = chartRef.current.addSeries(LineSeries, {
+            color: indicatorConfig.ma.color,
+            lineWidth: 2,
+            priceLineVisible: false,
+            lastValueVisible: false,
+          });
+        }
+        maSeriesRef.current.setData(dedupeAndSortIndicator(maData));
+      } else if (maSeriesRef.current) {
+        chartRef.current.removeSeries(maSeriesRef.current);
+        maSeriesRef.current = null;
+      }
+
+      // Update EMA series
+      if (indicatorConfig.ema.enabled && emaData.length > 0) {
+        if (!emaSeriesRef.current) {
+          emaSeriesRef.current = chartRef.current.addSeries(LineSeries, {
+            color: indicatorConfig.ema.color,
+            lineWidth: 2,
+            priceLineVisible: false,
+            lastValueVisible: false,
+          });
+        }
+        emaSeriesRef.current.setData(dedupeAndSortIndicator(emaData));
+      } else if (emaSeriesRef.current) {
+        chartRef.current.removeSeries(emaSeriesRef.current);
+        emaSeriesRef.current = null;
+      }
+
+      chartRef.current.timeScale().fitContent();
+    }, [data, indicatorConfig, maData, emaData]);
 
     if (data.length === 0) {
       return (

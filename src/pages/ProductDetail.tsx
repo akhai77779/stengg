@@ -136,88 +136,126 @@ const ProductDetail = () => {
     if (!isValidUUID(id)) return;
 
     setRealtimeStatus('connecting');
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let fallbackInterval: NodeJS.Timeout | null = null;
 
-    const priceHistoryChannel = supabase
-      .channel(`price_history_${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'price_history',
-          filter: `product_id=eq.${id}`,
-        },
-        (payload) => {
-          console.log('Realtime candle update:', payload.new);
-          const newRecord = payload.new as {
-            recorded_at: string;
-            open_price: number;
-            high_price: number;
-            low_price: number;
-            close_price: number;
-          };
+    const subscribe = () => {
+      const priceHistoryChannel = supabase
+        .channel(`price_history_${id}_${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'price_history',
+            filter: `product_id=eq.${id}`,
+          },
+          (payload) => {
+            console.log('Realtime candle update:', payload.eventType, payload.new);
+            const newRecord = payload.new as {
+              recorded_at: string;
+              open_price: number;
+              high_price: number;
+              low_price: number;
+              close_price: number;
+            };
 
-          // Convert to OHLCData format
-          const newCandle: OHLCData = {
-            time: newRecord.recorded_at,
-            open: newRecord.open_price,
-            high: newRecord.high_price,
-            low: newRecord.low_price,
-            close: newRecord.close_price,
-          };
+            // Convert to OHLCData format
+            const newCandle: OHLCData = {
+              time: newRecord.recorded_at,
+              open: newRecord.open_price,
+              high: newRecord.high_price,
+              low: newRecord.low_price,
+              close: newRecord.close_price,
+            };
 
-          // Trigger flash animation and increment counter
-          if (lastCandleTimeRef.current !== newCandle.time) {
-            lastCandleTimeRef.current = newCandle.time;
-            setCandleFlash(true);
+            // Trigger flash animation for new candles
+            if (lastCandleTimeRef.current !== newCandle.time) {
+              lastCandleTimeRef.current = newCandle.time;
+              setCandleFlash(true);
+              setTimeout(() => setCandleFlash(false), 600);
+            }
+            
+            // Always increment update counter
             setRealtimeUpdateCount(prev => prev + 1);
-            setTimeout(() => setCandleFlash(false), 600);
+
+            // Merge with existing candles efficiently
+            setCandleData(prev => {
+              if (prev.length === 0) return [newCandle];
+              
+              const candleMap = new Map(prev.map(c => [c.time, c]));
+              const existing = candleMap.get(newCandle.time);
+              
+              // Only update if values changed
+              if (existing && 
+                  existing.open === newCandle.open && 
+                  existing.high === newCandle.high &&
+                  existing.low === newCandle.low &&
+                  existing.close === newCandle.close) {
+                return prev; // No changes, skip re-render
+              }
+              
+              candleMap.set(newCandle.time, newCandle);
+              
+              const merged = Array.from(candleMap.values())
+                .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+              
+              // Update high/low
+              const high = Math.max(...merged.map(c => c.high));
+              const low = Math.min(...merged.map(c => c.low));
+              setHighPrice(high);
+              setLowPrice(low);
+
+              // Update line chart data
+              const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+              setChartData(merged.map(d => ({
+                time: format(new Date(d.time), timeFmt),
+                price: Number(d.close),
+              })));
+              
+              return merged;
+            });
           }
+        )
+        .subscribe((status, err) => {
+          console.log('Realtime subscription status:', status, err?.message);
+          
+          if (status === 'SUBSCRIBED') {
+            setRealtimeStatus('connected');
+            reconnectAttempts = 0;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setRealtimeStatus('disconnected');
+            
+            // Auto-reconnect with exponential backoff
+            if (reconnectAttempts < maxReconnectAttempts) {
+              const delay = 3000 * Math.pow(2, reconnectAttempts);
+              console.log(`Realtime reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+              
+              reconnectTimeout = setTimeout(() => {
+                reconnectAttempts++;
+                supabase.removeChannel(priceHistoryChannel);
+                subscribe();
+              }, delay);
+            }
+          }
+        });
 
-          // Merge with existing candles
-          setCandleData(prev => {
-            if (prev.length === 0) return [newCandle];
-            
-            const candleMap = new Map(prev.map(c => [c.time, c]));
-            candleMap.set(newCandle.time, newCandle);
-            
-            const merged = Array.from(candleMap.values())
-              .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-            
-            // Update high/low
-            const high = Math.max(...merged.map(c => c.high));
-            const low = Math.min(...merged.map(c => c.low));
-            setHighPrice(high);
-            setLowPrice(low);
+      return priceHistoryChannel;
+    };
 
-            // Update line chart data
-            const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
-            setChartData(merged.map(d => ({
-              time: format(new Date(d.time), timeFmt),
-              price: Number(d.close),
-            })));
-            
-            return merged;
-          });
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          setRealtimeStatus('connected');
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          setRealtimeStatus('disconnected');
-        }
-      });
+    const channel = subscribe();
 
-    // Fallback polling every 5 seconds (reduced from 1s since realtime handles most updates)
-    const fallbackInterval = setInterval(() => {
+    // Fallback polling every 5 seconds
+    fallbackInterval = setInterval(() => {
       refreshLatestCandles();
     }, 5000);
 
     return () => {
-      supabase.removeChannel(priceHistoryChannel);
-      clearInterval(fallbackInterval);
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (fallbackInterval) clearInterval(fallbackInterval);
+      supabase.removeChannel(channel);
       setRealtimeStatus('disconnected');
     };
   }, [id, timeframe]);
