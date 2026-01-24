@@ -139,7 +139,7 @@ const ProductDetail = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'price_history',
           filter: `product_id=eq.${id}`,
