@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
           const recordedAt = new Date(timestamp * 1000).toISOString();
 
-          // Upsert to avoid duplicates (based on product_id + recorded_at)
+          // Upsert with update on conflict to trigger realtime UPDATE events
           const { error: insertError } = await supabase
             .from("price_history")
             .upsert({
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
               volume: volume,
             }, {
               onConflict: "product_id,recorded_at",
-              ignoreDuplicates: true,
+              ignoreDuplicates: false,
             });
 
           if (insertError) {
