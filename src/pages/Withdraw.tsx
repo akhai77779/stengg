@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useExternalBalance } from "@/hooks/useExternalBalance";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -86,6 +87,31 @@ export default function WithdrawPage() {
       navigate('/login');
     }
   }, [user, authLoading, navigate]);
+
+  // Subscribe to realtime balance updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('withdraw-balance')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        () => {
+          refetchBalance();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, refetchBalance]);
 
   const handleSetMaxAmount = () => {
     // Account for 1% fee when setting max
@@ -207,18 +233,22 @@ export default function WithdrawPage() {
       <div className="px-4 py-4 space-y-4">
         {/* Balance Card */}
         <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="space-y-1">
+          <div className="space-y-2">
             <div className="flex items-baseline gap-2">
               <span className="text-sm text-muted-foreground">Số dư khả dụng:</span>
               {balanceLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <Skeleton className="h-6 w-24 inline-block" />
               ) : (
                 <span className="text-lg font-semibold text-primary">{availableBalance.toFixed(2)} USD</span>
               )}
             </div>
-            <div className="text-sm text-muted-foreground">
-              ≈ {balanceInVnd.toLocaleString('vi-VN')} VND
-            </div>
+            {balanceLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                ≈ {balanceInVnd.toLocaleString('vi-VN')} VND
+              </div>
+            )}
             {frozenBalance && frozenBalance > 0 && (
               <div className="text-sm text-destructive">
                 Đã đóng băng: {frozenBalance.toFixed(2)} USD
