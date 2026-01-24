@@ -100,87 +100,29 @@ export function DashboardTransactions() {
     setIsProcessing(true);
 
     try {
-      // Update transaction status
-      const { error: txError } = await supabase
-        .from('transactions')
-        .update({ 
-          status: 'approved', 
-          notes: adminNotes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedTransaction.id);
+      // Use secure server-side RPC function for atomic transaction processing
+      const rpcFunction = selectedTransaction.type === 'deposit' 
+        ? 'admin_approve_deposit'
+        : 'admin_approve_withdrawal';
+      
+      const { data, error } = await supabase.rpc(rpcFunction, {
+        _admin_id: user.id,
+        _transaction_id: selectedTransaction.id,
+        _notes: adminNotes || null
+      });
 
-      if (txError) throw txError;
+      if (error) throw error;
 
-      // Get current balance
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('balance')
-        .eq('id', selectedTransaction.user_id)
-        .single();
+      const result = data as { success: boolean; error?: string };
 
-      const currentBalance = profile?.balance || 0;
-      let newBalance = currentBalance;
-
-      // Update user balance
-      if (selectedTransaction.type === 'deposit') {
-        newBalance = currentBalance + selectedTransaction.amount;
-        await supabase
-          .from('profiles')
-          .update({ 
-            balance: newBalance,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedTransaction.user_id);
-
-        // Log deposit approval for audit
-        await supabase.from('audit_logs').insert({
-          user_id: selectedTransaction.user_id,
-          action: 'deposit_approved',
-          entity_type: 'transaction',
-          entity_id: selectedTransaction.id,
-          details: {
-            admin_id: user.id,
-            amount: selectedTransaction.amount,
-            network: selectedTransaction.network,
-            tx_hash: selectedTransaction.tx_hash,
-            balance_before: currentBalance,
-            balance_after: newBalance,
-            admin_notes: adminNotes
-          }
+      if (!result.success) {
+        toast({
+          title: 'Lỗi',
+          description: result.error || 'Không thể duyệt giao dịch',
+          variant: 'destructive',
         });
-      } else if (selectedTransaction.type === 'withdraw') {
-        // For withdrawals, deduct amount + fee (fee was already noted)
-        const fee = selectedTransaction.amount * 0.01;
-        const totalDeduction = selectedTransaction.amount + fee;
-        newBalance = currentBalance - totalDeduction;
-        
-        await supabase
-          .from('profiles')
-          .update({ 
-            balance: newBalance,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedTransaction.user_id);
-
-        // Log withdrawal approval for audit
-        await supabase.from('audit_logs').insert({
-          user_id: selectedTransaction.user_id,
-          action: 'withdrawal_approved',
-          entity_type: 'transaction',
-          entity_id: selectedTransaction.id,
-          details: {
-            admin_id: user.id,
-            amount: selectedTransaction.amount,
-            fee: fee,
-            total_deduction: totalDeduction,
-            network: selectedTransaction.network,
-            wallet_address: selectedTransaction.wallet_address,
-            balance_before: currentBalance,
-            balance_after: newBalance,
-            admin_notes: adminNotes
-          }
-        });
+        setIsProcessing(false);
+        return;
       }
 
       toast({
@@ -193,7 +135,7 @@ export function DashboardTransactions() {
       console.error('Error approving transaction:', error);
       toast({
         title: 'Lỗi',
-        description: 'Không thể duyệt giao dịch',
+        description: error instanceof Error ? error.message : 'Không thể duyệt giao dịch',
         variant: 'destructive',
       });
     }
@@ -205,34 +147,26 @@ export function DashboardTransactions() {
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ 
-          status: 'rejected', 
-          notes: adminNotes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedTransaction.id);
+      // Use secure server-side RPC function for atomic rejection
+      const { data, error } = await supabase.rpc('admin_reject_transaction', {
+        _admin_id: user.id,
+        _transaction_id: selectedTransaction.id,
+        _notes: adminNotes || null
+      });
 
       if (error) throw error;
 
-      // Log rejection for audit
-      const auditAction = selectedTransaction.type === 'deposit' ? 'deposit_rejected' : 'withdrawal_rejected';
-      await supabase.from('audit_logs').insert({
-        user_id: selectedTransaction.user_id,
-        action: auditAction,
-        entity_type: 'transaction',
-        entity_id: selectedTransaction.id,
-        details: {
-          admin_id: user.id,
-          amount: selectedTransaction.amount,
-          network: selectedTransaction.network,
-          wallet_address: selectedTransaction.wallet_address,
-          tx_hash: selectedTransaction.tx_hash,
-          admin_notes: adminNotes,
-          reason: 'Rejected by admin'
-        }
-      });
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        toast({
+          title: 'Lỗi',
+          description: result.error || 'Không thể từ chối giao dịch',
+          variant: 'destructive',
+        });
+        setIsProcessing(false);
+        return;
+      }
 
       toast({
         title: 'Thành công',
@@ -244,7 +178,7 @@ export function DashboardTransactions() {
       console.error('Error rejecting transaction:', error);
       toast({
         title: 'Lỗi',
-        description: 'Không thể từ chối giao dịch',
+        description: error instanceof Error ? error.message : 'Không thể từ chối giao dịch',
         variant: 'destructive',
       });
     }
