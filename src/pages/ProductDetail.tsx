@@ -123,16 +123,78 @@ const ProductDetail = () => {
     }
   }, [id, timeframe]);
 
-  // Auto-refresh candles every 1 second
+  // Subscribe to realtime price_history updates (replaces polling)
   useEffect(() => {
     if (!isValidUUID(id)) return;
-    
-    const chartRefreshInterval = setInterval(() => {
-      refreshLatestCandles();
-    }, 1000);
 
-    return () => clearInterval(chartRefreshInterval);
-  }, [id, timeframe, candleData.length]);
+    const priceHistoryChannel = supabase
+      .channel(`price_history_${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'price_history',
+          filter: `product_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Realtime candle update:', payload.new);
+          const newRecord = payload.new as {
+            recorded_at: string;
+            open_price: number;
+            high_price: number;
+            low_price: number;
+            close_price: number;
+          };
+
+          // Convert to OHLCData format
+          const newCandle: OHLCData = {
+            time: newRecord.recorded_at,
+            open: newRecord.open_price,
+            high: newRecord.high_price,
+            low: newRecord.low_price,
+            close: newRecord.close_price,
+          };
+
+          // Merge with existing candles
+          setCandleData(prev => {
+            if (prev.length === 0) return [newCandle];
+            
+            const candleMap = new Map(prev.map(c => [c.time, c]));
+            candleMap.set(newCandle.time, newCandle);
+            
+            const merged = Array.from(candleMap.values())
+              .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+            
+            // Update high/low
+            const high = Math.max(...merged.map(c => c.high));
+            const low = Math.min(...merged.map(c => c.low));
+            setHighPrice(high);
+            setLowPrice(low);
+
+            // Update line chart data
+            const timeFmt = timeframe === "1m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+            setChartData(merged.map(d => ({
+              time: format(new Date(d.time), timeFmt),
+              price: Number(d.close),
+            })));
+            
+            return merged;
+          });
+        }
+      )
+      .subscribe();
+
+    // Fallback polling every 5 seconds (reduced from 1s since realtime handles most updates)
+    const fallbackInterval = setInterval(() => {
+      refreshLatestCandles();
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(priceHistoryChannel);
+      clearInterval(fallbackInterval);
+    };
+  }, [id, timeframe]);
 
   // Subscribe to realtime product price updates
   useEffect(() => {
