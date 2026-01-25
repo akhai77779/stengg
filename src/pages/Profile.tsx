@@ -172,12 +172,12 @@ export default function Profile() {
     const todayStart = today.toISOString();
 
     try {
-      // Fetch today's settled option trades with positive profit
+      // Fetch today's won option trades with positive profit
       const { data: trades, error: tradesError } = await supabase
         .from('option_trades')
         .select('profit_loss')
         .eq('user_id', user.id)
-        .eq('status', 'settled')
+        .eq('status', 'won')
         .gte('settled_at', todayStart);
 
       if (tradesError) {
