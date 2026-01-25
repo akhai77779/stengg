@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +23,8 @@ import { cn } from '@/lib/utils';
 
 export default function SecuritySettings() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  const [isChangeTransactionPasswordOpen, setIsChangeTransactionPasswordOpen] = useState(false);
+  const [isWithdrawalPasswordOpen, setIsWithdrawalPasswordOpen] = useState(false);
+  const [hasWithdrawalPassword, setHasWithdrawalPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,6 +38,25 @@ export default function SecuritySettings() {
   // Check if user has verified phone/email
   const isPhoneVerified = !!user?.phone;
   const isEmailVerified = !!user?.email_confirmed_at;
+
+  // Fetch withdrawal password status
+  useEffect(() => {
+    const fetchWithdrawalPasswordStatus = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('withdrawal_password_hash')
+        .eq('id', user.id)
+        .single();
+      
+      if (!error && data) {
+        setHasWithdrawalPassword(!!data.withdrawal_password_hash);
+      }
+    };
+    
+    fetchWithdrawalPasswordStatus();
+  }, [user?.id]);
 
   const handleChangeLoginPassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -84,7 +104,7 @@ export default function SecuritySettings() {
     }
   };
 
-  const handleChangeTransactionPassword = async () => {
+  const handleWithdrawalPassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({
         title: t('common.error'),
@@ -105,11 +125,28 @@ export default function SecuritySettings() {
 
     setIsLoading(true);
     try {
+      // Hash the password using a simple approach (in production, use proper hashing on server)
+      const encoder = new TextEncoder();
+      const data = encoder.encode(newPassword);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ withdrawal_password_hash: hashHex })
+        .eq('id', user?.id);
+      
+      if (error) throw error;
+      
       toast({
         title: t('common.success'),
-        description: t('security.transactionPasswordChanged')
+        description: hasWithdrawalPassword 
+          ? t('security.withdrawalPasswordChanged')
+          : t('security.withdrawalPasswordCreated')
       });
-      setIsChangeTransactionPasswordOpen(false);
+      setHasWithdrawalPassword(true);
+      setIsWithdrawalPasswordOpen(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -224,17 +261,19 @@ export default function SecuritySettings() {
               </CardContent>
             </Card>
 
-            {/* Transaction Password */}
+            {/* Withdrawal Password */}
             <Card 
               className="bg-card border-border cursor-pointer hover:bg-muted/30 transition-colors"
-              onClick={() => setIsChangeTransactionPasswordOpen(true)}
+              onClick={() => setIsWithdrawalPasswordOpen(true)}
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <span className="text-sm text-foreground">
-                  {t('security.transactionPassword')}
+                  {t('security.withdrawalPassword')}
                 </span>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <span className="text-xs">{t('security.change')}</span>
+                  <span className="text-xs">
+                    {hasWithdrawalPassword ? t('security.change') : t('security.create')}
+                  </span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </CardContent>
@@ -294,27 +333,33 @@ export default function SecuritySettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Change Transaction Password Dialog */}
-      <Dialog open={isChangeTransactionPasswordOpen} onOpenChange={setIsChangeTransactionPasswordOpen}>
+      {/* Withdrawal Password Dialog */}
+      <Dialog open={isWithdrawalPasswordOpen} onOpenChange={setIsWithdrawalPasswordOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('security.changeTransactionPassword')}</DialogTitle>
+            <DialogTitle>
+              {hasWithdrawalPassword 
+                ? t('security.changeWithdrawalPassword')
+                : t('security.createWithdrawalPassword')}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {hasWithdrawalPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="wd-current-password">{t('security.currentPassword')}</Label>
+                <Input
+                  id="wd-current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder={t('security.enterCurrentPassword')}
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="tx-current-password">{t('security.currentPassword')}</Label>
+              <Label htmlFor="wd-new-password">{t('security.newPassword')}</Label>
               <Input
-                id="tx-current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder={t('security.enterCurrentPassword')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tx-new-password">{t('security.newPassword')}</Label>
-              <Input
-                id="tx-new-password"
+                id="wd-new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -322,9 +367,9 @@ export default function SecuritySettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tx-confirm-password">{t('security.confirmPassword')}</Label>
+              <Label htmlFor="wd-confirm-password">{t('security.confirmPassword')}</Label>
               <Input
-                id="tx-confirm-password"
+                id="wd-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -333,10 +378,10 @@ export default function SecuritySettings() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsChangeTransactionPasswordOpen(false)}>
+            <Button variant="outline" onClick={() => setIsWithdrawalPasswordOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleChangeTransactionPassword} disabled={isLoading}>
+            <Button onClick={handleWithdrawalPassword} disabled={isLoading}>
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {t('common.confirm')}
             </Button>
