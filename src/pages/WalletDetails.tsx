@@ -117,8 +117,9 @@ export default function WalletDetails() {
   }, [user]);
 
   const fetchProfile = async () => {
+    // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
     const { data, error } = await supabase
-      .from('profiles')
+      .from('profiles_safe')
       .select('id, full_name, balance, total_income')
       .eq('id', user!.id)
       .single();
@@ -126,7 +127,7 @@ export default function WalletDetails() {
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching profile:', error);
     } else if (data) {
-      setProfile(data);
+      setProfile(data as Profile);
     }
     setIsLoading(false);
   };

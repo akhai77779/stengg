@@ -137,10 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error };
     }
     
-    // Check if account is frozen
+    // Check if account is frozen - using profiles_safe view for security
     if (data?.user) {
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('is_frozen, frozen_reason')
         .eq('id', data.user.id)
         .single();

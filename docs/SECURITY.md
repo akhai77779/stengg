@@ -55,6 +55,9 @@ Tài liệu này mô tả các biện pháp bảo mật đã được triển kh
 | Admins can view all profiles | SELECT | `has_role(auth.uid(), 'admin')` |
 | Admins can update all profiles | UPDATE | `has_role(auth.uid(), 'admin')` |
 
+> **⚠️ BẢO MẬT:** Các trường nhạy cảm (`withdrawal_password_hash`, `last_login_ip`) được bảo vệ bằng view `profiles_safe`.
+> Client-side queries phải sử dụng `profiles_safe` thay vì `profiles` trực tiếp.
+
 ### Bảng `transactions` (Giao dịch tài chính)
 | Policy | Command | Điều kiện |
 |--------|---------|-----------|
@@ -146,8 +149,28 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 ### 6. `check_rate_limit(_user_id, _action_type, _max_requests, _window_seconds)`
 - **Mục đích:** Kiểm tra rate limiting
 - **Bảo mật:**
-  - ✅ Ngăn chặn abuse
+- ✅ Ngăn chặn abuse
   - ✅ Configurable limits per action type
+
+### 7. `has_withdrawal_password(_user_id)` ✅ MỚI
+- **Mục đích:** Kiểm tra user đã đặt mật khẩu rút tiền chưa (không expose hash)
+- **Bảo mật:**
+  - ✅ SET search_path = public
+  - ✅ SECURITY DEFINER - truy cập từ view mà không expose hash
+  - ✅ Chỉ trả về boolean, không bao giờ expose password hash
+
+---
+
+## 🛡️ Secure Views
+
+### View `profiles_safe` ✅ MỚI
+- **Mục đích:** Cung cấp truy cập an toàn đến dữ liệu profiles
+- **Các trường bị loại bỏ:**
+  - `withdrawal_password_hash` - Mật khẩu rút tiền (bcrypt hash)
+  - `last_login_ip` - IP đăng nhập cuối cùng
+- **Sử dụng:** 
+  - ✅ Client-side queries phải sử dụng `profiles_safe` thay vì `profiles`
+  - ✅ `security_invoker = on` - kế thừa RLS từ bảng gốc
 
 ---
 
@@ -256,6 +279,9 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 | Ngày | Thay đổi |
 |------|----------|
+| 25/01/2026 | **Sửa lỗi bảo mật nghiêm trọng:** Tạo view `profiles_safe` để ẩn `withdrawal_password_hash` và `last_login_ip` |
+| 25/01/2026 | Thêm function `has_withdrawal_password()` để kiểm tra mật khẩu rút tiền an toàn |
+| 25/01/2026 | Cập nhật tất cả client queries sang sử dụng `profiles_safe` |
 | 23/01/2026 | Sửa RLS cho `app_settings` - chỉ admin xem được |
 | 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
 | 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |

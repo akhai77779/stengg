@@ -71,10 +71,10 @@ export function DashboardTransactions() {
       return;
     }
 
-    // Fetch profiles for unique user_ids
+    // Fetch profiles for unique user_ids - using profiles_safe view for security
     const userIds = [...new Set(txData?.map(tx => tx.user_id) || [])];
     const { data: profilesData } = await supabase
-      .from('profiles')
+      .from('profiles_safe')
       .select('id, full_name')
       .in('id', userIds);
 

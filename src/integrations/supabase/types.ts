@@ -672,7 +672,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_safe: {
+        Row: {
+          avatar_url: string | null
+          balance: number | null
+          created_at: string | null
+          department: string | null
+          email: string | null
+          frozen_reason: string | null
+          full_name: string | null
+          id: string | null
+          is_frozen: boolean | null
+          is_trade_frozen: boolean | null
+          last_login_at: string | null
+          phone: string | null
+          position: string | null
+          total_income: number | null
+          updated_at: string | null
+          user_code: number | null
+          wallet_address_bep20: string | null
+          wallet_address_erc20: string | null
+          wallet_address_trc20: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          balance?: number | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          frozen_reason?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_frozen?: boolean | null
+          is_trade_frozen?: boolean | null
+          last_login_at?: string | null
+          phone?: string | null
+          position?: string | null
+          total_income?: number | null
+          updated_at?: string | null
+          user_code?: number | null
+          wallet_address_bep20?: string | null
+          wallet_address_erc20?: string | null
+          wallet_address_trc20?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          balance?: number | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          frozen_reason?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_frozen?: boolean | null
+          is_trade_frozen?: boolean | null
+          last_login_at?: string | null
+          phone?: string | null
+          position?: string | null
+          total_income?: number | null
+          updated_at?: string | null
+          user_code?: number | null
+          wallet_address_bep20?: string | null
+          wallet_address_erc20?: string | null
+          wallet_address_trc20?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_approve_deposit: {
@@ -713,6 +778,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_withdrawal_password: { Args: { _user_id: string }; Returns: boolean }
       is_valid_wallet_address: {
         Args: { _address: string; _network: string }
         Returns: boolean

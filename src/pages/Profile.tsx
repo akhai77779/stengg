@@ -153,14 +153,15 @@ export default function Profile() {
   }, [user]);
 
   const fetchProfile = async () => {
+    // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
     const {
       data,
       error
-    } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
+    } = await supabase.from('profiles_safe').select('*').eq('id', user!.id).single();
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching profile:', error);
     } else if (data) {
-      setProfile(data);
+      setProfile(data as Profile);
     }
     setIsLoading(false);
   };
