@@ -219,15 +219,58 @@ Deno.serve(async (req) => {
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
       console.error("[Config] Missing Supabase credentials");
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // JWT Authentication - require admin role
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("[Auth] Missing or invalid Authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized: Missing authentication" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Create auth client to verify user
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    if (userError || !user) {
+      console.warn("[Auth] Authentication failed:", userError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify admin role
+    const { data: roleData } = await authClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      console.warn(`[Auth] User ${user.id} attempted price sync without admin role`);
+      return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`[Auth] Admin user ${user.id} initiated price sync`);
 
     // Parse optional request body
     let targetProductId: string | null = null;

@@ -151,7 +151,52 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // JWT Authentication - require admin role
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("Missing or invalid Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized: Missing authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create auth client to verify user
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    if (userError || !user) {
+      console.warn("Authentication failed:", userError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized: Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify admin role
+    const { data: roleData } = await authClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      console.warn(`User ${user.id} attempted sync without admin role`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden: Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Admin user ${user.id} initiated sync`);
+    
+    // Use service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("Fetching data from external API:", EXTERNAL_API_URL);

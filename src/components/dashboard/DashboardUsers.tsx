@@ -181,20 +181,38 @@ export function DashboardUsers() {
 
     setIsAddingBalance(true);
 
-    const newBalance = (addBalanceUser.balance || 0) + amount;
+    try {
+      // Get current user session for admin ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
+        setIsAddingBalance(false);
+        return;
+      }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', addBalanceUser.id);
+      // Use atomic RPC function to prevent race conditions
+      const { data, error } = await supabase.rpc('admin_add_balance', {
+        _admin_id: user.id,
+        _user_id: addBalanceUser.id,
+        _amount: amount
+      });
 
-    if (error) {
-      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Thành công', description: `Đã cộng $${amount.toFixed(2)} vào tài khoản` });
-      setProfiles(profiles.map(p => p.id === addBalanceUser.id ? { ...p, balance: newBalance } : p));
-      setAddBalanceUser(null);
-      setAddAmount('');
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else if (data && typeof data === 'object' && 'success' in data && !(data as { success: boolean }).success) {
+        const errorMsg = (data as { error?: string }).error || 'Không thể cộng tiền';
+        toast({ title: 'Lỗi', description: errorMsg, variant: 'destructive' });
+      } else {
+        const result = data as { new_balance?: number } | null;
+        const newBalance = result?.new_balance ?? (addBalanceUser.balance || 0) + amount;
+        toast({ title: 'Thành công', description: `Đã cộng $${amount.toFixed(2)} vào tài khoản` });
+        setProfiles(profiles.map(p => p.id === addBalanceUser.id ? { ...p, balance: newBalance } : p));
+        setAddBalanceUser(null);
+        setAddAmount('');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
     }
 
     setIsAddingBalance(false);
@@ -217,20 +235,38 @@ export function DashboardUsers() {
 
     setIsSubtractingBalance(true);
 
-    const newBalance = currentBalance - amount;
+    try {
+      // Get current user session for admin ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
+        setIsSubtractingBalance(false);
+        return;
+      }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', subtractBalanceUser.id);
+      // Use atomic RPC function to prevent race conditions
+      const { data, error } = await supabase.rpc('admin_subtract_balance', {
+        _admin_id: user.id,
+        _user_id: subtractBalanceUser.id,
+        _amount: amount
+      });
 
-    if (error) {
-      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Thành công', description: `Đã trừ $${amount.toFixed(2)} khỏi tài khoản` });
-      setProfiles(profiles.map(p => p.id === subtractBalanceUser.id ? { ...p, balance: newBalance } : p));
-      setSubtractBalanceUser(null);
-      setSubtractAmount('');
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else if (data && typeof data === 'object' && 'success' in data && !(data as { success: boolean }).success) {
+        const errorMsg = (data as { error?: string }).error || 'Không thể trừ tiền';
+        toast({ title: 'Lỗi', description: errorMsg, variant: 'destructive' });
+      } else {
+        const result = data as { new_balance?: number } | null;
+        const newBalance = result?.new_balance ?? currentBalance - amount;
+        toast({ title: 'Thành công', description: `Đã trừ $${amount.toFixed(2)} khỏi tài khoản` });
+        setProfiles(profiles.map(p => p.id === subtractBalanceUser.id ? { ...p, balance: newBalance } : p));
+        setSubtractBalanceUser(null);
+        setSubtractAmount('');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
     }
 
     setIsSubtractingBalance(false);

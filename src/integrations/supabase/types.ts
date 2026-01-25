@@ -740,6 +740,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_balance: {
+        Args: { _admin_id: string; _amount: number; _user_id: string }
+        Returns: Json
+      }
       admin_approve_deposit: {
         Args: { _admin_id: string; _notes?: string; _transaction_id: string }
         Returns: Json
@@ -750,6 +754,10 @@ export type Database = {
       }
       admin_reject_transaction: {
         Args: { _admin_id: string; _notes?: string; _transaction_id: string }
+        Returns: Json
+      }
+      admin_subtract_balance: {
+        Args: { _admin_id: string; _amount: number; _user_id: string }
         Returns: Json
       }
       check_rate_limit: {
