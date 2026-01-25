@@ -371,3 +371,61 @@
 .animate-candle-flash {
   animation: candle-flash 0.6s ease-out;
 }
+
+/* Safe area padding for bottom sheets */
+.safe-area-padding-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+.safe-area-margin-top {
+  margin-top: env(safe-area-inset-top, 0);
+}
+
+/* Mobile bottom sheet optimization */
+@media (max-width: 640px) {
+  /* Full-width bottom sheets */
+  [data-state="open"][data-side="bottom"] {
+    max-height: 95vh !important;
+    border-radius: 24px 24px 0 0;
+  }
+  
+  /* Larger touch targets for duration/amount buttons */
+  .duration-btn, .amount-btn {
+    @apply min-h-[56px] py-3;
+  }
+}
+
+/* Input with larger tap area */
+.input-mobile {
+  @apply min-h-[52px] text-base;
+  font-size: 16px !important; /* Prevent iOS zoom */
+}
+
+/* Stack layout for small screens */
+@media (max-width: 480px) {
+  .stack-mobile {
+    @apply flex-col;
+  }
+  
+  .stack-mobile > * {
+    @apply w-full;
+  }
+}
+
+/* Responsive grid for product cards */
+.product-grid-mobile {
+  @apply grid gap-3;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 640px) {
+  .product-grid-mobile {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-grid-mobile {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
