@@ -26,7 +26,6 @@ interface Profile {
   balance: number | null;
   email: string | null;
   phone: string | null;
-  last_login_ip: string | null;
   last_login_at: string | null;
   wallet_address_bep20: string | null;
   wallet_address_trc20: string | null;
@@ -96,7 +95,8 @@ export function DashboardUsers() {
 
   const fetchData = async () => {
     const [profilesResult, rolesResult] = await Promise.all([
-      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
+      supabase.from('profiles_safe').select('*').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
     ]);
 
@@ -436,7 +436,7 @@ export function DashboardUsers() {
                     <TableHead>Email/SĐT</TableHead>
                     <TableHead>Số dư</TableHead>
                     <TableHead>Trạng thái</TableHead>
-                    <TableHead>IP cuối</TableHead>
+                    <TableHead>Đăng nhập cuối</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -541,10 +541,9 @@ export function DashboardUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {profile.last_login_ip ? (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Globe className="w-3 h-3" />
-                            <span className="font-mono">{profile.last_login_ip}</span>
+                        {profile.last_login_at ? (
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(profile.last_login_at), 'dd/MM/yyyy HH:mm')}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -690,8 +689,8 @@ export function DashboardUsers() {
                 </div>
 
                 <div className="col-span-2 space-y-1">
-                  <p className="text-muted-foreground">IP cuối cùng</p>
-                  <p className="font-mono text-xs">{selectedUser.last_login_ip || '-'}</p>
+                  <p className="text-muted-foreground">Đăng nhập cuối</p>
+                  <p className="font-mono text-xs">{selectedUser.last_login_at ? format(new Date(selectedUser.last_login_at), 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
                 </div>
 
                 {selectedUser.frozen_reason && (
