@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.sync-price-history]
 verify_jwt = false
+
+[functions.withdrawal-password]
+verify_jwt = false

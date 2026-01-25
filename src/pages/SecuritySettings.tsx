@@ -123,21 +123,31 @@ export default function SecuritySettings() {
       return;
     }
 
+    if (hasWithdrawalPassword && !currentPassword) {
+      toast({
+        title: t('common.error'),
+        description: t('security.enterCurrentPassword'),
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Hash the password using a simple approach (in production, use proper hashing on server)
-      const encoder = new TextEncoder();
-      const data = encoder.encode(newPassword);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ withdrawal_password_hash: hashHex })
-        .eq('id', user?.id);
-      
+      // Call server-side edge function for secure password handling
+      const { data, error } = await supabase.functions.invoke('withdrawal-password', {
+        body: {
+          action: hasWithdrawalPassword ? 'change' : 'create',
+          currentPassword: hasWithdrawalPassword ? currentPassword : undefined,
+          newPassword
+        }
+      });
+
       if (error) throw error;
+      
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to update password');
+      }
       
       toast({
         title: t('common.success'),
@@ -151,9 +161,10 @@ export default function SecuritySettings() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
+      console.error('Withdrawal password error:', error);
       toast({
         title: t('common.error'),
-        description: error.message,
+        description: error.message || t('common.error'),
         variant: 'destructive'
       });
     } finally {
