@@ -539,6 +539,7 @@ export type Database = {
           wallet_address_bep20: string | null
           wallet_address_erc20: string | null
           wallet_address_trc20: string | null
+          withdrawal_password_hash: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -561,6 +562,7 @@ export type Database = {
           wallet_address_bep20?: string | null
           wallet_address_erc20?: string | null
           wallet_address_trc20?: string | null
+          withdrawal_password_hash?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -583,6 +585,7 @@ export type Database = {
           wallet_address_bep20?: string | null
           wallet_address_erc20?: string | null
           wallet_address_trc20?: string | null
+          withdrawal_password_hash?: string | null
         }
         Relationships: []
       }
