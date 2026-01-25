@@ -49,25 +49,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
+    // Create auth client to verify JWT
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
     // Verify JWT and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('Invalid JWT:', claimsError);
+    if (userError || !user) {
+      console.error('Invalid JWT or user not found:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
+
+    // Create service role client for database operations (bypasses RLS)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
     console.log(`Processing withdrawal password request for user: ${userId}`);
 
     // Parse request body
