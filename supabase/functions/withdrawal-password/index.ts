@@ -1,23 +1,41 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hash, compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - restrict to known domains
+const ALLOWED_ORIGINS = [
+  "https://stengg-it-com.lovable.app",
+  "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
+  "https://f9a00261-b7fb-4428-ad85-88f8d5788c27.lovableproject.com",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
 
-// Simple SHA-256 hash function
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate origin for non-preflight requests
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    console.error(`Unauthorized origin: ${origin}`);
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -86,8 +104,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Hash and save new password
-      const hashedPassword = await hashPassword(newPassword);
+      // Hash password with bcrypt (includes automatic salt)
+      const hashedPassword = await hash(newPassword);
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ withdrawal_password_hash: hashedPassword })
@@ -145,9 +163,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify current password
-      const currentHash = await hashPassword(currentPassword);
-      if (currentHash !== profile.withdrawal_password_hash) {
+      // Verify current password with bcrypt compare
+      const isCurrentValid = await compare(currentPassword, profile.withdrawal_password_hash);
+      if (!isCurrentValid) {
         console.log(`Invalid current password attempt for user: ${userId}`);
         return new Response(
           JSON.stringify({ error: 'Current password is incorrect' }),
@@ -155,8 +173,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Hash and save new password
-      const newHash = await hashPassword(newPassword);
+      // Hash new password with bcrypt
+      const newHash = await hash(newPassword);
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ withdrawal_password_hash: newHash })
@@ -207,9 +225,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify password
-      const hash = await hashPassword(currentPassword);
-      const isValid = hash === profile.withdrawal_password_hash;
+      // Verify password with bcrypt compare
+      const isValid = await compare(currentPassword, profile.withdrawal_password_hash);
 
       console.log(`Withdrawal password verification for user ${userId}: ${isValid ? 'success' : 'failed'}`);
       return new Response(
