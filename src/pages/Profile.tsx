@@ -32,6 +32,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
   const [todayProductEarnings, setTodayProductEarnings] = useState<number>(0);
   const [todayCharityEarnings, setTodayCharityEarnings] = useState<number>(0);
@@ -248,8 +249,6 @@ export default function Profile() {
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>;
   }
-  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
-  
   const quickActions = [{
     icon: ArrowDownToLine,
     label: t('transaction.deposit'),
