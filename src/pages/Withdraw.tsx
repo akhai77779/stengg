@@ -164,7 +164,26 @@ export default function WithdrawPage() {
     setIsSubmitting(true);
 
     try {
-      // Use secure RPC function for withdrawal
+      // First, verify the withdrawal password via edge function
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('withdrawal-password', {
+        body: {
+          action: 'verify',
+          currentPassword: password
+        }
+      });
+
+      if (verifyError) {
+        console.error("Password verification error:", verifyError);
+        toast.error("Không thể xác thực mật khẩu rút tiền");
+        return;
+      }
+
+      if (!verifyData?.success || !verifyData?.valid) {
+        toast.error(verifyData?.error || "Mật khẩu rút tiền không đúng");
+        return;
+      }
+
+      // Password verified, proceed with withdrawal request
       const { data, error } = await supabase.rpc('create_withdrawal_request', {
         _user_id: user.id,
         _amount: parseFloat(amount),
