@@ -32,6 +32,9 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
+  const [todayProductEarnings, setTodayProductEarnings] = useState<number>(0);
+  const [todayCharityEarnings, setTodayCharityEarnings] = useState<number>(0);
+  const [totalCharityBalance, setTotalCharityBalance] = useState<number>(0);
   const {
     user,
     signOut,
@@ -118,6 +121,7 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchTodayEarnings();
 
       // Subscribe to realtime balance updates
       const channel = supabase.channel('profile-balance').on('postgres_changes', {
@@ -128,11 +132,24 @@ export default function Profile() {
       }, () => {
         fetchProfile();
       }).subscribe();
+
+      // Subscribe to option_trades updates for earnings
+      const tradesChannel = supabase.channel('profile-trades').on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'option_trades',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        fetchTodayEarnings();
+      }).subscribe();
+
       return () => {
         supabase.removeChannel(channel);
+        supabase.removeChannel(tradesChannel);
       };
     }
   }, [user]);
+
   const fetchProfile = async () => {
     const {
       data,
@@ -144,6 +161,69 @@ export default function Profile() {
       setProfile(data);
     }
     setIsLoading(false);
+  };
+
+  const fetchTodayEarnings = async () => {
+    if (!user?.id) return;
+
+    // Get start of today in UTC
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.toISOString();
+
+    try {
+      // Fetch today's settled option trades with positive profit
+      const { data: trades, error: tradesError } = await supabase
+        .from('option_trades')
+        .select('profit_loss')
+        .eq('user_id', user.id)
+        .eq('status', 'settled')
+        .gte('settled_at', todayStart);
+
+      if (tradesError) {
+        console.error('Error fetching today trades:', tradesError);
+      } else if (trades) {
+        // Sum only positive profits for today's earnings
+        const totalProfit = trades.reduce((sum, trade) => {
+          const profit = trade.profit_loss || 0;
+          return sum + (profit > 0 ? profit : 0);
+        }, 0);
+        setTodayProductEarnings(totalProfit);
+      }
+
+      // For charity earnings - sum from transactions table with type 'charity_income'
+      const { data: charityData, error: charityError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('type', 'charity_income')
+        .eq('status', 'approved')
+        .gte('created_at', todayStart);
+
+      if (charityError) {
+        console.error('Error fetching charity earnings:', charityError);
+      } else if (charityData) {
+        const totalCharity = charityData.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        setTodayCharityEarnings(totalCharity);
+      }
+
+      // For total charity balance - all time charity income
+      const { data: allCharityData, error: allCharityError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('type', 'charity_income')
+        .eq('status', 'approved');
+
+      if (allCharityError) {
+        console.error('Error fetching total charity:', allCharityError);
+      } else if (allCharityData) {
+        const total = allCharityData.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        setTotalCharityBalance(total);
+      }
+    } catch (err) {
+      console.error('Error in fetchTodayEarnings:', err);
+    }
   };
   const copyUID = () => {
     navigator.clipboard.writeText(uid);
@@ -291,7 +371,7 @@ export default function Profile() {
                 <div>
                   <p className="text-[10px] md:text-xs text-muted-foreground mb-1">{t('wallet.charityTalent')} ({currency})</p>
                   <p className="text-xl md:text-2xl font-bold text-[#00bdd6]">
-                    {showBalance ? '0' : '****'}
+                    {showBalance ? formatCurrency(totalCharityBalance) : '****'}
                   </p>
                 </div>
               </div>
@@ -303,13 +383,13 @@ export default function Profile() {
                   <div>
                     <p className="text-[10px] md:text-xs text-muted-foreground">{t('wallet.productTrade')} ({currency})</p>
                     <p className="text-base md:text-lg font-semibold text-[#26e36b]">
-                      {showBalance ? '0' : '****'}
+                      {showBalance ? formatCurrency(todayProductEarnings) : '****'}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] md:text-xs text-muted-foreground">{t('wallet.charityTalent')} ({currency})</p>
                     <p className="text-base md:text-lg font-semibold bg-[#0b111e] text-[#11df6e]">
-                      {showBalance ? '0' : '****'}
+                      {showBalance ? formatCurrency(todayCharityEarnings) : '****'}
                     </p>
                   </div>
                 </div>
