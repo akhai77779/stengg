@@ -7,7 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
-import { Loader2, X, Clock, TrendingUp, TrendingDown, Wallet, BarChart2, CheckCircle } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Loader2, X, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OptionsTradeSheetProps {
@@ -52,6 +53,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
   const [countdown, setCountdown] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useExternalBalance(user?.id);
 
   const price = product.price || 0;
@@ -118,7 +120,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
   const handleTrade = async () => {
     if (!user) {
-      toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+      toast({ title: t('options.pleaseLogin'), variant: 'destructive' });
       return;
     }
 
@@ -131,8 +133,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
     if ((count || 0) > 0) {
       toast({ 
-        title: 'Bạn đang có lệnh đang chờ', 
-        description: 'Vui lòng đợi lệnh hiện tại hoàn thành trước khi đặt lệnh mới',
+        title: t('options.pendingOrder'), 
         variant: 'destructive' 
       });
       setHasActiveTrade(true);
@@ -141,8 +142,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
     if (amountNum < currentMinAmount) {
       toast({ 
-        title: 'Số tiền không hợp lệ', 
-        description: `Tối thiểu cho ${selectedDuration.label}: $${currentMinAmount.toLocaleString()}`,
+        title: t('options.invalidAmount'), 
+        description: t('options.minimumFor', { duration: selectedDuration.label, amount: currentMinAmount.toLocaleString() }),
         variant: 'destructive' 
       });
       return;
@@ -150,8 +151,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
     if (balance !== null && amountNum > balance) {
       toast({ 
-        title: 'Số dư không đủ', 
-        description: `Cần $${amountNum.toLocaleString()} nhưng chỉ có $${balance.toLocaleString()}`,
+        title: t('options.insufficientBalance'), 
+        description: t('options.needAmount', { need: amountNum.toLocaleString(), have: balance.toLocaleString() }),
         variant: 'destructive' 
       });
       return;
@@ -177,8 +178,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
       if (!result.success) {
         toast({
-          title: 'Lỗi',
-          description: result.error || 'Không thể đặt lệnh',
+          title: t('options.error'),
+          description: result.error || t('options.cannotPlaceOrder'),
           variant: 'destructive',
         });
         return;
@@ -192,8 +193,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
     } catch (error) {
       console.error('Option trade error:', error);
       toast({
-        title: 'Lỗi',
-        description: 'Không thể thực hiện giao dịch',
+        title: t('options.error'),
+        description: t('options.cannotExecuteTrade'),
         variant: 'destructive',
       });
     } finally {
@@ -224,25 +225,25 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
   return (
     <>
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
+        <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-3xl safe-area-padding-bottom">
           <SheetHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
-            <SheetTitle className="text-lg">Limited time</SheetTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 touch-action-manipulation">
               <X className="h-5 w-5" />
             </Button>
           </SheetHeader>
 
-          <div className="space-y-5 py-4 overflow-y-auto">
+          <div className="space-y-5 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
             {/* Product Info */}
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Product Name</span>
+              <span className="text-muted-foreground">{t('options.productName')}</span>
               <span className="font-semibold">{product.symbol || product.name}</span>
             </div>
 
             {/* Buy/Sell Toggle and Price */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Buying amount</span>
+                <span className="text-muted-foreground">{t('options.buyingAmount')}</span>
                 <span className="text-muted-foreground/70">${amountNum.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-3">
@@ -250,7 +251,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                   "font-medium",
                   direction === 'buy' ? "text-green-500" : "text-red-500"
                 )}>
-                  {direction === 'buy' ? 'Buy Up' : 'Buy Down'}
+                  {direction === 'buy' ? t('options.buyUp') : t('options.buyDown')}
                 </span>
                 <span className={cn(
                   "font-bold text-lg",
@@ -264,7 +265,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             {/* Balance and Fee */}
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Available Balance</span>
+                <span className="text-muted-foreground">{t('options.availableBalance')}</span>
                 <span className="font-semibold text-primary">
                   {balanceLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
@@ -274,7 +275,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Handling Fee</span>
+                <span className="text-muted-foreground">{t('options.handlingFee')}</span>
                 <span className="font-medium">{(FEE_RATE * 100).toFixed(1)}%</span>
               </div>
             </div>
@@ -282,14 +283,14 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             {/* Active Trade Warning */}
             {hasActiveTrade && (
               <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm">
-                Bạn đang có lệnh đang chờ. Vui lòng đợi lệnh hoàn thành trước khi đặt lệnh mới.
+                {t('options.pendingOrder')}
               </div>
             )}
 
-            {/* Duration Options */}
+            {/* Duration Options - Mobile optimized with larger touch targets */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Delivery Time</span>
+                <span>{t('options.deliveryTime')}</span>
               </div>
               <div className="flex gap-2">
                 {DURATION_OPTIONS.map((opt) => (
@@ -297,10 +298,10 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                     key={opt.seconds}
                     onClick={() => setSelectedDuration(opt)}
                     className={cn(
-                      "flex-1 py-3 px-2 rounded-lg transition-all",
+                      "flex-1 py-4 px-2 rounded-lg transition-all min-h-[64px] touch-action-manipulation",
                       selectedDuration.seconds === opt.seconds
                         ? "bg-cyan-500/20 border-2 border-cyan-500"
-                        : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/30"
+                        : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/30 active:bg-muted"
                     )}
                   >
                     <div className="flex items-center justify-center gap-1 text-sm font-medium">
@@ -313,41 +314,42 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                         ? "text-cyan-400" 
                         : "text-muted-foreground"
                     )}>
-                      Profitability{(opt.profitRate * 100).toFixed(0)}%
+                      {t('options.profitability')} {(opt.profitRate * 100).toFixed(0)}%
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Amount Input */}
+            {/* Amount Input - Mobile optimized */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Buying amount</span>
-                <span className="text-muted-foreground">Minimum: {currentMinAmount.toLocaleString()}</span>
+                <span className="text-muted-foreground">{t('options.buyingAmount')}</span>
+                <span className="text-muted-foreground">{t('options.minimum')}: {currentMinAmount.toLocaleString()}</span>
               </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                 <Input
                   type="number"
+                  inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0"
                   min={MIN_AMOUNT}
-                  className="pl-8 h-14 text-lg font-medium bg-muted/50"
+                  className="pl-8 h-14 text-lg font-medium bg-muted/50 touch-action-manipulation"
                 />
               </div>
             </div>
 
-            {/* Quick Amount Buttons */}
-            <div className="flex gap-2">
+            {/* Quick Amount Buttons - Mobile optimized */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {QUICK_AMOUNTS.map((amt) => (
                 <Button
                   key={amt}
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "flex-1 rounded-lg",
+                    "flex-1 min-w-[64px] min-h-[44px] rounded-lg touch-action-manipulation",
                     amountNum === amt && "border-cyan-500 bg-cyan-500/10 text-cyan-400"
                   )}
                   onClick={() => setAmount(String(amt))}
@@ -360,21 +362,21 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             {/* Estimated Profit */}
             <div className="flex items-center justify-between text-sm">
               <span className="text-green-500 font-medium">
-                Estimated revenue:{formatCurrency(estimatedProfit)}
+                {t('options.estimatedRevenue')}: {formatCurrency(estimatedProfit)}
               </span>
               <span className="text-muted-foreground flex items-center gap-1">
-                Occupied margin: {priceEquivalent}
+                {t('options.occupiedMargin')}: {priceEquivalent}
               </span>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Button - Large touch target */}
             <Button
               size="lg"
               className={cn(
-                "w-full h-14 text-lg font-semibold rounded-xl",
+                "w-full min-h-[56px] h-14 text-lg font-semibold rounded-xl touch-action-manipulation",
                 direction === 'buy'
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
+                  : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
               disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
               onClick={handleTrade}
@@ -382,7 +384,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : null}
-              {direction === 'buy' ? 'Buy Now' : 'Sell Now'}
+              {direction === 'buy' ? t('options.buyNow') : t('options.sellNow')}
             </Button>
           </div>
         </SheetContent>
@@ -426,20 +428,20 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Mobile optimized */}
             <div className="flex gap-4 w-full">
               <Button
                 variant="outline"
-                className="flex-1 h-12 rounded-xl bg-muted/50"
+                className="flex-1 min-h-[48px] h-12 rounded-xl bg-muted/50 touch-action-manipulation"
                 onClick={handleCloseSuccessDialog}
               >
-                Close
+                {t('common.close')}
               </Button>
               <Button
-                className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-700"
+                className="flex-1 min-h-[48px] h-12 rounded-xl bg-green-600 hover:bg-green-700 touch-action-manipulation"
                 onClick={handleContinue}
               >
-                Continue
+                {t('options.continue')}
               </Button>
             </div>
           </div>
@@ -448,8 +450,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
 
       {/* Success Toast Banner */}
       {showSuccessDialog && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full bg-muted/90 backdrop-blur-sm border border-border flex items-center gap-3">
-          <span className="text-sm font-medium">Successful purchase</span>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full bg-muted/90 backdrop-blur-sm border border-border flex items-center gap-3 safe-area-margin-top">
+          <span className="text-sm font-medium">{t('options.successfulPurchase')}</span>
           <CheckCircle className="h-5 w-5 text-green-500" />
         </div>
       )}

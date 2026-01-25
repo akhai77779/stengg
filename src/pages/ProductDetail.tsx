@@ -13,6 +13,7 @@ import { MiniPriceChart } from "@/components/product/MiniPriceChart";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
 import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/components/charts/ChartIndicators";
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
@@ -70,6 +71,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -482,8 +484,8 @@ const ProductDetail = () => {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <p className="text-muted-foreground">Không tìm thấy sản phẩm</p>
-          <Button onClick={() => navigate("/products")}>Quay lại</Button>
+          <p className="text-muted-foreground">{t('product.notFound')}</p>
+          <Button onClick={() => navigate("/products")}>{t('product.goBack')}</Button>
         </div>
       </Layout>
     );
@@ -544,19 +546,19 @@ const ProductDetail = () => {
           </div>
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">24h highest price</span>
+              <span className="text-muted-foreground">{t('product.highest24h')}</span>
               <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : null)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">24h lowest price</span>
+              <span className="text-muted-foreground">{t('product.lowest24h')}</span>
               <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : null)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">24h trading volume</span>
+              <span className="text-muted-foreground">{t('product.volume24h')}</span>
               <AnimatedStat value={formatVolume(product.volume)} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">24h turnover</span>
+              <span className="text-muted-foreground">{t('product.turnover24h')}</span>
               <AnimatedStat value={formatVolume(product.turnover || product.volume)} className="font-medium" />
             </div>
           </div>
@@ -570,7 +572,7 @@ const ProductDetail = () => {
             onClick={() => setChartType('line')}
             className="min-h-[36px] h-9 min-w-[44px] px-3 text-xs font-medium touch-action-manipulation"
           >
-            Line
+            {t('product.line')}
           </Button>
           {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => {
             const displayLabel = tf.toUpperCase();
@@ -626,11 +628,11 @@ const ProductDetail = () => {
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">Live</span>
+                  <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">{t('product.live')}</span>
                 </div>
                 {realtimeStats.updateCount > 0 && (
                   <span className="text-[10px] text-muted-foreground">
-                    +{realtimeStats.updateCount} updates
+                    +{realtimeStats.updateCount} {t('product.updates')}
                   </span>
                 )}
               </div>
@@ -687,7 +689,7 @@ const ProductDetail = () => {
         {/* Position Section */}
         <div className="px-1">
           <div className="flex items-center justify-between py-3 border-b border-border">
-            <span className="text-sm text-muted-foreground">Position({activePositionCount})</span>
+            <span className="text-sm text-muted-foreground">{t('product.position')}({activePositionCount})</span>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -715,7 +717,7 @@ const ProductDetail = () => {
           {/* Empty state when no positions */}
           {activePositionCount === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              Chưa có vị thế nào
+              {t('product.noPosition')}
             </div>
           )}
         </div>
@@ -724,10 +726,10 @@ const ProductDetail = () => {
         <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border/50 safe-area-margin-bottom">
           <div className="max-w-md mx-auto flex gap-3">
             <Button 
-              className="flex-1 min-h-[48px] h-12 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
+              className="flex-1 min-h-[52px] h-13 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
               onClick={() => {
                 if (!user) {
-                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+                  toast({ title: t('options.pleaseLogin'), variant: 'destructive' });
                   navigate('/login');
                   return;
                 }
@@ -736,13 +738,13 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              Buy Up
+              {t('options.buyUp')}
             </Button>
             <Button 
-              className="flex-1 min-h-[48px] h-12 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
+              className="flex-1 min-h-[52px] h-13 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
               onClick={() => {
                 if (!user) {
-                  toast({ title: 'Vui lòng đăng nhập', variant: 'destructive' });
+                  toast({ title: t('options.pleaseLogin'), variant: 'destructive' });
                   navigate('/login');
                   return;
                 }
@@ -751,7 +753,7 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              Buy Down
+              {t('options.buyDown')}
             </Button>
           </div>
         </div>

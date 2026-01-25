@@ -5,7 +5,7 @@ export type Language = 'vi' | 'en' | 'zh' | 'th' | 'ja' | 'ko' | 'id' | 'ms';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
   isTransitioning: boolean;
 }
 
@@ -361,6 +361,46 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Ngôn ngữ',
     'settings.currency': 'Tiền tệ',
     'settings.exchangeRate': 'Tỷ giá',
+    
+    // Options Trading
+    'options.limitedTime': 'Thời gian giới hạn',
+    'options.productName': 'Tên sản phẩm',
+    'options.buyingAmount': 'Số tiền mua',
+    'options.buyUp': 'Mua lên',
+    'options.buyDown': 'Mua xuống',
+    'options.buyNow': 'Mua ngay',
+    'options.sellNow': 'Bán ngay',
+    'options.availableBalance': 'Số dư khả dụng',
+    'options.handlingFee': 'Phí xử lý',
+    'options.deliveryTime': 'Thời gian giao',
+    'options.profitability': 'Tỷ suất lợi nhuận',
+    'options.minimum': 'Tối thiểu',
+    'options.estimatedRevenue': 'Doanh thu ước tính',
+    'options.occupiedMargin': 'Ký quỹ chiếm dụng',
+    'options.pendingOrder': 'Bạn đang có lệnh đang chờ. Vui lòng đợi lệnh hoàn thành trước khi đặt lệnh mới.',
+    'options.successfulPurchase': 'Mua thành công',
+    'options.continue': 'Tiếp tục',
+    'options.pleaseLogin': 'Vui lòng đăng nhập',
+    'options.invalidAmount': 'Số tiền không hợp lệ',
+    'options.minimumFor': 'Tối thiểu cho {{duration}}: ${{amount}}',
+    'options.insufficientBalance': 'Số dư không đủ',
+    'options.needAmount': 'Cần ${{need}} nhưng chỉ có ${{have}}',
+    'options.error': 'Lỗi',
+    'options.cannotPlaceOrder': 'Không thể đặt lệnh',
+    'options.cannotExecuteTrade': 'Không thể thực hiện giao dịch',
+    
+    // Product Detail
+    'product.notFound': 'Không tìm thấy sản phẩm',
+    'product.goBack': 'Quay lại',
+    'product.highest24h': 'Giá cao nhất 24h',
+    'product.lowest24h': 'Giá thấp nhất 24h',
+    'product.volume24h': 'Khối lượng giao dịch 24h',
+    'product.turnover24h': 'Doanh số 24h',
+    'product.line': 'Đường',
+    'product.live': 'Trực tiếp',
+    'product.updates': 'cập nhật',
+    'product.position': 'Vị thế',
+    'product.noPosition': 'Chưa có vị thế nào',
   },
   en: {
     // Common
@@ -710,6 +750,46 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Language',
     'settings.currency': 'Currency',
     'settings.exchangeRate': 'Exchange Rate',
+    
+    // Options Trading
+    'options.limitedTime': 'Limited Time',
+    'options.productName': 'Product Name',
+    'options.buyingAmount': 'Buying Amount',
+    'options.buyUp': 'Buy Up',
+    'options.buyDown': 'Buy Down',
+    'options.buyNow': 'Buy Now',
+    'options.sellNow': 'Sell Now',
+    'options.availableBalance': 'Available Balance',
+    'options.handlingFee': 'Handling Fee',
+    'options.deliveryTime': 'Delivery Time',
+    'options.profitability': 'Profitability',
+    'options.minimum': 'Minimum',
+    'options.estimatedRevenue': 'Estimated Revenue',
+    'options.occupiedMargin': 'Occupied Margin',
+    'options.pendingOrder': 'You have a pending order. Please wait for it to complete before placing a new one.',
+    'options.successfulPurchase': 'Successful Purchase',
+    'options.continue': 'Continue',
+    'options.pleaseLogin': 'Please login',
+    'options.invalidAmount': 'Invalid amount',
+    'options.minimumFor': 'Minimum for {{duration}}: ${{amount}}',
+    'options.insufficientBalance': 'Insufficient balance',
+    'options.needAmount': 'Need ${{need}} but only have ${{have}}',
+    'options.error': 'Error',
+    'options.cannotPlaceOrder': 'Cannot place order',
+    'options.cannotExecuteTrade': 'Cannot execute trade',
+    
+    // Product Detail
+    'product.notFound': 'Product not found',
+    'product.goBack': 'Go Back',
+    'product.highest24h': '24h Highest Price',
+    'product.lowest24h': '24h Lowest Price',
+    'product.volume24h': '24h Trading Volume',
+    'product.turnover24h': '24h Turnover',
+    'product.line': 'Line',
+    'product.live': 'Live',
+    'product.updates': 'updates',
+    'product.position': 'Position',
+    'product.noPosition': 'No positions yet',
   },
   zh: {
     // Common
@@ -2010,9 +2090,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }, 50);
     }, 150);
   };
-
-  const t = (key: string): string => {
-    return translations[language][key] || key;
+  const t = (key: string, vars?: Record<string, string | number>): string => {
+    // Try current language first, then fallback to English, then return key
+    let value = translations[language]?.[key] || translations.en?.[key] || key;
+    
+    // Interpolate variables like {{name}}
+    if (vars) {
+      Object.entries(vars).forEach(([k, v]) => {
+        value = value.replace(new RegExp(`{{${k}}}`, 'g'), String(v));
+      });
+    }
+    
+    return value;
   };
 
   useEffect(() => {
