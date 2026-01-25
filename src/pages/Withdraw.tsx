@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, History, Eye, EyeOff, Loader2, ChevronRight } from "lucide-react";
+import { ArrowLeft, History, Eye, EyeOff, Loader2, ChevronRight, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TransactionHistory } from "@/components/profile/TransactionHistory";
 
 interface BankAccount {
   id: string;
@@ -56,6 +57,7 @@ export default function WithdrawPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
 
   const minWithdraw = 10;
   
@@ -243,10 +245,17 @@ export default function WithdrawPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-semibold">Rút tiền</h1>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/wallet-details')} className="text-foreground hover:bg-muted">
-          <History className="h-5 w-5" />
+        <Button variant="ghost" size="icon" onClick={() => setShowTransactionHistory(!showTransactionHistory)} className="text-foreground hover:bg-muted">
+          {showTransactionHistory ? <X className="h-5 w-5" /> : <History className="h-5 w-5" />}
         </Button>
       </div>
+
+      {/* Transaction History Panel */}
+      {showTransactionHistory && (
+        <div className="px-4 py-4 border-b border-border">
+          <TransactionHistory />
+        </div>
+      )}
 
       {/* Content */}
       <div className="px-4 py-4 space-y-4">
