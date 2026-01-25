@@ -26,14 +26,15 @@ export function useExternalBalance(userId: string | undefined): ExternalBalanceD
     setError(null);
 
     try {
+      // Use profiles_safe view to exclude sensitive fields
       const { data: profile, error: dbError } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('balance')
         .eq('id', userId)
         .maybeSingle();
 
       if (dbError) {
-        console.error('Error fetching balance from profiles:', dbError);
+        console.error('Error fetching balance from profiles_safe:', dbError);
         setError(dbError.message);
         return;
       }

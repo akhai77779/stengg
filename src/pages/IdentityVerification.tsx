@@ -64,13 +64,13 @@ export default function IdentityVerification() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch profile data
+  // Fetch profile data - using profiles_safe view for security
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) return;
       
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('full_name')
         .eq('id', user.id)
         .maybeSingle();

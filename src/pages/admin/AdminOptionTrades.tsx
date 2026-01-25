@@ -97,8 +97,9 @@ export default function AdminOptionTrades() {
     const productIds = [...new Set(tradesData.map(t => t.product_id))];
 
     if (userIds.length > 0) {
+      // Use profiles_safe view for security
       const { data: profilesData } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('id, full_name')
         .in('id', userIds);
       

@@ -68,10 +68,10 @@ export function NewsComments({ newsId }: NewsCommentsProps) {
     if (error) {
       console.error('Error fetching comments:', error);
     } else if (data) {
-      // Fetch profiles for each comment
+      // Fetch profiles for each comment - using profiles_safe view for security
       const userIds = [...new Set(data.map(c => c.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 

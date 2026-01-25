@@ -39,19 +39,17 @@ export default function SecuritySettings() {
   const isPhoneVerified = !!user?.phone;
   const isEmailVerified = !!user?.email_confirmed_at;
 
-  // Fetch withdrawal password status
+  // Fetch withdrawal password status using secure RPC (never exposes hash)
   useEffect(() => {
     const fetchWithdrawalPasswordStatus = async () => {
       if (!user?.id) return;
       
+      // Use SECURITY DEFINER function that checks existence without exposing hash
       const { data, error } = await supabase
-        .from('profiles')
-        .select('withdrawal_password_hash')
-        .eq('id', user.id)
-        .single();
+        .rpc('has_withdrawal_password', { _user_id: user.id });
       
-      if (!error && data) {
-        setHasWithdrawalPassword(!!data.withdrawal_password_hash);
+      if (!error) {
+        setHasWithdrawalPassword(data === true);
       }
     };
     

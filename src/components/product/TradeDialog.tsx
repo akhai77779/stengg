@@ -45,8 +45,9 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
 
   const fetchBalance = async () => {
     setIsFetchingBalance(true);
+    // Use profiles_safe view to exclude sensitive fields
     const { data, error } = await supabase
-      .from('profiles')
+      .from('profiles_safe')
       .select('balance')
       .eq('id', user!.id)
       .single();
