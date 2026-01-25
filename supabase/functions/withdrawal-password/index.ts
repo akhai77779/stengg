@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { hash, compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { hashSync, compareSync } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 // Allowed origins for CORS - restrict to known domains
 const ALLOWED_ORIGINS = [
@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Hash password with bcrypt (includes automatic salt)
-      const hashedPassword = await hash(newPassword);
+      // Hash password with bcrypt (includes automatic salt) - using sync version for Edge Functions
+      const hashedPassword = hashSync(newPassword);
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ withdrawal_password_hash: hashedPassword })
@@ -163,8 +163,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify current password with bcrypt compare
-      const isCurrentValid = await compare(currentPassword, profile.withdrawal_password_hash);
+      // Verify current password with bcrypt compare - using sync version for Edge Functions
+      const isCurrentValid = compareSync(currentPassword, profile.withdrawal_password_hash);
       if (!isCurrentValid) {
         console.log(`Invalid current password attempt for user: ${userId}`);
         return new Response(
@@ -173,8 +173,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Hash new password with bcrypt
-      const newHash = await hash(newPassword);
+      // Hash new password with bcrypt - using sync version for Edge Functions
+      const newHash = hashSync(newPassword);
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ withdrawal_password_hash: newHash })
@@ -225,8 +225,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify password with bcrypt compare
-      const isValid = await compare(currentPassword, profile.withdrawal_password_hash);
+      // Verify password with bcrypt compare - using sync version for Edge Functions
+      const isValid = compareSync(currentPassword, profile.withdrawal_password_hash);
 
       console.log(`Withdrawal password verification for user ${userId}: ${isValid ? 'success' : 'failed'}`);
       return new Response(
