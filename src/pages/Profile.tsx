@@ -259,6 +259,11 @@ export default function Profile() {
     color: 'text-orange-400',
     href: '/withdraw'
   }, {
+    icon: CreditCard,
+    label: t('profile.transactionHistory'),
+    color: 'text-blue-400',
+    href: '/wallet-details'
+  }, {
     icon: Headphones,
     label: t('profile.customerService'),
     color: 'text-purple-400',
@@ -397,7 +402,7 @@ export default function Profile() {
                 </p>}
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-3 gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+              <div className="grid grid-cols-4 gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
                 {quickActions.map(action => 
                   action.external ? (
                     <a 
