@@ -248,6 +248,8 @@ export default function Profile() {
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>;
   }
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  
   const quickActions = [{
     icon: ArrowDownToLine,
     label: t('transaction.deposit'),
@@ -262,7 +264,7 @@ export default function Profile() {
     icon: CreditCard,
     label: t('profile.transactionHistory'),
     color: 'text-blue-400',
-    href: '/wallet-details'
+    onClick: () => setShowTransactionHistory(!showTransactionHistory)
   }, {
     icon: Headphones,
     label: t('profile.customerService'),
@@ -417,8 +419,19 @@ export default function Profile() {
                       </div>
                       <span className="text-[9px] md:text-[10px] text-muted-foreground text-center leading-tight">{action.label}</span>
                     </a>
+                  ) : action.onClick ? (
+                    <button 
+                      key={action.label} 
+                      onClick={action.onClick}
+                      className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation"
+                    >
+                      <div className={cn('p-1.5 md:p-2 rounded-full bg-card', action.color)}>
+                        <action.icon className="w-4 h-4 md:w-5 md:h-5" />
+                      </div>
+                      <span className="text-[9px] md:text-[10px] text-muted-foreground text-center leading-tight">{action.label}</span>
+                    </button>
                   ) : (
-                    <Link key={action.label} to={action.href} className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation">
+                    <Link key={action.label} to={action.href!} className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation">
                       <div className={cn('p-1.5 md:p-2 rounded-full bg-card', action.color)}>
                         <action.icon className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
@@ -427,6 +440,13 @@ export default function Profile() {
                   )
                 )}
               </div>
+              
+              {/* Transaction History Inline */}
+              {showTransactionHistory && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <TransactionHistory />
+                </div>
+              )}
             </CardContent>
           </Card>
 
