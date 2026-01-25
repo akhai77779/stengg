@@ -14,6 +14,7 @@ import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, RefreshCw, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { TransactionHistory } from '@/components/profile/TransactionHistory';
 interface Profile {
   id: string;
   full_name: string | null;
@@ -483,6 +484,11 @@ export default function Profile() {
                 </button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Transaction History */}
+          <div className="mb-4 md:mb-6">
+            <TransactionHistory />
           </div>
 
           {/* Security Notice */}
