@@ -3,6 +3,8 @@ import { hashSync, compareSync } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts"
 
 // Allowed origins for CORS - restrict to known domains
 const ALLOWED_ORIGINS = [
+  "https://stengg.it.com",
+  "https://www.stengg.it.com",
   "https://stengg-it-com.lovable.app",
   "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
   "https://f9a00261-b7fb-4428-ad85-88f8d5788c27.lovableproject.com",
