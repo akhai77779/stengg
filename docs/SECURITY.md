@@ -220,6 +220,40 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 ---
 
+## 🔑 Edge Functions Security
+
+### `withdrawal-password` Edge Function
+- **Mục đích:** Quản lý mật khẩu rút tiền (create, change, verify, admin-reset)
+- **Actions hỗ trợ:**
+
+| Action | Mô tả | Quyền yêu cầu |
+|--------|-------|---------------|
+| `create` | Tạo mật khẩu rút tiền mới | Authenticated user (chính chủ) |
+| `change` | Đổi mật khẩu (cần mật khẩu cũ) | Authenticated user (chính chủ) |
+| `verify` | Xác minh mật khẩu khi rút tiền | Authenticated user (chính chủ) |
+| `admin-reset` | Admin đặt lại mật khẩu cho user | **Admin role required** |
+
+- **Bảo mật `admin-reset`:**
+  - ✅ Xác minh JWT token của admin
+  - ✅ Kiểm tra role `admin` trong bảng `user_roles`
+  - ✅ Sử dụng `bcryptSync` để hash mật khẩu mới
+  - ✅ Service Role key để bypass RLS khi update
+  - ✅ **Bắt buộc audit logging** với action `admin_withdrawal_password_reset`
+  - ✅ CORS origin whitelisting
+
+```typescript
+// Ví dụ audit log entry
+{
+  action: 'admin_withdrawal_password_reset',
+  entity_type: 'user',
+  entity_id: targetUserId,
+  user_id: adminId,
+  details: { changed_by: adminId }
+}
+```
+
+---
+
 ## 🛡️ Secure Views
 
 ### View `profiles_safe` ✅ ĐÃ XÁC MINH
@@ -315,6 +349,7 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 | `admin_password_change` | user | Changed by admin |
 | `admin_balance_add` | user | Admin ID, amount, new balance |
 | `admin_balance_subtract` | user | Admin ID, amount, new balance |
+| `admin_withdrawal_password_reset` | user | Admin ID đổi mật khẩu rút tiền cho user |
 
 ---
 
@@ -381,6 +416,8 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 | Ngày | Thay đổi |
 |------|----------|
+| 26/01/2026 | **Thêm admin-reset withdrawal password:** Cho phép admin đổi mật khẩu rút tiền của user với đầy đủ audit logging |
+| 26/01/2026 | Thêm section "Edge Functions Security" với chi tiết về withdrawal-password function |
 | 26/01/2026 | **Security scan verification:** Xác minh tất cả error-level findings đều là false positives |
 | 26/01/2026 | Cập nhật documentation với trạng thái bảo mật mới nhất |
 | 26/01/2026 | Thêm section "Security Scan Decisions" |
@@ -389,6 +426,9 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 | 25/01/2026 | Cập nhật tất cả client queries sang sử dụng `profiles_safe` |
 | 25/01/2026 | Thêm atomic admin RPCs (`admin_add_balance`, `admin_subtract_balance`) |
 | 23/01/2026 | Sửa RLS cho `app_settings` - chỉ admin xem được |
+| 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
+| 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |
+| 23/01/2026 | Tạo tài liệu bảo mật này |
 | 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
 | 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |
 | 23/01/2026 | Tạo tài liệu bảo mật này |
