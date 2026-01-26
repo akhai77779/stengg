@@ -1,14 +1,25 @@
 # 🔐 Tài liệu Bảo mật Dự án ST Engineering Trading Platform
 
-> **Phiên bản:** 1.0  
-> **Cập nhật:** 23/01/2026  
-> **Loại dự án:** Demo/Training Application
+> **Phiên bản:** 2.0  
+> **Cập nhật:** 26/01/2026  
+> **Loại dự án:** Demo/Training Application  
+> **Trạng thái bảo mật:** ✅ Đã xác minh - Không có lỗ hổng nghiêm trọng
 
 ---
 
 ## 📋 Tổng quan
 
-Tài liệu này mô tả các biện pháp bảo mật đã được triển khai trong dự án trading platform demo. Dự án sử dụng Lovable Cloud (Supabase) làm backend với Row-Level Security (RLS) để bảo vệ dữ liệu.
+Tài liệu này mô tả các biện pháp bảo mật đã được triển khai trong dự án trading platform demo. Dự án sử dụng Lovable Cloud làm backend với Row-Level Security (RLS) để bảo vệ dữ liệu.
+
+### Tóm tắt Bảo mật
+
+| Thành phần | Trạng thái | Ghi chú |
+|------------|------------|---------|
+| RLS Policies | ✅ Đã bảo vệ | Tất cả 17 bảng đều có RLS |
+| Sensitive Data | ✅ Đã bảo vệ | View `profiles_safe` ẩn dữ liệu nhạy cảm |
+| Admin Functions | ✅ Đã bảo vệ | Atomic RPCs với audit logging |
+| Storage | ✅ Đã bảo vệ | Private bucket cho identity documents |
+| Audit Logs | ✅ Immutable | Không cho phép sửa/xóa |
 
 ---
 
@@ -27,7 +38,7 @@ Tài liệu này mô tả các biện pháp bảo mật đã được triển kh
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  Supabase (Backend)                          │
+│                  Lovable Cloud (Backend)                     │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │              Row-Level Security (RLS)                │    │
 │  │  • auth.uid() = user_id (User chỉ xem data mình)    │    │
@@ -38,6 +49,11 @@ Tài liệu này mô tả các biện pháp bảo mật đã được triển kh
 │  │  • Atomic operations với FOR UPDATE locking         │    │
 │  │  • Server-side validation                           │    │
 │  │  • SET search_path = public                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Secure Views                            │    │
+│  │  • profiles_safe (security_invoker = on)            │    │
+│  │  • Kế thừa RLS từ bảng gốc                          │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -82,19 +98,54 @@ Tài liệu này mô tả các biện pháp bảo mật đã được triển kh
 | Admins can view all verifications | SELECT | `has_role(auth.uid(), 'admin')` |
 | Admins can update all verifications | UPDATE | `has_role(auth.uid(), 'admin')` |
 
-### Bảng `app_settings` (Cấu hình hệ thống) ✅ ĐÃ SỬA
+### Bảng `bank_accounts` (Tài khoản ngân hàng)
 | Policy | Command | Điều kiện |
 |--------|---------|-----------|
-| ~~Anyone authenticated can view settings~~ | ~~SELECT~~ | ~~`true`~~ |
-| **Admins can view settings** | **SELECT** | **`has_role(auth.uid(), 'admin')`** |
+| Users can view own bank accounts | SELECT | `auth.uid() = user_id` |
+| Users can create own bank accounts | INSERT | `auth.uid() = user_id` |
+| Users can update own bank accounts | UPDATE | `auth.uid() = user_id` |
+| Users can delete own bank accounts | DELETE | `auth.uid() = user_id` |
+| Admins can view all bank accounts | SELECT | `has_role(auth.uid(), 'admin')` |
+
+### Bảng `audit_logs` (Nhật ký kiểm toán) ✅ IMMUTABLE
+| Policy | Command | Điều kiện |
+|--------|---------|-----------|
+| Admins can view audit logs | SELECT | `has_role(auth.uid(), 'admin')` |
+| No direct user inserts | INSERT | `false` (chỉ qua SECURITY DEFINER) |
+| No updates allowed | UPDATE | `false` |
+| No deletes allowed | DELETE | `false` |
+
+> **🔒 BẢO MẬT:** Audit logs không thể bị sửa đổi hoặc xóa, đảm bảo tính toàn vẹn của dữ liệu kiểm toán.
+
+### Bảng `app_settings` (Cấu hình hệ thống)
+| Policy | Command | Điều kiện |
+|--------|---------|-----------|
+| Admins can view settings | SELECT | `has_role(auth.uid(), 'admin')` |
+| Anyone can read exchange_rates | SELECT | `key = 'exchange_rates'` |
 | Admins can manage settings | ALL | `has_role(auth.uid(), 'admin')` |
 
-### Bảng `product_price_controls` (Điều khiển giá) ✅ ĐÃ SỬA
+### Bảng `product_price_controls` (Điều khiển giá)
 | Policy | Command | Điều kiện |
 |--------|---------|-----------|
-| ~~Anyone authenticated can view~~ | ~~SELECT~~ | ~~`true`~~ |
-| **Admins can view price controls** | **SELECT** | **`has_role(auth.uid(), 'admin')`** |
+| Admins can view price controls | SELECT | `has_role(auth.uid(), 'admin')` |
 | Admins can manage price controls | ALL | `has_role(auth.uid(), 'admin')` |
+
+### Bảng `user_roles` (Phân quyền)
+| Policy | Command | Điều kiện |
+|--------|---------|-----------|
+| Users can view own role | SELECT | `auth.uid() = user_id` |
+| Admins can view all roles | SELECT | `has_role(auth.uid(), 'admin')` |
+| Admins can manage roles | ALL | `has_role(auth.uid(), 'admin')` |
+
+### Các bảng Public (Xem công khai cho authenticated users)
+| Bảng | SELECT | Ghi chú |
+|------|--------|---------|
+| `products` | `true` | Danh sách sản phẩm giao dịch |
+| `news` | `true` | Tin tức công ty |
+| `hero_banners` | `true` | Banners trang chủ |
+| `charity_programs` | `true` | Chương trình từ thiện |
+| `comments` | `true` | Bình luận tin tức |
+| `price_history` | `true` | Lịch sử giá (charts) |
 
 ---
 
@@ -149,28 +200,45 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 ### 6. `check_rate_limit(_user_id, _action_type, _max_requests, _window_seconds)`
 - **Mục đích:** Kiểm tra rate limiting
 - **Bảo mật:**
-- ✅ Ngăn chặn abuse
+  - ✅ Ngăn chặn abuse
   - ✅ Configurable limits per action type
 
-### 7. `has_withdrawal_password(_user_id)` ✅ MỚI
+### 7. `has_withdrawal_password(_user_id)`
 - **Mục đích:** Kiểm tra user đã đặt mật khẩu rút tiền chưa (không expose hash)
 - **Bảo mật:**
   - ✅ SET search_path = public
   - ✅ SECURITY DEFINER - truy cập từ view mà không expose hash
   - ✅ Chỉ trả về boolean, không bao giờ expose password hash
 
+### 8. `admin_add_balance` / `admin_subtract_balance`
+- **Mục đích:** Admin điều chỉnh số dư user
+- **Bảo mật:**
+  - ✅ SET search_path = public
+  - ✅ FOR UPDATE row locking (ngăn race conditions)
+  - ✅ Bắt buộc audit logging
+  - ✅ Kiểm tra admin role
+
 ---
 
 ## 🛡️ Secure Views
 
-### View `profiles_safe` ✅ MỚI
+### View `profiles_safe` ✅ ĐÃ XÁC MINH
 - **Mục đích:** Cung cấp truy cập an toàn đến dữ liệu profiles
+- **Cấu hình:** `security_invoker = on`
 - **Các trường bị loại bỏ:**
   - `withdrawal_password_hash` - Mật khẩu rút tiền (bcrypt hash)
   - `last_login_ip` - IP đăng nhập cuối cùng
+- **Kế thừa RLS:** 
+  - ✅ View kế thừa RLS từ bảng `profiles` gốc
+  - ✅ Users chỉ xem được data của mình (`auth.uid() = id`)
+  - ✅ Admins xem được tất cả (`has_role()`)
 - **Sử dụng:** 
-  - ✅ Client-side queries phải sử dụng `profiles_safe` thay vì `profiles`
-  - ✅ `security_invoker = on` - kế thừa RLS từ bảng gốc
+  - ✅ Tất cả client-side queries sử dụng `profiles_safe`
+  - ✅ Component `DashboardUsers` đã được cập nhật
+
+> **📋 Ghi chú bảo mật:** Security scanner có thể báo "Missing RLS" cho view này. 
+> Đây là **false positive** vì views với `security_invoker=on` không cần RLS riêng - 
+> chúng tự động kế thừa RLS từ bảng gốc.
 
 ---
 
@@ -183,6 +251,7 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 - **Policies:**
   - SELECT: Public access
   - INSERT: Authenticated users only
+  - UPDATE: Authenticated users only
   - DELETE: Admins only
 
 ### Bucket `identity-documents` (Private)
@@ -217,10 +286,21 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 - **RLS Policies:** Tất cả queries đều qua RLS
 - **has_role() function:** Kiểm tra role từ `user_roles` table
 - **Edge Functions:** Verify admin role trước khi thực hiện operations
+- **Frozen Account:** Users với `is_frozen = true` bị tự động logout
+
+### Account Freezing
+- **`is_frozen`:** Chặn đăng nhập hoàn toàn
+- **`is_trade_frozen`:** Chặn giao dịch và rút tiền
+- **`frozen_reason`:** Hiển thị lý do cho user
 
 ---
 
 ## 📊 Audit Logging
+
+### Bảo vệ Audit Logs
+- **Immutable:** Không cho phép UPDATE hoặc DELETE
+- **Server-only INSERT:** Chỉ SECURITY DEFINER functions có thể tạo logs
+- **Admin-only SELECT:** Chỉ admin xem được logs
 
 ### Các actions được log:
 | Action | Entity Type | Chi tiết |
@@ -233,19 +313,41 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 | `option_trade_created` | option_trade | Direction, amount, entry price |
 | `option_trade_settled` | option_trade | Result, profit/loss |
 | `admin_password_change` | user | Changed by admin |
+| `admin_balance_add` | user | Admin ID, amount, new balance |
+| `admin_balance_subtract` | user | Admin ID, amount, new balance |
+
+---
+
+## ✅ Security Scan Decisions
+
+### Đã xác minh là False Positives
+
+| Finding | Lý do Ignored |
+|---------|---------------|
+| `profiles_safe_no_rls` | View sử dụng `security_invoker=on`, kế thừa RLS từ bảng `profiles`. Không cần RLS riêng. |
+| Storage anonymous access | Bucket `uploads` cố ý public cho website content. Bucket `identity-documents` vẫn private. |
+
+### Đã sửa
+
+| Finding | Ngày sửa | Giải pháp |
+|---------|----------|-----------|
+| Admin balance updates | 25/01/2026 | Chuyển sang atomic RPCs (`admin_add_balance`, `admin_subtract_balance`) |
+| Sensitive data exposure | 25/01/2026 | Tạo view `profiles_safe` với `security_invoker=on` |
+| Edge function CORS | 25/01/2026 | Thêm origin whitelisting |
 
 ---
 
 ## ⚠️ Các vấn đề đã biết (Demo App)
 
-### 1. Admin Balance Updates (Ignored)
-- **Vấn đề:** Client-side calculations trong DashboardTransactions.tsx
-- **Lý do ignored:** Demo app, không có tiền thật
-- **Production fix:** Sử dụng RPC functions với atomic operations
+### 1. Anonymous Sign-ins Enabled
+- **Vấn đề:** Supabase scanner cảnh báo anonymous sign-ins
+- **Lý do ignored:** Tính năng này không được sử dụng trong app, chỉ là cấu hình mặc định
+- **Risk:** Low - không có flow nào sử dụng anonymous auth
 
-### 2. Transaction Type Constraint (Ignored)
+### 2. Transaction Type Constraint
 - **Vấn đề:** CHECK constraint không match với code
 - **Lý do ignored:** Demo app, transactions section chỉ để demo
+- **Production fix:** Cập nhật constraint hoặc code
 
 ---
 
@@ -279,9 +381,13 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 | Ngày | Thay đổi |
 |------|----------|
+| 26/01/2026 | **Security scan verification:** Xác minh tất cả error-level findings đều là false positives |
+| 26/01/2026 | Cập nhật documentation với trạng thái bảo mật mới nhất |
+| 26/01/2026 | Thêm section "Security Scan Decisions" |
 | 25/01/2026 | **Sửa lỗi bảo mật nghiêm trọng:** Tạo view `profiles_safe` để ẩn `withdrawal_password_hash` và `last_login_ip` |
 | 25/01/2026 | Thêm function `has_withdrawal_password()` để kiểm tra mật khẩu rút tiền an toàn |
 | 25/01/2026 | Cập nhật tất cả client queries sang sử dụng `profiles_safe` |
+| 25/01/2026 | Thêm atomic admin RPCs (`admin_add_balance`, `admin_subtract_balance`) |
 | 23/01/2026 | Sửa RLS cho `app_settings` - chỉ admin xem được |
 | 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
 | 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |
@@ -297,4 +403,4 @@ Nếu phát hiện lỗ hổng bảo mật, vui lòng liên hệ:
 
 ---
 
-*Tài liệu này được tạo tự động bởi Lovable Security Scanner*
+*Tài liệu này được cập nhật bởi Lovable Security Scanner - Phiên bản 2.0*
