@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +45,23 @@ interface BankAccount {
   account_number: string;
   account_holder: string;
   branch: string | null;
+}
+
+interface IdentityVerification {
+  id: string;
+  user_id: string;
+  document_type: 'cccd' | 'passport';
+  document_number: string;
+  full_name: string;
+  date_of_birth: string;
+  address: string;
+  expiry_date: string;
+  front_image_url: string;
+  back_image_url: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function DashboardUsers() {
@@ -92,15 +110,25 @@ export function DashboardUsers() {
   const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
 
+  // Identity verification states
+  const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
+  const [userVerification, setUserVerification] = useState<IdentityVerification | null>(null);
+  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationUser, setVerificationUser] = useState<Profile | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isProcessingVerification, setIsProcessingVerification] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
-    const [profilesResult, rolesResult] = await Promise.all([
+    const [profilesResult, rolesResult, verificationsResult] = await Promise.all([
       // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
       supabase.from('profiles_safe').select('*').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
+      supabase.from('identity_verifications').select('*'),
     ]);
 
     if (profilesResult.error) {
@@ -117,6 +145,14 @@ export function DashboardUsers() {
         rolesMap[r.user_id] = r.role;
       });
       setRoles(rolesMap);
+    }
+
+    if (!verificationsResult.error && verificationsResult.data) {
+      const verificationsMap: Record<string, IdentityVerification> = {};
+      verificationsResult.data.forEach((v) => {
+        verificationsMap[v.user_id] = v as IdentityVerification;
+      });
+      setVerifications(verificationsMap);
     }
 
     setIsLoading(false);
@@ -171,6 +207,123 @@ export function DashboardUsers() {
     setSelectedUser(profile);
     setShowDetailDialog(true);
     fetchUserBankAccounts(profile.id);
+    // Set user verification if exists
+    setUserVerification(verifications[profile.id] || null);
+  };
+
+  const handleShowVerification = (profile: Profile) => {
+    setVerificationUser(profile);
+    setUserVerification(verifications[profile.id] || null);
+    setRejectionReason('');
+    setShowVerificationDialog(true);
+  };
+
+  const handleApproveVerification = async (id: string) => {
+    setIsProcessingVerification(true);
+    const { error } = await supabase
+      .from('identity_verifications')
+      .update({ 
+        status: 'approved',
+        rejection_reason: null 
+      })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể duyệt yêu cầu.',
+      });
+    } else {
+      toast({
+        title: 'Thành công',
+        description: 'Đã duyệt xác minh danh tính.',
+      });
+      // Update local state
+      if (verificationUser) {
+        const updatedVerification = { ...verifications[verificationUser.id], status: 'approved' as const, rejection_reason: null };
+        setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
+        setUserVerification(updatedVerification);
+      }
+      setShowVerificationDialog(false);
+    }
+    setIsProcessingVerification(false);
+  };
+
+  const handleRejectVerification = async (id: string) => {
+    if (!rejectionReason.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Vui lòng nhập lý do từ chối.',
+      });
+      return;
+    }
+
+    setIsProcessingVerification(true);
+    const { error } = await supabase
+      .from('identity_verifications')
+      .update({ 
+        status: 'rejected',
+        rejection_reason: rejectionReason 
+      })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể từ chối yêu cầu.',
+      });
+    } else {
+      toast({
+        title: 'Thành công',
+        description: 'Đã từ chối yêu cầu xác minh.',
+      });
+      // Update local state
+      if (verificationUser) {
+        const updatedVerification = { ...verifications[verificationUser.id], status: 'rejected' as const, rejection_reason: rejectionReason };
+        setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
+        setUserVerification(updatedVerification);
+      }
+      setShowVerificationDialog(false);
+      setRejectionReason('');
+    }
+    setIsProcessingVerification(false);
+  };
+
+  const getVerificationBadge = (userId: string) => {
+    const verification = verifications[userId];
+    if (!verification) {
+      return (
+        <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted">
+          Chưa xác minh
+        </Badge>
+      );
+    }
+    switch (verification.status) {
+      case 'approved':
+        return (
+          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px] h-5">
+            <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
+            Đã xác minh
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px] h-5">
+            <XCircle className="w-2.5 h-2.5 mr-0.5" />
+            Từ chối
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] h-5">
+            <Clock className="w-2.5 h-2.5 mr-0.5" />
+            Chờ duyệt
+          </Badge>
+        );
+    }
   };
 
   const handleAddBalance = async () => {
@@ -486,6 +639,7 @@ export function DashboardUsers() {
                     <TableHead>Người dùng</TableHead>
                     <TableHead>Email/SĐT</TableHead>
                     <TableHead>Số dư</TableHead>
+                    <TableHead>Xác minh</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Đăng nhập cuối</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
@@ -569,6 +723,16 @@ export function DashboardUsers() {
                             <span className="text-lg font-bold">+</span>
                           </Button>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-1"
+                          onClick={() => handleShowVerification(profile)}
+                        >
+                          {getVerificationBadge(profile.id)}
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -796,6 +960,44 @@ export function DashboardUsers() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+
+              {/* Identity Verification Section */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
+                  Xác minh danh tính
+                </p>
+                {userVerification ? (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Trạng thái:</span>
+                      {getVerificationBadge(selectedUser.id)}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Họ tên:</span>
+                      <span className="font-medium">{userVerification.full_name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Số giấy tờ:</span>
+                      <span className="font-mono">{userVerification.document_number}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => {
+                        setShowDetailDialog(false);
+                        handleShowVerification(selectedUser);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Xem chi tiết
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Chưa gửi yêu cầu xác minh</p>
                 )}
               </div>
 
@@ -1081,6 +1283,152 @@ export function DashboardUsers() {
               {isUpdatingFreeze && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Xác nhận
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Identity Verification Dialog */}
+      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5" />
+              Xác minh danh tính
+            </DialogTitle>
+            <DialogDescription>
+              {verificationUser?.full_name || verificationUser?.email} (ID: {verificationUser && getUserCode(verificationUser)})
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!userVerification ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <UserCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Người dùng chưa gửi yêu cầu xác minh danh tính.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Trạng thái:</span>
+                {userVerification.status === 'approved' && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Đã duyệt</Badge>
+                )}
+                {userVerification.status === 'rejected' && (
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Từ chối</Badge>
+                )}
+                {userVerification.status === 'pending' && (
+                  <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Chờ duyệt</Badge>
+                )}
+              </div>
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Họ tên</p>
+                  <p className="font-medium">{userVerification.full_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Loại giấy tờ</p>
+                  <p className="font-medium">
+                    {userVerification.document_type === 'cccd' ? 'CCCD/CMND' : 'Hộ chiếu'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Số giấy tờ</p>
+                  <p className="font-medium">{userVerification.document_number}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ngày sinh</p>
+                  <p className="font-medium">
+                    {format(new Date(userVerification.date_of_birth), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Địa chỉ</p>
+                  <p className="font-medium">{userVerification.address}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ngày hết hạn</p>
+                  <p className="font-medium">
+                    {format(new Date(userVerification.expiry_date), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ngày gửi</p>
+                  <p className="font-medium">
+                    {format(new Date(userVerification.created_at), 'dd/MM/yyyy HH:mm')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Images */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Ảnh mặt trước</p>
+                  <img
+                    src={userVerification.front_image_url}
+                    alt="Front"
+                    className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
+                    onClick={() => window.open(userVerification.front_image_url, '_blank')}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Ảnh mặt sau</p>
+                  <img
+                    src={userVerification.back_image_url}
+                    alt="Back"
+                    className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
+                    onClick={() => window.open(userVerification.back_image_url, '_blank')}
+                  />
+                </div>
+              </div>
+
+              {/* Rejection reason (for rejected or when rejecting) */}
+              {userVerification.status === 'pending' && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Lý do từ chối (nếu từ chối)</p>
+                  <Textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Nhập lý do từ chối..."
+                    rows={3}
+                  />
+                </div>
+              )}
+
+              {userVerification.status === 'rejected' && userVerification.rejection_reason && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-sm text-red-400">
+                    <strong>Lý do từ chối:</strong> {userVerification.rejection_reason}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowVerificationDialog(false)}>
+              Đóng
+            </Button>
+            {userVerification?.status === 'pending' && (
+              <>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleRejectVerification(userVerification.id)}
+                  disabled={isProcessingVerification}
+                >
+                  {isProcessingVerification ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                  Từ chối
+                </Button>
+                <Button
+                  onClick={() => handleApproveVerification(userVerification.id)}
+                  disabled={isProcessingVerification}
+                >
+                  {isProcessingVerification ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                  Duyệt
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
