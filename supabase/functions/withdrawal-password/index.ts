@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     console.log(`Processing withdrawal password request for user: ${userId}`);
 
     // Parse request body
-    const { action, currentPassword, newPassword } = await req.json();
+    const { action, currentPassword, newPassword, targetUserId } = await req.json();
 
     if (action === 'create') {
       // Create new withdrawal password (no current password needed)
@@ -241,9 +241,72 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
+    } else if (action === 'admin-reset') {
+      // Admin reset withdrawal password (requires admin role)
+      
+      if (!newPassword || newPassword.length < 6) {
+        return new Response(
+          JSON.stringify({ error: 'New password must be at least 6 characters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'Target user ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if current user is admin
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+
+      if (roleError || !roleData) {
+        console.error('Admin check failed:', roleError);
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Hash new password with bcrypt
+      const newHash = hashSync(newPassword);
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ withdrawal_password_hash: newHash })
+        .eq('id', targetUserId);
+
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update password' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Log the action in audit_logs
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        action: 'admin_withdrawal_password_reset',
+        entity_type: 'user',
+        entity_id: targetUserId,
+        details: { changed_by: user.email },
+      });
+
+      console.log(`Admin ${userId} reset withdrawal password for user: ${targetUserId}`);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Withdrawal password reset by admin' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
     } else {
       return new Response(
-        JSON.stringify({ error: 'Invalid action. Use: create, change, or verify' }),
+        JSON.stringify({ error: 'Invalid action. Use: create, change, verify, or admin-reset' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
