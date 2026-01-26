@@ -250,7 +250,6 @@ const ALLOWED_ORIGINS = [
 |----------|--------------|------------|----------|
 | `withdrawal-password` | ✅ | ❌ (user) / ✅ (admin-reset) | Quản lý mật khẩu rút tiền |
 | `admin-update-password` | ✅ | ✅ | Admin đổi mật khẩu đăng nhập user |
-| `create-wallet-address` | ✅ | ❌ | Tạo địa chỉ ví mới |
 | `ohlc` | ❌ | ❌ | Lấy dữ liệu chart (public) |
 | `sync-external-data` | ✅ | ✅ | Đồng bộ dữ liệu từ API bên ngoài |
 | `sync-price-history` | ✅ | ✅ | Đồng bộ lịch sử giá |
@@ -296,6 +295,9 @@ const ALLOWED_ORIGINS = [
 - **Các trường bị loại bỏ:**
   - `withdrawal_password_hash` - Mật khẩu rút tiền (bcrypt hash)
   - `last_login_ip` - IP đăng nhập cuối cùng
+  - ~~`wallet_address_bep20`~~ - **ĐÃ XÓA HOÀN TOÀN** (26/01/2026)
+  - ~~`wallet_address_trc20`~~ - **ĐÃ XÓA HOÀN TOÀN** (26/01/2026)
+  - ~~`wallet_address_erc20`~~ - **ĐÃ XÓA HOÀN TOÀN** (26/01/2026)
 - **Kế thừa RLS:** 
   - ✅ View kế thừa RLS từ bảng `profiles` gốc
   - ✅ Users chỉ xem được data của mình (`auth.uid() = id`)
@@ -431,7 +433,6 @@ const ALLOWED_ORIGINS = [
 ### 2. Data Protection
 - [ ] Encryption at rest cho sensitive fields
 - [ ] Signed URLs với expiry cho document images
-- [ ] Data masking cho wallet addresses trong UI
 
 ### 3. Monitoring
 - [ ] Alert khi có unusual access patterns
@@ -450,7 +451,8 @@ const ALLOWED_ORIGINS = [
 
 | Ngày | Thay đổi |
 |------|----------|
-| 26/01/2026 | **CORS whitelist đồng bộ:** Thêm domain `stengg.it.com` và `www.stengg.it.com` vào tất cả 7 Edge Functions |
+| 26/01/2026 | **🗑️ XÓA HOÀN TOÀN wallet addresses:** Xóa columns `wallet_address_bep20/trc20/erc20` từ `profiles`, xóa edge function `create-wallet-address`, xóa UI hiển thị trong Admin Dashboard |
+| 26/01/2026 | **CORS whitelist đồng bộ:** Thêm domain `stengg.it.com` và `www.stengg.it.com` vào tất cả Edge Functions |
 | 26/01/2026 | **Chuẩn hóa CORS:** Function `sync-price-history` chuyển từ wildcard `*` sang whitelist cụ thể |
 | 26/01/2026 | **Thêm admin-reset withdrawal password:** Cho phép admin đổi mật khẩu rút tiền của user với đầy đủ audit logging |
 | 26/01/2026 | Thêm section "Edge Functions Security" với chi tiết về withdrawal-password function |
