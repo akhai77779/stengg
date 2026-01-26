@@ -1,6 +1,6 @@
 # 🔐 Tài liệu Bảo mật Dự án ST Engineering Trading Platform
 
-> **Phiên bản:** 2.0  
+> **Phiên bản:** 2.1  
 > **Cập nhật:** 26/01/2026  
 > **Loại dự án:** Demo/Training Application  
 > **Trạng thái bảo mật:** ✅ Đã xác minh - Không có lỗ hổng nghiêm trọng
@@ -10,6 +10,12 @@
 ## 📋 Tổng quan
 
 Tài liệu này mô tả các biện pháp bảo mật đã được triển khai trong dự án trading platform demo. Dự án sử dụng Lovable Cloud làm backend với Row-Level Security (RLS) để bảo vệ dữ liệu.
+
+### Production Domain
+- **Primary:** `https://stengg.it.com`
+- **Secondary:** `https://www.stengg.it.com`
+- **Lovable App:** `https://stengg-it-com.lovable.app`
+- **Preview:** `https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app`
 
 ### Tóm tắt Bảo mật
 
@@ -222,6 +228,34 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 ## 🔑 Edge Functions Security
 
+### CORS Whitelist (Áp dụng cho tất cả Edge Functions)
+
+Tất cả Edge Functions đều sử dụng CORS whitelist thống nhất:
+
+```javascript
+const ALLOWED_ORIGINS = [
+  "https://stengg.it.com",          // Production domain
+  "https://www.stengg.it.com",       // WWW production domain
+  "https://stengg-it-com.lovable.app",
+  "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
+  "https://f9a00261-b7fb-4428-ad85-88f8d5788c27.lovableproject.com",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+```
+
+### Danh sách Edge Functions
+
+| Function | Auth Required | Admin Only | Mục đích |
+|----------|--------------|------------|----------|
+| `withdrawal-password` | ✅ | ❌ (user) / ✅ (admin-reset) | Quản lý mật khẩu rút tiền |
+| `admin-update-password` | ✅ | ✅ | Admin đổi mật khẩu đăng nhập user |
+| `create-wallet-address` | ✅ | ❌ | Tạo địa chỉ ví mới |
+| `ohlc` | ❌ | ❌ | Lấy dữ liệu chart (public) |
+| `sync-external-data` | ✅ | ✅ | Đồng bộ dữ liệu từ API bên ngoài |
+| `sync-price-history` | ✅ | ✅ | Đồng bộ lịch sử giá |
+| `track-login` | ✅ | ❌ | Ghi log đăng nhập |
+
 ### `withdrawal-password` Edge Function
 - **Mục đích:** Quản lý mật khẩu rút tiền (create, change, verify, admin-reset)
 - **Actions hỗ trợ:**
@@ -416,6 +450,8 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 
 | Ngày | Thay đổi |
 |------|----------|
+| 26/01/2026 | **CORS whitelist đồng bộ:** Thêm domain `stengg.it.com` và `www.stengg.it.com` vào tất cả 7 Edge Functions |
+| 26/01/2026 | **Chuẩn hóa CORS:** Function `sync-price-history` chuyển từ wildcard `*` sang whitelist cụ thể |
 | 26/01/2026 | **Thêm admin-reset withdrawal password:** Cho phép admin đổi mật khẩu rút tiền của user với đầy đủ audit logging |
 | 26/01/2026 | Thêm section "Edge Functions Security" với chi tiết về withdrawal-password function |
 | 26/01/2026 | **Security scan verification:** Xác minh tất cả error-level findings đều là false positives |
@@ -426,9 +462,6 @@ Các function quan trọng sử dụng `SECURITY DEFINER` với các biện phá
 | 25/01/2026 | Cập nhật tất cả client queries sang sử dụng `profiles_safe` |
 | 25/01/2026 | Thêm atomic admin RPCs (`admin_add_balance`, `admin_subtract_balance`) |
 | 23/01/2026 | Sửa RLS cho `app_settings` - chỉ admin xem được |
-| 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
-| 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |
-| 23/01/2026 | Tạo tài liệu bảo mật này |
 | 23/01/2026 | Sửa RLS cho `product_price_controls` - chỉ admin xem được |
 | 23/01/2026 | Thêm security documentation cho `useAuth.tsx` |
 | 23/01/2026 | Tạo tài liệu bảo mật này |
@@ -443,4 +476,4 @@ Nếu phát hiện lỗ hổng bảo mật, vui lòng liên hệ:
 
 ---
 
-*Tài liệu này được cập nhật bởi Lovable Security Scanner - Phiên bản 2.0*
+*Tài liệu này được cập nhật bởi Lovable Security Scanner - Phiên bản 2.1*
