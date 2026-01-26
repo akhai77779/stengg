@@ -536,9 +536,6 @@ export type Database = {
           total_income: number | null
           updated_at: string
           user_code: number | null
-          wallet_address_bep20: string | null
-          wallet_address_erc20: string | null
-          wallet_address_trc20: string | null
           withdrawal_password_hash: string | null
         }
         Insert: {
@@ -559,9 +556,6 @@ export type Database = {
           total_income?: number | null
           updated_at?: string
           user_code?: number | null
-          wallet_address_bep20?: string | null
-          wallet_address_erc20?: string | null
-          wallet_address_trc20?: string | null
           withdrawal_password_hash?: string | null
         }
         Update: {
@@ -582,9 +576,6 @@ export type Database = {
           total_income?: number | null
           updated_at?: string
           user_code?: number | null
-          wallet_address_bep20?: string | null
-          wallet_address_erc20?: string | null
-          wallet_address_trc20?: string | null
           withdrawal_password_hash?: string | null
         }
         Relationships: []
@@ -690,9 +681,6 @@ export type Database = {
           total_income: number | null
           updated_at: string | null
           user_code: number | null
-          wallet_address_bep20: string | null
-          wallet_address_erc20: string | null
-          wallet_address_trc20: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -711,9 +699,6 @@ export type Database = {
           total_income?: number | null
           updated_at?: string | null
           user_code?: number | null
-          wallet_address_bep20?: string | null
-          wallet_address_erc20?: string | null
-          wallet_address_trc20?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -732,9 +717,6 @@ export type Database = {
           total_income?: number | null
           updated_at?: string | null
           user_code?: number | null
-          wallet_address_bep20?: string | null
-          wallet_address_erc20?: string | null
-          wallet_address_trc20?: string | null
         }
         Relationships: []
       }

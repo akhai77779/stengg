@@ -27,9 +27,6 @@ interface Profile {
   email: string | null;
   phone: string | null;
   last_login_at: string | null;
-  wallet_address_bep20: string | null;
-  wallet_address_trc20: string | null;
-  wallet_address_erc20: string | null;
   user_code: number | null;
   is_frozen: boolean | null;
   is_trade_frozen: boolean | null;
@@ -800,34 +797,6 @@ export function DashboardUsers() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Wallet Addresses Section */}
-              <div className="border-t pt-4">
-                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
-                  <Landmark className="w-4 h-4" />
-                  Địa chỉ ví USDT
-                </p>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-14 justify-center">BEP20</Badge>
-                    <code className="flex-1 bg-muted px-2 py-1 rounded font-mono truncate">
-                      {selectedUser.wallet_address_bep20 || '-'}
-                    </code>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-14 justify-center">TRC20</Badge>
-                    <code className="flex-1 bg-muted px-2 py-1 rounded font-mono truncate">
-                      {selectedUser.wallet_address_trc20 || '-'}
-                    </code>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-14 justify-center">ERC20</Badge>
-                    <code className="flex-1 bg-muted px-2 py-1 rounded font-mono truncate">
-                      {selectedUser.wallet_address_erc20 || '-'}
-                    </code>
-                  </div>
-                </div>
               </div>
 
               {/* Quick Actions in Detail Dialog */}
