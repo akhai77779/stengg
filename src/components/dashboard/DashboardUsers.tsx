@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -75,6 +75,12 @@ export function DashboardUsers() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Change withdrawal password dialog
+  const [withdrawalPasswordUser, setWithdrawalPasswordUser] = useState<Profile | null>(null);
+  const [newWithdrawalPassword, setNewWithdrawalPassword] = useState('');
+  const [confirmWithdrawalPassword, setConfirmWithdrawalPassword] = useState('');
+  const [isChangingWithdrawalPassword, setIsChangingWithdrawalPassword] = useState(false);
 
   // Freeze reason dialog
   const [freezeUser, setFreezeUser] = useState<Profile | null>(null);
@@ -317,6 +323,54 @@ export function DashboardUsers() {
     }
 
     setIsChangingPassword(false);
+  };
+
+  const handleChangeWithdrawalPassword = async () => {
+    if (!withdrawalPasswordUser) return;
+
+    if (newWithdrawalPassword.length < 6) {
+      toast({ title: 'Lỗi', description: 'Mật khẩu phải có ít nhất 6 ký tự', variant: 'destructive' });
+      return;
+    }
+
+    if (newWithdrawalPassword !== confirmWithdrawalPassword) {
+      toast({ title: 'Lỗi', description: 'Mật khẩu không khớp', variant: 'destructive' });
+      return;
+    }
+
+    setIsChangingWithdrawalPassword(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/withdrawal-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'admin-reset',
+          targetUserId: withdrawalPasswordUser.id,
+          newPassword: newWithdrawalPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Đổi mật khẩu rút tiền thất bại');
+      }
+
+      toast({ title: 'Thành công', description: 'Đã đổi mật khẩu rút tiền cho người dùng' });
+      setWithdrawalPasswordUser(null);
+      setNewWithdrawalPassword('');
+      setConfirmWithdrawalPassword('');
+    } catch (error: any) {
+      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    }
+
+    setIsChangingWithdrawalPassword(false);
   };
 
   const handleToggleAccountFreeze = async (profile: Profile) => {
@@ -569,9 +623,22 @@ export function DashboardUsers() {
                               setNewPassword('');
                               setConfirmPassword('');
                             }}
-                            title="Đổi mật khẩu"
+                            title="Đổi mật khẩu đăng nhập"
                           >
                             <Key className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-500 hover:text-amber-600"
+                            onClick={() => {
+                              setWithdrawalPasswordUser(profile);
+                              setNewWithdrawalPassword('');
+                              setConfirmWithdrawalPassword('');
+                            }}
+                            title="Đổi mật khẩu rút tiền"
+                          >
+                            <KeyRound className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -946,6 +1013,56 @@ export function DashboardUsers() {
             <Button onClick={handleChangePassword} disabled={isChangingPassword}>
               {isChangingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Đổi mật khẩu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Withdrawal Password Dialog */}
+      <Dialog open={!!withdrawalPasswordUser} onOpenChange={(open) => !open && setWithdrawalPasswordUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-500">
+              <KeyRound className="w-5 h-5" />
+              Đổi mật khẩu rút tiền
+            </DialogTitle>
+            <DialogDescription>
+              Đổi mật khẩu rút tiền cho {withdrawalPasswordUser?.full_name || withdrawalPasswordUser?.email} (ID: {withdrawalPasswordUser && getUserCode(withdrawalPasswordUser)})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newWithdrawalPassword">Mật khẩu rút tiền mới</Label>
+              <Input
+                id="newWithdrawalPassword"
+                type="password"
+                value={newWithdrawalPassword}
+                onChange={(e) => setNewWithdrawalPassword(e.target.value)}
+                placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmWithdrawalPassword">Xác nhận mật khẩu</Label>
+              <Input
+                id="confirmWithdrawalPassword"
+                type="password"
+                value={confirmWithdrawalPassword}
+                onChange={(e) => setConfirmWithdrawalPassword(e.target.value)}
+                placeholder="Nhập lại mật khẩu"
+              />
+            </div>
+            <div className="bg-amber-500/10 text-amber-600 p-3 rounded-lg text-sm">
+              <p className="font-medium">Lưu ý:</p>
+              <p>Mật khẩu rút tiền sẽ được đặt mới và thay thế mật khẩu cũ (nếu có).</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawalPasswordUser(null)}>
+              Hủy
+            </Button>
+            <Button onClick={handleChangeWithdrawalPassword} disabled={isChangingWithdrawalPassword} className="bg-amber-500 hover:bg-amber-600 text-white">
+              {isChangingWithdrawalPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Đổi mật khẩu rút tiền
             </Button>
           </DialogFooter>
         </DialogContent>
