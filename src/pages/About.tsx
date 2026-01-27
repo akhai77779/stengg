@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ChevronLeft, Mail, Phone, Globe, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Mail, Phone, Globe, MessageCircle, MapPin, Facebook, Linkedin, Youtube } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function About() {
@@ -13,6 +13,13 @@ export default function About() {
   const supportPhone = '+65 6722 1234';
   const website = 'https://stengg.it.com';
   const liveChatUrl = 'https://direct.lc.chat/19460523/';
+  const address = 'ST Engineering Hub, Singapore';
+  
+  const socialLinks = {
+    facebook: 'https://www.facebook.com/stlobal',
+    linkedin: 'https://www.linkedin.com/company/st-engineering',
+    youtube: 'https://www.youtube.com/c/STEngineering'
+  };
 
   return (
     <Layout hideFooter>
@@ -46,6 +53,54 @@ export default function About() {
               <p className="text-sm text-muted-foreground text-center">
                 {t('about.description')}
               </p>
+              <p className="text-xs text-muted-foreground text-center mt-2 italic">
+                Cổng thông tin nội bộ ST Engineering - Nơi kết nối, chia sẻ và phát triển cùng nhau.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Location */}
+          <Card className="bg-card border-border mb-4">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
+                <span className="text-sm text-foreground">{address}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Social Media */}
+          <Card className="bg-card border-border mb-4">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-medium text-foreground text-center mb-4">
+                {t('about.connectWithUs') || 'Kết nối với chúng tôi'}
+              </h3>
+              <div className="flex items-center justify-center gap-4">
+                <a 
+                  href={socialLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center hover:bg-primary/20 transition-colors active:bg-primary/30"
+                >
+                  <Facebook className="w-5 h-5 text-foreground" />
+                </a>
+                <a 
+                  href={socialLinks.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center hover:bg-primary/20 transition-colors active:bg-primary/30"
+                >
+                  <Linkedin className="w-5 h-5 text-foreground" />
+                </a>
+                <a 
+                  href={socialLinks.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center hover:bg-primary/20 transition-colors active:bg-primary/30"
+                >
+                  <Youtube className="w-5 h-5 text-foreground" />
+                </a>
+              </div>
             </CardContent>
           </Card>
 
