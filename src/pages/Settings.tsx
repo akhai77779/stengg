@@ -145,16 +145,31 @@ export default function Settings() {
                   </div>
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl">
+              <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh]">
                 <SheetHeader>
                   <SheetTitle>{t('settings.currencySettings')}</SheetTitle>
                 </SheetHeader>
-                <div className="py-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {t('settings.currentCurrency')}: <span className="font-medium text-foreground">{currency}</span>
+                <div className="py-4 overflow-y-auto space-y-4">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Tại ST Engineering, chúng tôi ứng dụng công nghệ và sự đổi mới để giải quyết các vấn đề thực tế và cải thiện cuộc sống. Sự tận tâm hướng đến sự xuất sắc và thành tích vững chắc đã mang lại cho chúng tôi danh tiếng đặc biệt về chất lượng và sự tin cậy với tư cách là một tập đoàn công nghệ, quốc phòng và kỹ thuật toàn cầu.
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('settings.currencyNote')}
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Danh mục kinh doanh đa dạng của chúng tôi trải rộng trên các lĩnh vực hàng không vũ trụ, thành phố thông minh, giải pháp kỹ thuật số, quốc phòng và an ninh công cộng, và mạng lưới toàn cầu gồm các công ty con và công ty liên kết của chúng tôi trải rộng khắp châu Á, châu Âu, Trung Đông và Hoa Kỳ.
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Chúng tôi thành công nhờ khả năng đáp ứng nhu cầu của các đối tác và khách hàng. Trên toàn Tập đoàn, chúng tôi có hơn 27.000 nhân viên với nền tảng và kỹ năng đa dạng, bao gồm hơn 19.000 kỹ sư và chuyên gia công nghệ tận tâm giải quyết các vấn đề thực tế cho khách hàng. Cùng nhau, chúng tôi chuyển đổi và bảo vệ tương lai các thành phố, giúp chúng trở nên năng động hơn, an toàn hơn và đáng sống hơn cho cộng đồng. Với chuyên môn và cơ sở vật chất trên toàn thế giới, chúng tôi đảm bảo máy bay bay an toàn và tàu thuyền hoạt động hiệu quả.
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Chúng tôi giúp các quốc gia bảo vệ công dân của họ bằng cách đáp ứng nhu cầu quốc phòng trên không, trên bộ và trên biển, đồng thời trang bị cho lực lượng chiến đấu của họ để hoạt động hiệu quả trên chiến trường. An ninh mạng và các hệ thống quan trọng của chúng tôi giúp khách hàng tăng cường an ninh công cộng và an ninh quốc gia trong một thế giới ngày càng số hóa. Và thiết bị truyền thông vệ tinh của chúng tôi đóng góp vào phần lớn khả năng kết nối mạng lưới toàn cầu.
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Chúng tôi đón nhận mọi thách thức bằng những giải pháp hiệu quả và cạnh tranh, giúp khách hàng tại hơn 100 quốc gia được chuẩn bị tốt hơn, bảo vệ tốt hơn và kết nối tốt hơn cho một tương lai bền vững. Sức mạnh đằng sau tất cả điều này là đội ngũ nhân viên toàn cầu của chúng tôi, được truyền cảm hứng bởi một cam kết và mục tiêu chung. Chúng tôi là một đội ngũ hiểu rõ những gì cần thiết và cam kết thách thức, thay đổi và bảo vệ tương lai.
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Tại Mỹ, các hoạt động chính của chúng tôi trải rộng trên hơn 50 thành phố thuộc 21 tiểu bang, với khoảng 6.000 nhân viên cung cấp các sản phẩm và giải pháp sáng tạo cho khách hàng thương mại và chính phủ trên nhiều phân khúc thị trường khác nhau.
+                  </p>
+                  <p className="text-sm text-primary font-medium leading-relaxed">
+                    Hãy cùng tìm hiểu về lịch sử phong phú và hành trình huy hoàng đưa chúng tôi đến vị trí hiện tại.
                   </p>
                 </div>
               </SheetContent>
