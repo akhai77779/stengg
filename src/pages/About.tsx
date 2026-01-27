@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronLeft, Mail, Phone, Globe, MessageCircle, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 
 export default function About() {
   const navigate = useNavigate();
@@ -36,16 +37,14 @@ export default function About() {
             <CardContent className="p-4">
               <div className="text-center mb-4">
                 <img 
-                  src="/lovable-uploads/a85205e2-87c2-4249-93ae-54cd1c085cc6.png" 
+                  src={stEngineeringLogo}
                   alt="ST Engineering Logo" 
-                  className="w-16 h-16 mx-auto mb-3 rounded-xl object-contain"
+                  className="h-10 mx-auto mb-4 object-contain"
                 />
-                <h2 className="text-lg font-semibold text-foreground">ST Engineering</h2>
-                <p className="text-sm text-muted-foreground">{t('about.version')}: {appVersion}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('about.portalDescription')}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground text-center">
-                {t('about.description')}
-              </p>
             </CardContent>
           </Card>
 
