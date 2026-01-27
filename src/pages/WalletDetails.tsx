@@ -22,15 +22,15 @@ import { cn } from '@/lib/utils';
 // Skeleton component for balance card
 function BalanceCardSkeleton() {
   return (
-    <Card className="bg-card border-border mb-6">
-      <CardContent className="p-6">
+    <Card className="bg-card border-border mb-4 md:mb-6">
+      <CardContent className="p-4 md:p-6">
         <div className="flex items-center gap-2 mb-2">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-4 rounded" />
         </div>
         <div className="flex items-center justify-between">
           <Skeleton className="h-9 w-32" />
-          <Skeleton className="w-20 h-20 rounded-lg" />
+          <Skeleton className="w-16 h-16 md:w-20 md:h-20 rounded-lg" />
         </div>
       </CardContent>
     </Card>
@@ -41,7 +41,7 @@ function BalanceCardSkeleton() {
 function IncomeCardSkeleton() {
   return (
     <Card className="bg-card border-border">
-      <CardContent className="p-4 flex items-center justify-between">
+      <CardContent className="p-3 md:p-4 flex items-center justify-between">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-5 w-16" />
       </CardContent>
@@ -200,19 +200,19 @@ export default function WalletDetails() {
   return (
     <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8">
-        <div className="container mx-auto px-4 py-6 max-w-lg">
+        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
           
           {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => navigate('/profile')}
-              className="shrink-0"
+              className="shrink-0 text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl font-bold text-foreground flex-1 text-center pr-10">
+            <h1 className="text-lg md:text-xl font-bold text-foreground flex-1 text-center pr-10">
               {t('wallet.assets')}
             </h1>
           </div>
@@ -222,13 +222,13 @@ export default function WalletDetails() {
             <TabsList className="w-full mb-4 bg-transparent border-b border-border rounded-none p-0 h-auto">
               <TabsTrigger 
                 value="overview" 
-                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3"
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 text-xs md:text-sm"
               >
                 {t('wallet.overview')}
               </TabsTrigger>
               <TabsTrigger 
                 value="charity" 
-                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3"
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 text-xs md:text-sm"
               >
                 {t('wallet.charityTalent')}
               </TabsTrigger>
@@ -240,15 +240,15 @@ export default function WalletDetails() {
               {showSkeleton ? (
                 <BalanceCardSkeleton />
               ) : (
-                <Card className="bg-card border-border mb-6">
-                  <CardContent className="p-6">
+                <Card className="bg-card border-border mb-4 md:mb-6">
+                  <CardContent className="p-4 md:p-6">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-[10px] md:text-xs text-muted-foreground">
                         {t('wallet.valuation')} ({currency})
                       </span>
                       <button 
                         onClick={() => setShowBalance(!showBalance)}
-                        className="text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center -m-2"
                       >
                         {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
@@ -256,12 +256,12 @@ export default function WalletDetails() {
                     
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-foreground">
+                        <p className="text-2xl md:text-3xl font-bold text-foreground">
                           {formatAmount(balance)}
                         </p>
                       </div>
-                      <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
-                        <Wallet className="w-10 h-10 text-muted-foreground" />
+                      <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-muted/30 rounded-lg">
+                        <Wallet className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground" />
                       </div>
                     </div>
                   </CardContent>
@@ -269,8 +269,8 @@ export default function WalletDetails() {
               )}
 
               {/* Today's Income */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-foreground mb-3">
+              <div className="mb-4 md:mb-6">
+                <h3 className="text-xs md:text-sm font-medium text-foreground mb-3">
                   {t('wallet.todayIncome')}
                 </h3>
                 
@@ -282,12 +282,12 @@ export default function WalletDetails() {
                 ) : (
                   <>
                     <Card className="bg-card border-border mb-3">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                      <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {t('wallet.productTrade')} ({currency})
                         </span>
                         <span className={cn(
-                          "font-mono font-medium",
+                          "font-mono text-sm md:text-base font-medium",
                           todayTradeIncome > 0 ? "text-green-500" : todayTradeIncome < 0 ? "text-red-500" : "text-foreground"
                         )}>
                           {showBalance ? todayTradeIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
@@ -296,11 +296,11 @@ export default function WalletDetails() {
                     </Card>
 
                     <Card className="bg-card border-border">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                      <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {t('wallet.charityTalent')} ({currency})
                         </span>
-                        <span className="font-mono font-medium text-foreground">
+                        <span className="font-mono text-sm md:text-base font-medium text-foreground">
                           {showBalance ? charityIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '****'}
                         </span>
                       </CardContent>
@@ -310,8 +310,8 @@ export default function WalletDetails() {
               </div>
 
               {/* Account Details */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-foreground mb-3">
+              <div className="mb-4 md:mb-6">
+                <h3 className="text-xs md:text-sm font-medium text-foreground mb-3">
                   {t('wallet.accountDetails')}
                 </h3>
                 
@@ -323,22 +323,22 @@ export default function WalletDetails() {
                 ) : (
                   <>
                     <Card className="bg-card border-border mb-3">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                      <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {t('wallet.availableBalance')} ({currency})
                         </span>
-                        <span className="font-mono font-medium text-primary">
+                        <span className="font-mono text-sm md:text-base font-medium text-primary">
                           {formatAmount(balance)}
                         </span>
                       </CardContent>
                     </Card>
 
                     <Card className="bg-card border-border">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                      <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {t('wallet.charityTalent')} ({currency})
                         </span>
-                        <span className="font-mono font-medium text-foreground">
+                        <span className="font-mono text-sm md:text-base font-medium text-foreground">
                           {showBalance ? '0' : '****'}
                         </span>
                       </CardContent>
@@ -346,11 +346,11 @@ export default function WalletDetails() {
 
                     {frozenBalance !== null && frozenBalance > 0 && (
                       <Card className="bg-card border-border mt-3">
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
+                        <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                          <span className="text-[10px] md:text-xs text-muted-foreground">
                             {t('wallet.frozenBalance')} ({currency})
                           </span>
-                          <span className="font-mono font-medium text-orange-500">
+                          <span className="font-mono text-sm md:text-base font-medium text-orange-500">
                             {formatAmount(frozenBalance)}
                           </span>
                         </CardContent>
@@ -364,50 +364,50 @@ export default function WalletDetails() {
             {/* Charity Tab */}
             <TabsContent value="charity" className="mt-0">
               {/* Charity Balance Card */}
-              <Card className="bg-card border-border mb-6">
-                <CardContent className="p-6">
+              <Card className="bg-card border-border mb-4 md:mb-6">
+                <CardContent className="p-4 md:p-6">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-[10px] md:text-xs text-muted-foreground">
                       {t('wallet.valuation')} ({currency})
                     </span>
                     <button 
                       onClick={() => setShowBalance(!showBalance)}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center -m-2"
                     >
                       {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">
                       {showBalance ? '0' : '****'}
                     </p>
-                    <div className="w-20 h-20 flex items-center justify-center bg-muted/30 rounded-lg">
-                      <Wallet className="w-10 h-10 text-muted-foreground" />
+                    <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-muted/30 rounded-lg">
+                      <Wallet className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* No Profit Card */}
-              <Card className="bg-card border-border mb-6">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
+              <Card className="bg-card border-border mb-4 md:mb-6">
+                <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                  <span className="text-[10px] md:text-xs text-muted-foreground">
                     {t('wallet.noProfit')}
                   </span>
-                  <span className="font-mono font-medium text-foreground">0</span>
+                  <span className="font-mono text-sm md:text-base font-medium text-foreground">0</span>
                 </CardContent>
               </Card>
 
               {/* Daily Income History */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-foreground mb-3">
+              <div className="mb-4 md:mb-6">
+                <h3 className="text-xs md:text-sm font-medium text-foreground mb-3">
                   {t('wallet.dailyIncomeHistory')}
                 </h3>
                 
                 {dailyIncomeHistory.length === 0 ? (
                   <Card className="bg-card border-border">
-                    <CardContent className="p-6 text-center text-muted-foreground">
+                    <CardContent className="p-4 md:p-6 text-center text-muted-foreground text-xs md:text-sm">
                       {t('wallet.noHistory')}
                     </CardContent>
                   </Card>
@@ -415,10 +415,10 @@ export default function WalletDetails() {
                   <div className="space-y-2">
                     {dailyIncomeHistory.map((item, index) => (
                       <Card key={index} className="bg-card border-border">
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">{item.date}</span>
+                        <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                          <span className="text-[10px] md:text-xs text-muted-foreground">{item.date}</span>
                           <span className={cn(
-                            "font-mono font-medium",
+                            "font-mono text-sm md:text-base font-medium",
                             item.amount > 0 ? "text-green-500" : item.amount < 0 ? "text-red-500" : "text-foreground"
                           )}>
                             {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
