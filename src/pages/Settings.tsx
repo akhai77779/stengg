@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage, Language } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ChevronLeft, ChevronRight, ArrowUpDown, Sun, Moon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Info, Globe } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import {
@@ -13,12 +13,24 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+const languages: { code: Language; name: string; flag: string }[] = [
+  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'th', name: 'ไทย', flag: '🇹🇭' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ko', name: '한국어', flag: '🇰🇷' },
+  { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+  { code: 'ms', name: 'Bahasa Melayu', flag: '🇲🇾' },
+];
+
 export default function Settings() {
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { currency } = useCurrency();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -31,6 +43,13 @@ export default function Settings() {
 
   const handleThemeChange = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const currentLanguage = languages.find((l) => l.code === language);
+
+  const handleLanguageSelect = (code: Language) => {
+    setLanguage(code);
+    setLanguageSheetOpen(false);
   };
 
   return (
@@ -52,6 +71,51 @@ export default function Settings() {
 
           {/* Settings List */}
           <div className="space-y-0">
+            {/* Language Settings */}
+            <Sheet open={languageSheetOpen} onOpenChange={setLanguageSheetOpen}>
+              <SheetTrigger asChild>
+                <button className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]">
+                  <span className="text-sm md:text-base text-foreground">
+                    {t('settings.language')}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{currentLanguage?.flag}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {currentLanguage?.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh]">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    {t('settings.language')}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="py-4 space-y-1 overflow-y-auto">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleLanguageSelect(lang.code)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        language === lang.code 
+                          ? 'bg-primary/10 text-primary' 
+                          : 'hover:bg-muted/50 active:bg-muted/70'
+                      }`}
+                    >
+                      <span className="text-xl">{lang.flag}</span>
+                      <span className="text-sm md:text-base font-medium">{lang.name}</span>
+                      {language === lang.code && (
+                        <span className="ml-auto text-primary">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+
             {/* Theme Mode */}
             <button
               onClick={handleThemeChange}
@@ -68,7 +132,7 @@ export default function Settings() {
               </div>
             </button>
 
-            {/* Currency Settings */}
+            {/* About Us */}
             <Sheet>
               <SheetTrigger asChild>
                 <button className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]">
@@ -76,7 +140,7 @@ export default function Settings() {
                     {t('settings.currencySettings')}
                   </span>
                   <div className="flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4 text-green-500" />
+                    <Info className="w-4 h-4 text-blue-500" />
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </button>
@@ -96,7 +160,7 @@ export default function Settings() {
               </SheetContent>
             </Sheet>
 
-            {/* About */}
+            {/* Contact Info */}
             <button 
               onClick={() => navigate('/about')}
               className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]"
