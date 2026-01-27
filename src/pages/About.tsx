@@ -1,0 +1,121 @@
+import { useNavigate } from 'react-router-dom';
+import { Layout } from '@/components/layout/Layout';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { ChevronLeft, Mail, Phone, Globe, MessageCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+
+export default function About() {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const appVersion = '1.0.0';
+  const supportEmail = 'support@stengg-it.com';
+  const supportPhone = '+84 123 456 789';
+  const website = 'https://stengg-it.com';
+  const liveChatUrl = 'https://direct.lc.chat/19460523/';
+
+  return (
+    <Layout hideFooter>
+      <div className="min-h-screen pb-20 md:pb-8">
+        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
+          {/* Header */}
+          <div className="mb-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-full hover:bg-muted/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center mb-4 active:bg-muted/70 touch-action-manipulation"
+            >
+              <ChevronLeft className="w-6 h-6 text-foreground" />
+            </button>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">
+              {t('settings.about')}
+            </h1>
+          </div>
+
+          {/* App Info */}
+          <Card className="bg-card border-border mb-4">
+            <CardContent className="p-4">
+              <div className="text-center mb-4">
+                <img 
+                  src="/placeholder.svg" 
+                  alt="App Logo" 
+                  className="w-16 h-16 mx-auto mb-3 rounded-xl"
+                />
+                <h2 className="text-lg font-semibold text-foreground">ST Engineering</h2>
+                <p className="text-sm text-muted-foreground">{t('about.version')}: {appVersion}</p>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                {t('about.description')}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Contact Support */}
+          <Card className="bg-card border-border">
+            <CardContent className="p-0">
+              <h3 className="text-sm font-medium text-foreground px-4 py-3 border-b border-border/30">
+                {t('about.contactSupport')}
+              </h3>
+              
+              {/* Email */}
+              <a 
+                href={`mailto:${supportEmail}`}
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40"
+              >
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">Email</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{supportEmail}</span>
+              </a>
+
+              {/* Phone */}
+              <a 
+                href={`tel:${supportPhone.replace(/\s/g, '')}`}
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40"
+              >
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.phone')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{supportPhone}</span>
+              </a>
+
+              {/* Website */}
+              <a 
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40"
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">Website</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{website.replace('https://', '')}</span>
+              </a>
+
+              {/* Live Chat */}
+              <a 
+                href={liveChatUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors active:bg-muted/40"
+              >
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.liveChat')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{t('about.chatNow')}</span>
+              </a>
+            </CardContent>
+          </Card>
+
+          {/* Copyright */}
+          <p className="text-xs text-muted-foreground text-center mt-6">
+            © 2024 ST Engineering. {t('about.allRightsReserved')}
+          </p>
+        </div>
+      </div>
+    </Layout>
+  );
+}
