@@ -95,7 +95,7 @@ export default function About() {
 
           {/* Copyright */}
           <p className="text-xs text-muted-foreground text-center mt-6">
-            © 2024 ST Engineering. {t('about.allRightsReserved')}
+            © 2026 ST Engineering. {t('about.allRightsReserved')}
           </p>
         </div>
       </div>
