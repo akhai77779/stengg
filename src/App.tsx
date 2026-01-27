@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -42,54 +41,52 @@ const queryClient = new QueryClient();
 // App component with proper provider hierarchy
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark">
-      <LanguageProvider>
-        <CurrencyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AuthProvider>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/news" element={<News />} />
-                  <Route path="/news/:id" element={<NewsDetail />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/products/:id" element={<ProductDetail />} />
-                  <Route path="/charity" element={<Charity />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/wallet-details" element={<WalletDetails />} />
-                  <Route path="/security" element={<SecuritySettings />} />
-                  <Route path="/identity-verification" element={<IdentityVerification />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<Navigate to="overview" replace />} />
-                    <Route path="overview" element={<AdminOverview />} />
-                    <Route path="banners" element={<AdminBanners />} />
-                    <Route path="news" element={<AdminNews />} />
-                    <Route path="products" element={<AdminProducts />} />
-                    <Route path="option-trades" element={<AdminOptionTrades />} />
-                    <Route path="charity" element={<AdminCharity />} />
-                    <Route path="transactions" element={<AdminTransactions />} />
-                    <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
-                    <Route path="audit-logs" element={<AdminAuditLogs />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="settings" element={<AdminSettings />} />
-                  </Route>
-                  <Route path="/deposit" element={<Deposit />} />
-                  <Route path="/withdraw" element={<Withdraw />} />
-                  <Route path="/bank-accounts" element={<BankAccounts />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AuthProvider>
-            </BrowserRouter>
-          </TooltipProvider>
-        </CurrencyProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <CurrencyProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/news" element={<News />} />
+                <Route path="/news/:id" element={<NewsDetail />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/charity" element={<Charity />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/wallet-details" element={<WalletDetails />} />
+                <Route path="/security" element={<SecuritySettings />} />
+                <Route path="/identity-verification" element={<IdentityVerification />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<AdminOverview />} />
+                  <Route path="banners" element={<AdminBanners />} />
+                  <Route path="news" element={<AdminNews />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="option-trades" element={<AdminOptionTrades />} />
+                  <Route path="charity" element={<AdminCharity />} />
+                  <Route path="transactions" element={<AdminTransactions />} />
+                  <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
+                  <Route path="audit-logs" element={<AdminAuditLogs />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
+                <Route path="/deposit" element={<Deposit />} />
+                <Route path="/withdraw" element={<Withdraw />} />
+                <Route path="/bank-accounts" element={<BankAccounts />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CurrencyProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 

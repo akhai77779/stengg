@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
-import { ThemeToggle } from '@/components/settings/ThemeToggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, RefreshCw, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff, Moon } from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, RefreshCw, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
@@ -478,16 +477,7 @@ export default function Profile() {
             <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2 md:mb-3 px-1">{t('profile.system')}</h3>
             <Card className="bg-card border-border">
               <CardContent className="p-0 divide-y divide-border">
-              {/* Theme Toggle */}
-                <div className="flex items-center justify-between p-3 md:p-4 rounded-xl min-h-[52px]">
-                  <div className="flex items-center gap-3">
-                    <Moon className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm text-foreground">{t('settings.theme')}</span>
-                  </div>
-                  <ThemeToggle />
-                </div>
-                
-                {/* Language Selector */}
+              {/* Language Selector */}
                 <div className="flex items-center justify-between p-3 md:p-4 rounded-xl min-h-[52px]">
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
