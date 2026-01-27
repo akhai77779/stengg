@@ -373,6 +373,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'Phiên bản',
     'about.description': 'Ứng dụng giao dịch và quản lý tài sản số hàng đầu.',
+    'about.portalDescription': 'Cổng thông tin nội bộ ST Engineering - Nơi kết nối, chia sẻ và phát triển cùng nhau.',
     'about.contactSupport': 'Liên hệ hỗ trợ',
     'about.address': 'Địa chỉ',
     'about.phone': 'Điện thoại',
@@ -780,6 +781,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'Version',
     'about.description': 'Leading digital asset trading and management application.',
+    'about.portalDescription': 'ST Engineering Internal Portal - Connect, share and grow together.',
     'about.contactSupport': 'Contact Support',
     'about.address': 'Address',
     'about.phone': 'Phone',
@@ -1089,6 +1091,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': '版本',
     'about.description': '领先的数字资产交易和管理应用程序。',
+    'about.portalDescription': 'ST Engineering 内部门户 - 连接、分享、共同成长。',
     'about.contactSupport': '联系支持',
     'about.address': '地址',
     'about.phone': '电话',
@@ -1311,6 +1314,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'เวอร์ชัน',
     'about.description': 'แอปพลิเคชันซื้อขายและจัดการสินทรัพย์ดิจิทัลชั้นนำ',
+    'about.portalDescription': 'พอร์ทัลภายใน ST Engineering - เชื่อมต่อ แบ่งปัน และเติบโตไปด้วยกัน',
     'about.contactSupport': 'ติดต่อฝ่ายสนับสนุน',
     'about.address': 'ที่อยู่',
     'about.phone': 'โทรศัพท์',
@@ -1534,6 +1538,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'バージョン',
     'about.description': '最先端のデジタル資産取引・管理アプリケーション。',
+    'about.portalDescription': 'ST Engineering 社内ポータル - つながり、共有し、共に成長する。',
     'about.contactSupport': 'サポートに連絡',
     'about.address': '住所',
     'about.phone': '電話',
@@ -1757,6 +1762,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': '버전',
     'about.description': '최고의 디지털 자산 거래 및 관리 애플리케이션.',
+    'about.portalDescription': 'ST Engineering 내부 포털 - 연결하고, 공유하고, 함께 성장합니다.',
     'about.contactSupport': '지원 문의',
     'about.address': '주소',
     'about.phone': '전화',
@@ -1980,6 +1986,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'Versi',
     'about.description': 'Aplikasi perdagangan dan manajemen aset digital terkemuka.',
+    'about.portalDescription': 'Portal Internal ST Engineering - Terhubung, berbagi, dan berkembang bersama.',
     'about.contactSupport': 'Hubungi Dukungan',
     'about.address': 'Alamat',
     'about.phone': 'Telepon',
@@ -2203,6 +2210,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.version': 'Versi',
     'about.description': 'Aplikasi perdagangan dan pengurusan aset digital terkemuka.',
+    'about.portalDescription': 'Portal Dalaman ST Engineering - Berhubung, berkongsi dan berkembang bersama.',
     'about.contactSupport': 'Hubungi Sokongan',
     'about.address': 'Alamat',
     'about.phone': 'Telefon',
