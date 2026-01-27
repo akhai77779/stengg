@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { useExternalBalance } from "@/hooks/useExternalBalance";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -238,189 +240,217 @@ export default function WithdrawPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-foreground hover:bg-muted">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-lg font-semibold">Rút tiền</h1>
-        <Button variant="ghost" size="icon" onClick={() => setShowTransactionHistory(!showTransactionHistory)} className="text-foreground hover:bg-muted">
-          {showTransactionHistory ? <X className="h-5 w-5" /> : <History className="h-5 w-5" />}
-        </Button>
-      </div>
-
-      {/* Transaction History Panel */}
-      {showTransactionHistory && (
-        <div className="px-4 py-4 border-b border-border">
-          <TransactionHistory />
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="px-4 py-4 space-y-4">
-        {/* Balance Card */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="space-y-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm text-muted-foreground">Số dư khả dụng:</span>
-              {balanceLoading ? (
-                <Skeleton className="h-6 w-24 inline-block" />
-              ) : (
-                <span className="text-lg font-semibold text-primary">{availableBalance.toFixed(2)} USD</span>
-              )}
+    <Layout hideFooter>
+      <div className="min-h-screen pb-20 md:pb-8">
+        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate(-1)} 
+                className="text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg md:text-xl font-bold text-foreground">Rút tiền</h1>
             </div>
-            {balanceLoading ? (
-              <Skeleton className="h-4 w-32" />
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                ≈ {balanceInVnd.toLocaleString('vi-VN')} VND
-              </div>
-            )}
-            {frozenBalance && frozenBalance > 0 && (
-              <div className="text-sm text-destructive">
-                Đã đóng băng: {frozenBalance.toFixed(2)} USD
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Country & Currency Select */}
-        <div className="bg-card rounded-lg p-4 border border-border space-y-4">
-          {/* Country Select */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Quốc gia</Label>
-            <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary">
-                <SelectValue placeholder="Vui lòng chọn một quốc gia" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Currency Select */}
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Tiền tệ</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary">
-                <SelectValue placeholder="Vui lòng chọn tiền tệ" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Bank Account Selection */}
-        <button
-          type="button"
-          onClick={() => navigate('/bank-accounts', { state: { selectMode: true } })}
-          className="w-full bg-card rounded-lg p-4 border border-border flex items-center justify-between hover:bg-muted/50 transition-colors"
-        >
-          {selectedBankAccount ? (
-            <div className="text-left space-y-1">
-              <div className="text-foreground font-medium">{selectedBankAccount.bank_name}</div>
-              <div className="text-sm text-muted-foreground">
-                {selectedBankAccount.account_holder} - ****{selectedBankAccount.account_number.slice(-4)}
-              </div>
-            </div>
-          ) : (
-            <span className="text-muted-foreground">
-              Vui lòng chọn tài khoản ngân hàng
-            </span>
-          )}
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        </button>
-
-        {/* Amount Section */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Số lượng</Label>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Input
-                type="number"
-                placeholder="Vui lòng nhập số lượng"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground h-auto p-0 flex-1 focus-visible:ring-0"
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-foreground">USD</span>
-                <button 
-                  onClick={handleSetMaxAmount}
-                  className="text-primary text-sm font-medium hover:underline"
-                >
-                  tất cả
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Số tiền rút tiền tối thiểu</span>
-              <span className="text-foreground">{minWithdraw} USD</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Số tiền rút tiền tối đa</span>
-              <span className="text-foreground">{maxWithdraw.toFixed(2)} USD</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Fee Section */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Phí xử lý</Label>
-          <div className="text-foreground">{processingFee.toFixed(2)}</div>
-        </div>
-
-        {/* Password Input */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <Label className="text-sm text-foreground mb-2 block">Mật khẩu rút tiền</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Vui lòng nhập mật khẩu rút tiền của bạn"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground h-auto p-0 flex-1 focus-visible:ring-0"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowPassword(!showPassword)}
-              className="text-primary hover:bg-transparent h-auto w-auto p-0"
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowTransactionHistory(!showTransactionHistory)} 
+              className="text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
             >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              {showTransactionHistory ? <X className="h-5 w-5" /> : <History className="h-5 w-5" />}
             </Button>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <Button
-          onClick={handleWithdraw}
-          disabled={isSubmitting || balanceLoading || !amount || parseFloat(amount) < minWithdraw}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-lg"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Đang xử lý...
-            </>
-          ) : (
-            "Rút tiền"
+          {/* Transaction History Panel */}
+          {showTransactionHistory && (
+            <Card className="bg-card border-border mb-4 md:mb-6">
+              <CardContent className="p-3 md:p-4">
+                <TransactionHistory />
+              </CardContent>
+            </Card>
           )}
-        </Button>
+
+          {/* Content */}
+          <div className="space-y-4">
+            {/* Balance Card */}
+            <Card className="bg-card border-border">
+              <CardContent className="p-3 md:p-4">
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs md:text-sm text-muted-foreground">Số dư khả dụng:</span>
+                    {balanceLoading ? (
+                      <Skeleton className="h-6 w-24 inline-block" />
+                    ) : (
+                      <span className="text-base md:text-lg font-semibold text-primary">{availableBalance.toFixed(2)} USD</span>
+                    )}
+                  </div>
+                  {balanceLoading ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    <div className="text-xs md:text-sm text-muted-foreground">
+                      ≈ {balanceInVnd.toLocaleString('vi-VN')} VND
+                    </div>
+                  )}
+                  {frozenBalance && frozenBalance > 0 && (
+                    <div className="text-xs md:text-sm text-destructive">
+                      Đã đóng băng: {frozenBalance.toFixed(2)} USD
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Country & Currency Select */}
+            <Card className="bg-card border-border">
+              <CardContent className="p-3 md:p-4 space-y-4">
+                {/* Country Select */}
+                <div>
+                  <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Quốc gia</Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary text-sm">
+                      <SelectValue placeholder="Vui lòng chọn một quốc gia" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Currency Select */}
+                <div>
+                  <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Tiền tệ</Label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary text-sm">
+                      <SelectValue placeholder="Vui lòng chọn tiền tệ" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {CURRENCIES.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Account Selection */}
+            <button
+              type="button"
+              onClick={() => navigate('/bank-accounts', { state: { selectMode: true } })}
+              className="w-full bg-card rounded-lg p-3 md:p-4 border border-border flex items-center justify-between hover:bg-muted/50 transition-colors min-h-[56px] touch-action-manipulation"
+            >
+              {selectedBankAccount ? (
+                <div className="text-left space-y-1">
+                  <div className="text-sm md:text-base text-foreground font-medium">{selectedBankAccount.bank_name}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">
+                    {selectedBankAccount.account_holder} - ****{selectedBankAccount.account_number.slice(-4)}
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs md:text-sm text-muted-foreground">
+                  Vui lòng chọn tài khoản ngân hàng
+                </span>
+              )}
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            {/* Amount Section */}
+            <Card className="bg-card border-border">
+              <CardContent className="p-3 md:p-4">
+                <Label className="text-xs md:text-sm text-foreground mb-2 block">Số lượng</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Input
+                      type="number"
+                      placeholder="Vui lòng nhập số lượng"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground h-auto p-0 flex-1 focus-visible:ring-0 text-sm md:text-base"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm md:text-base text-foreground">USD</span>
+                      <button 
+                        onClick={handleSetMaxAmount}
+                        className="text-primary text-xs md:text-sm font-medium hover:underline min-h-[44px] px-2"
+                      >
+                        tất cả
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs md:text-sm">
+                    <span className="text-muted-foreground">Số tiền rút tiền tối thiểu</span>
+                    <span className="text-foreground">{minWithdraw} USD</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs md:text-sm">
+                    <span className="text-muted-foreground">Số tiền rút tiền tối đa</span>
+                    <span className="text-foreground">{maxWithdraw.toFixed(2)} USD</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Fee Section */}
+            <Card className="bg-card border-border">
+              <CardContent className="p-3 md:p-4">
+                <Label className="text-xs md:text-sm text-foreground mb-2 block">Phí xử lý</Label>
+                <div className="text-sm md:text-base text-foreground">{processingFee.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+
+            {/* Password Input */}
+            <Card className="bg-card border-border">
+              <CardContent className="p-3 md:p-4">
+                <Label className="text-xs md:text-sm text-foreground mb-2 block">Mật khẩu rút tiền</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Vui lòng nhập mật khẩu rút tiền của bạn"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground h-auto p-0 flex-1 focus-visible:ring-0 text-sm md:text-base"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-primary hover:bg-transparent h-auto w-auto p-0 min-h-[44px] min-w-[44px]"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+          {/* Submit Button */}
+          <Button
+            onClick={handleWithdraw}
+            disabled={isSubmitting || balanceLoading || !amount || parseFloat(amount) < minWithdraw}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-lg min-h-[48px] text-sm md:text-base"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Đang xử lý...
+              </>
+            ) : (
+              "Rút tiền"
+            )}
+          </Button>
+          </div>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
