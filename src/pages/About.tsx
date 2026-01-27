@@ -11,7 +11,7 @@ export default function About() {
   const appVersion = '1.0.0';
   const supportEmail = 'stengg.com@stengg.it.com';
   const supportPhone = '+84 123 456 789';
-  const website = 'https://stengg-it.com';
+  const website = 'https://stengg.it.com';
   const liveChatUrl = 'https://direct.lc.chat/19460523/';
 
   return (
