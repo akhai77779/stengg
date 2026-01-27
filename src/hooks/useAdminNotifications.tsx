@@ -67,12 +67,48 @@ const playNotificationSound = () => {
   }
 };
 
+// Request notification permission
+const requestNotificationPermission = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+};
+
+// Send desktop notification
+const sendDesktopNotification = (title: string, body: string, icon: string = '💰') => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body,
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      tag: `admin-notification-${Date.now()}`,
+      requireInteraction: false,
+    });
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+
+    // Focus window when clicked
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }
+};
+
 export function useAdminNotifications() {
   const [pendingTransactionCount, setPendingTransactionCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const isInitialLoad = useRef(true);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (isAdmin) {
+      requestNotificationPermission();
+    }
+  }, [isAdmin]);
 
   const fetchPendingCounts = useCallback(async () => {
     if (!user || !isAdmin) return;
@@ -125,6 +161,12 @@ export function useAdminNotifications() {
           // Play notification sound (only after initial load)
           if (!isInitialLoad.current) {
             playNotificationSound();
+            
+            // Send desktop notification
+            sendDesktopNotification(
+              '💰 Giao dịch mới cần duyệt',
+              `Yêu cầu ${typeLabel} ${amount} đang chờ xử lý`
+            );
           }
 
           toast({
@@ -168,9 +210,15 @@ export function useAdminNotifications() {
           const newVerify = payload.new as PendingVerification;
           const docType = newVerify.document_type === 'cccd' ? 'CCCD' : 'Passport';
 
-          // Play notification sound (only after initial load)
+          // Play notification sound and send desktop notification (only after initial load)
           if (!isInitialLoad.current) {
             playNotificationSound();
+            
+            // Send desktop notification
+            sendDesktopNotification(
+              '🪪 Yêu cầu xác minh mới',
+              `${newVerify.full_name} đã gửi ${docType} cần duyệt`
+            );
           }
 
           toast({
