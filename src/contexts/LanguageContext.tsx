@@ -365,7 +365,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.themeMode': 'Chế độ chủ đề',
     'settings.darkMode': 'Chế độ ban đêm',
     'settings.lightMode': 'Chế độ ban ngày',
-    'settings.currencySettings': 'Cấu hình màu',
+    'settings.currencySettings': 'Về chúng tôi',
     'settings.currentCurrency': 'Tiền tệ hiện tại',
     'settings.currencyNote': 'Cấu hình tiền tệ được đồng bộ từ hệ thống',
     'settings.about': 'Thông tin liên hệ',
