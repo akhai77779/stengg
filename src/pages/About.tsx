@@ -36,9 +36,9 @@ export default function About() {
             <CardContent className="p-4">
               <div className="text-center mb-4">
                 <img 
-                  src="/placeholder.svg" 
-                  alt="App Logo" 
-                  className="w-16 h-16 mx-auto mb-3 rounded-xl"
+                  src="/lovable-uploads/a85205e2-87c2-4249-93ae-54cd1c085cc6.png" 
+                  alt="ST Engineering Logo" 
+                  className="w-16 h-16 mx-auto mb-3 rounded-xl object-contain"
                 />
                 <h2 className="text-lg font-semibold text-foreground">ST Engineering</h2>
                 <p className="text-sm text-muted-foreground">{t('about.version')}: {appVersion}</p>
