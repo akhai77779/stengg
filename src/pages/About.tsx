@@ -19,7 +19,7 @@ export default function About() {
         <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
           {/* Header */}
           <div className="mb-6">
-            <button onClick={() => navigate('/profile')} className="p-2 -ml-2 rounded-full hover:bg-muted/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center mb-4 active:bg-muted/70 touch-action-manipulation">
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center mb-4 active:bg-muted/70 touch-action-manipulation">
               <ChevronLeft className="w-6 h-6 text-foreground" />
             </button>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">
