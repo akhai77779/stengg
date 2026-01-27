@@ -361,6 +361,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Ngôn ngữ',
     'settings.currency': 'Tiền tệ',
     'settings.exchangeRate': 'Tỷ giá',
+    'settings.generalSettings': 'Cài đặt chung',
+    'settings.themeMode': 'Chế độ chủ đề',
+    'settings.darkMode': 'Chế độ ban đêm',
+    'settings.lightMode': 'Chế độ ban ngày',
+    'settings.currencySettings': 'Cấu hình màu',
+    'settings.currentCurrency': 'Tiền tệ hiện tại',
+    'settings.currencyNote': 'Cấu hình tiền tệ được đồng bộ từ hệ thống',
+    'settings.about': 'Về',
     
     // Options Trading
     'options.limitedTime': 'Thời gian giới hạn',
@@ -750,6 +758,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Language',
     'settings.currency': 'Currency',
     'settings.exchangeRate': 'Exchange Rate',
+    'settings.generalSettings': 'General Settings',
+    'settings.themeMode': 'Theme Mode',
+    'settings.darkMode': 'Dark Mode',
+    'settings.lightMode': 'Light Mode',
+    'settings.currencySettings': 'Color Settings',
+    'settings.currentCurrency': 'Current Currency',
+    'settings.currencyNote': 'Currency settings synced from system',
+    'settings.about': 'About',
     
     // Options Trading
     'options.limitedTime': 'Limited Time',
@@ -1041,6 +1057,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '语言',
     'settings.currency': '货币',
     'settings.exchangeRate': '汇率',
+    'settings.generalSettings': '通用设置',
+    'settings.themeMode': '主题模式',
+    'settings.darkMode': '夜间模式',
+    'settings.lightMode': '日间模式',
+    'settings.currencySettings': '颜色配置',
+    'settings.currentCurrency': '当前货币',
+    'settings.currencyNote': '货币设置从系统同步',
+    'settings.about': '关于',
   },
   th: {
     // Common
@@ -1245,6 +1269,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'ภาษา',
     'settings.currency': 'สกุลเงิน',
     'settings.exchangeRate': 'อัตราแลกเปลี่ยน',
+    'settings.generalSettings': 'การตั้งค่าทั่วไป',
+    'settings.themeMode': 'โหมดธีม',
+    'settings.darkMode': 'โหมดกลางคืน',
+    'settings.lightMode': 'โหมดกลางวัน',
+    'settings.currencySettings': 'การตั้งค่าสี',
+    'settings.currentCurrency': 'สกุลเงินปัจจุบัน',
+    'settings.currencyNote': 'การตั้งค่าสกุลเงินซิงค์จากระบบ',
+    'settings.about': 'เกี่ยวกับ',
   },
   ja: {
     // Common
@@ -1450,6 +1482,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '言語',
     'settings.currency': '通貨',
     'settings.exchangeRate': '為替レート',
+    'settings.generalSettings': '一般設定',
+    'settings.themeMode': 'テーマモード',
+    'settings.darkMode': 'ダークモード',
+    'settings.lightMode': 'ライトモード',
+    'settings.currencySettings': 'カラー設定',
+    'settings.currentCurrency': '現在の通貨',
+    'settings.currencyNote': '通貨設定はシステムから同期されます',
+    'settings.about': 'について',
   },
   ko: {
     // Common
@@ -1655,6 +1695,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '언어',
     'settings.currency': '통화',
     'settings.exchangeRate': '환율',
+    'settings.generalSettings': '일반 설정',
+    'settings.themeMode': '테마 모드',
+    'settings.darkMode': '다크 모드',
+    'settings.lightMode': '라이트 모드',
+    'settings.currencySettings': '색상 설정',
+    'settings.currentCurrency': '현재 통화',
+    'settings.currencyNote': '통화 설정은 시스템에서 동기화됩니다',
+    'settings.about': '정보',
   },
   id: {
     // Common
@@ -1860,6 +1908,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Bahasa',
     'settings.currency': 'Mata Uang',
     'settings.exchangeRate': 'Kurs',
+    'settings.generalSettings': 'Pengaturan Umum',
+    'settings.themeMode': 'Mode Tema',
+    'settings.darkMode': 'Mode Gelap',
+    'settings.lightMode': 'Mode Terang',
+    'settings.currencySettings': 'Pengaturan Warna',
+    'settings.currentCurrency': 'Mata Uang Saat Ini',
+    'settings.currencyNote': 'Pengaturan mata uang disinkronkan dari sistem',
+    'settings.about': 'Tentang',
   },
   ms: {
     // Common
@@ -2065,6 +2121,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Bahasa',
     'settings.currency': 'Mata Wang',
     'settings.exchangeRate': 'Kadar Pertukaran',
+    'settings.generalSettings': 'Tetapan Umum',
+    'settings.themeMode': 'Mod Tema',
+    'settings.darkMode': 'Mod Gelap',
+    'settings.lightMode': 'Mod Terang',
+    'settings.currencySettings': 'Tetapan Warna',
+    'settings.currentCurrency': 'Mata Wang Semasa',
+    'settings.currencyNote': 'Tetapan mata wang disegerakkan dari sistem',
+    'settings.about': 'Mengenai',
   },
 };
 

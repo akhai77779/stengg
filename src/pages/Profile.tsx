@@ -303,7 +303,7 @@ export default function Profile() {
   const systemSettings = [{
     icon: Settings,
     label: t('common.settings'),
-    href: '#',
+    href: '/settings',
     value: null,
     isLink: true
   }, {
