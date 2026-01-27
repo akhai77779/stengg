@@ -22,6 +22,7 @@ import Dashboard from "./pages/Dashboard";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import BankAccounts from "./pages/BankAccounts";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/deposit" element={<Deposit />} />
                 <Route path="/withdraw" element={<Withdraw />} />
                 <Route path="/bank-accounts" element={<BankAccounts />} />
+                <Route path="/settings" element={<Settings />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
