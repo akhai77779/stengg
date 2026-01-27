@@ -57,9 +57,12 @@ export default function About() {
               </h3>
               
               {/* Address */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span className="text-sm text-foreground">ST Engineering Hub, Singapore</span>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.address')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">ST Engineering Hub, Singapore</span>
               </div>
 
               {/* Email */}
