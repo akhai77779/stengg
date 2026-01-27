@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ChevronLeft, Mail, Phone, Globe, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Mail, Phone, Globe, MessageCircle, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function About() {
@@ -56,6 +56,12 @@ export default function About() {
                 {t('about.contactSupport')}
               </h3>
               
+              {/* Address */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
+                <MapPin className="w-5 h-5 text-primary" />
+                <span className="text-sm text-foreground">ST Engineering Hub, Singapore</span>
+              </div>
+
               {/* Email */}
               <a 
                 href={`mailto:${supportEmail}`}
