@@ -368,7 +368,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currencySettings': 'Cấu hình màu',
     'settings.currentCurrency': 'Tiền tệ hiện tại',
     'settings.currencyNote': 'Cấu hình tiền tệ được đồng bộ từ hệ thống',
-    'settings.about': 'Về',
+    'settings.about': 'Về chúng tôi',
     
     // About page
     'about.version': 'Phiên bản',
