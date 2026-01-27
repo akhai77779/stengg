@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ComponentType } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -25,15 +26,23 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
   to: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  badgeKey?: 'verification' | 'transaction';
 };
 
-function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+interface AdminSidebarProps {
+  onNavigate?: () => void;
+  pendingVerificationCount: number;
+  pendingTransactionCount: number;
+}
+
+function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransactionCount }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
@@ -46,14 +55,20 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       { to: "/admin/products", label: t('admin.products'), icon: Package },
       { to: "/admin/option-trades", label: "Option Trades", icon: Clock },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
-      { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard },
-      { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck },
+      { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' },
+      { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck, badgeKey: 'verification' },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
       { to: "/admin/users", label: t('admin.users'), icon: Users },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
     ],
     [t]
   );
+
+  const getBadgeCount = (badgeKey?: 'verification' | 'transaction') => {
+    if (badgeKey === 'verification') return pendingVerificationCount;
+    if (badgeKey === 'transaction') return pendingTransactionCount;
+    return 0;
+  };
 
   return (
     <aside className="h-full">
@@ -66,6 +81,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         {items.map((item) => {
           const active = location.pathname === item.to;
           const Icon = item.icon;
+          const badgeCount = getBadgeCount(item.badgeKey);
           return (
             <Button
               key={item.to}
@@ -80,7 +96,12 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
               }}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className="flex-1 text-left">{item.label}</span>
+              {badgeCount > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs animate-pulse">
+                  {badgeCount}
+                </Badge>
+              )}
             </Button>
           );
         })}
@@ -91,6 +112,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function AdminLayout() {
   const { user, isAdmin, isLoading: authLoading, isAdminLoading } = useAuth();
+  const { pendingVerificationCount, pendingTransactionCount } = useAdminNotifications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -108,7 +130,10 @@ export default function AdminLayout() {
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
           <div className="hidden md:block">
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <AdminSidebar />
+              <AdminSidebar 
+                pendingVerificationCount={pendingVerificationCount}
+                pendingTransactionCount={pendingTransactionCount}
+              />
             </div>
           </div>
 
@@ -126,7 +151,11 @@ export default function AdminLayout() {
                     <SheetTitle>Menu quản trị</SheetTitle>
                   </SheetHeader>
                   <div className="mt-4">
-                    <AdminSidebar onNavigate={() => undefined} />
+                    <AdminSidebar 
+                      onNavigate={() => undefined}
+                      pendingVerificationCount={pendingVerificationCount}
+                      pendingTransactionCount={pendingTransactionCount}
+                    />
                   </div>
                 </SheetContent>
               </Sheet>
