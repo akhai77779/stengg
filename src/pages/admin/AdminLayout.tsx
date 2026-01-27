@@ -27,6 +27,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { NotificationHistory } from "@/components/admin/NotificationHistory";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
@@ -112,7 +113,14 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
 
 export default function AdminLayout() {
   const { user, isAdmin, isLoading: authLoading, isAdminLoading } = useAuth();
-  const { pendingVerificationCount, pendingTransactionCount } = useAdminNotifications();
+  const { 
+    pendingVerificationCount, 
+    pendingTransactionCount,
+    notificationHistory,
+    unreadNotificationCount,
+    markAsRead,
+    clearAllNotifications
+  } = useAdminNotifications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -138,27 +146,38 @@ export default function AdminLayout() {
           </div>
 
           <div className="space-y-4">
-            <div className="md:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Menu className="h-4 w-4" />
-                    Menu admin
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[320px]">
-                  <SheetHeader>
-                    <SheetTitle>Menu quản trị</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4">
-                    <AdminSidebar 
-                      onNavigate={() => undefined}
-                      pendingVerificationCount={pendingVerificationCount}
-                      pendingTransactionCount={pendingTransactionCount}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+            {/* Mobile menu and notification history */}
+            <div className="flex items-center justify-between md:justify-end gap-2">
+              <div className="md:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Menu className="h-4 w-4" />
+                      Menu admin
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[320px]">
+                    <SheetHeader>
+                      <SheetTitle>Menu quản trị</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4">
+                      <AdminSidebar 
+                        onNavigate={() => undefined}
+                        pendingVerificationCount={pendingVerificationCount}
+                        pendingTransactionCount={pendingTransactionCount}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* Notification History Button */}
+              <NotificationHistory
+                notifications={notificationHistory}
+                onClearAll={clearAllNotifications}
+                onMarkAsRead={markAsRead}
+                unreadCount={unreadNotificationCount}
+              />
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4 md:p-6">

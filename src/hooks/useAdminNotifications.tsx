@@ -20,6 +20,15 @@ interface PendingVerification {
   created_at: string;
 }
 
+export interface NotificationItem {
+  id: string;
+  type: 'transaction' | 'verification';
+  title: string;
+  description: string;
+  timestamp: Date;
+  read: boolean;
+}
+
 // Create notification sound using Web Audio API
 const playNotificationSound = () => {
   try {
@@ -75,7 +84,7 @@ const requestNotificationPermission = async () => {
 };
 
 // Send desktop notification
-const sendDesktopNotification = (title: string, body: string, icon: string = '💰') => {
+const sendDesktopNotification = (title: string, body: string) => {
   if ('Notification' in window && Notification.permission === 'granted') {
     const notification = new Notification(title, {
       body,
@@ -99,6 +108,7 @@ const sendDesktopNotification = (title: string, body: string, icon: string = '�
 export function useAdminNotifications() {
   const [pendingTransactionCount, setPendingTransactionCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+  const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const isInitialLoad = useRef(true);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -109,6 +119,38 @@ export function useAdminNotifications() {
       requestNotificationPermission();
     }
   }, [isAdmin]);
+
+  // Add notification to history
+  const addNotification = useCallback((
+    type: 'transaction' | 'verification',
+    title: string,
+    description: string
+  ) => {
+    const newNotification: NotificationItem = {
+      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      title,
+      description,
+      timestamp: new Date(),
+      read: false,
+    };
+    setNotificationHistory(prev => [newNotification, ...prev]);
+  }, []);
+
+  // Mark notification as read
+  const markAsRead = useCallback((id: string) => {
+    setNotificationHistory(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+  }, []);
+
+  // Clear all notifications
+  const clearAllNotifications = useCallback(() => {
+    setNotificationHistory([]);
+  }, []);
+
+  // Get unread count
+  const unreadNotificationCount = notificationHistory.filter(n => !n.read).length;
 
   const fetchPendingCounts = useCallback(async () => {
     if (!user || !isAdmin) return;
@@ -158,22 +200,19 @@ export function useAdminNotifications() {
             currency: 'USD',
           }).format(newTx.amount);
 
-          // Play notification sound (only after initial load)
+          const title = '💰 Giao dịch mới cần duyệt';
+          const description = `Yêu cầu ${typeLabel} ${amount} đang chờ xử lý`;
+
+          // Add to history
+          addNotification('transaction', title, description);
+
+          // Play notification sound and send desktop notification (only after initial load)
           if (!isInitialLoad.current) {
             playNotificationSound();
-            
-            // Send desktop notification
-            sendDesktopNotification(
-              '💰 Giao dịch mới cần duyệt',
-              `Yêu cầu ${typeLabel} ${amount} đang chờ xử lý`
-            );
+            sendDesktopNotification(title, description);
           }
 
-          toast({
-            title: '💰 Giao dịch mới cần duyệt',
-            description: `Yêu cầu ${typeLabel} ${amount} đang chờ xử lý`,
-          });
-
+          toast({ title, description });
           setPendingTransactionCount(prev => prev + 1);
         }
       )
@@ -210,22 +249,19 @@ export function useAdminNotifications() {
           const newVerify = payload.new as PendingVerification;
           const docType = newVerify.document_type === 'cccd' ? 'CCCD' : 'Passport';
 
+          const title = '🪪 Yêu cầu xác minh mới';
+          const description = `${newVerify.full_name} đã gửi ${docType} cần duyệt`;
+
+          // Add to history
+          addNotification('verification', title, description);
+
           // Play notification sound and send desktop notification (only after initial load)
           if (!isInitialLoad.current) {
             playNotificationSound();
-            
-            // Send desktop notification
-            sendDesktopNotification(
-              '🪪 Yêu cầu xác minh mới',
-              `${newVerify.full_name} đã gửi ${docType} cần duyệt`
-            );
+            sendDesktopNotification(title, description);
           }
 
-          toast({
-            title: '🪪 Yêu cầu xác minh mới',
-            description: `${newVerify.full_name} đã gửi ${docType} cần duyệt`,
-          });
-
+          toast({ title, description });
           setPendingVerificationCount(prev => prev + 1);
         }
       )
@@ -251,7 +287,7 @@ export function useAdminNotifications() {
       supabase.removeChannel(txChannel);
       supabase.removeChannel(verifyChannel);
     };
-  }, [user, isAdmin, toast, fetchPendingCounts]);
+  }, [user, isAdmin, toast, fetchPendingCounts, addNotification]);
 
   // Total pending count for backward compatibility
   const pendingCount = pendingTransactionCount + pendingVerificationCount;
@@ -260,6 +296,10 @@ export function useAdminNotifications() {
     pendingCount,
     pendingTransactionCount, 
     pendingVerificationCount, 
+    notificationHistory,
+    unreadNotificationCount,
+    markAsRead,
+    clearAllNotifications,
     refetch: fetchPendingCounts 
   };
 }
