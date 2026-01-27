@@ -361,6 +361,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Ngôn ngữ',
     'settings.currency': 'Tiền tệ',
     'settings.exchangeRate': 'Tỷ giá',
+    'settings.theme': 'Giao diện',
     
     // Options Trading
     'options.limitedTime': 'Thời gian giới hạn',
@@ -750,6 +751,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Language',
     'settings.currency': 'Currency',
     'settings.exchangeRate': 'Exchange Rate',
+    'settings.theme': 'Theme',
     
     // Options Trading
     'options.limitedTime': 'Limited Time',
@@ -1041,6 +1043,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '语言',
     'settings.currency': '货币',
     'settings.exchangeRate': '汇率',
+    'settings.theme': '主题',
   },
   th: {
     // Common
@@ -1245,6 +1248,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'ภาษา',
     'settings.currency': 'สกุลเงิน',
     'settings.exchangeRate': 'อัตราแลกเปลี่ยน',
+    'settings.theme': 'ธีม',
   },
   ja: {
     // Common
@@ -1450,6 +1454,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '言語',
     'settings.currency': '通貨',
     'settings.exchangeRate': '為替レート',
+    'settings.theme': 'テーマ',
   },
   ko: {
     // Common
@@ -1655,6 +1660,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': '언어',
     'settings.currency': '통화',
     'settings.exchangeRate': '환율',
+    'settings.theme': '테마',
   },
   id: {
     // Common
@@ -1860,6 +1866,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Bahasa',
     'settings.currency': 'Mata Uang',
     'settings.exchangeRate': 'Kurs',
+    'settings.theme': 'Tema',
   },
   ms: {
     // Common
@@ -2065,6 +2072,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language': 'Bahasa',
     'settings.currency': 'Mata Wang',
     'settings.exchangeRate': 'Kadar Pertukaran',
+    'settings.theme': 'Tema',
   },
 };
 
