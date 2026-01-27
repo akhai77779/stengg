@@ -98,7 +98,7 @@ export default function Settings() {
 
             {/* About */}
             <button 
-              onClick={() => {}}
+              onClick={() => navigate('/about')}
               className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]"
             >
               <span className="text-sm md:text-base text-foreground">

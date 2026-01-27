@@ -370,6 +370,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currencyNote': 'Cấu hình tiền tệ được đồng bộ từ hệ thống',
     'settings.about': 'Về',
     
+    // About page
+    'about.version': 'Phiên bản',
+    'about.description': 'Ứng dụng giao dịch và quản lý tài sản số hàng đầu.',
+    'about.contactSupport': 'Liên hệ hỗ trợ',
+    'about.phone': 'Điện thoại',
+    'about.liveChat': 'Chat trực tuyến',
+    'about.chatNow': 'Chat ngay',
+    'about.allRightsReserved': 'Tất cả quyền được bảo lưu',
+    
     // Options Trading
     'options.limitedTime': 'Thời gian giới hạn',
     'options.productName': 'Tên sản phẩm',
@@ -767,6 +776,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currencyNote': 'Currency settings synced from system',
     'settings.about': 'About',
     
+    // About page
+    'about.version': 'Version',
+    'about.description': 'Leading digital asset trading and management application.',
+    'about.contactSupport': 'Contact Support',
+    'about.phone': 'Phone',
+    'about.liveChat': 'Live Chat',
+    'about.chatNow': 'Chat Now',
+    'about.allRightsReserved': 'All rights reserved',
+    
     // Options Trading
     'options.limitedTime': 'Limited Time',
     'options.productName': 'Product Name',
@@ -1065,6 +1083,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': '当前货币',
     'settings.currencyNote': '货币设置从系统同步',
     'settings.about': '关于',
+    
+    // About page
+    'about.version': '版本',
+    'about.description': '领先的数字资产交易和管理应用程序。',
+    'about.contactSupport': '联系支持',
+    'about.phone': '电话',
+    'about.liveChat': '在线聊天',
+    'about.chatNow': '立即聊天',
+    'about.allRightsReserved': '版权所有',
   },
   th: {
     // Common
@@ -1277,6 +1304,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': 'สกุลเงินปัจจุบัน',
     'settings.currencyNote': 'การตั้งค่าสกุลเงินซิงค์จากระบบ',
     'settings.about': 'เกี่ยวกับ',
+    
+    // About page
+    'about.version': 'เวอร์ชัน',
+    'about.description': 'แอปพลิเคชันซื้อขายและจัดการสินทรัพย์ดิจิทัลชั้นนำ',
+    'about.contactSupport': 'ติดต่อฝ่ายสนับสนุน',
+    'about.phone': 'โทรศัพท์',
+    'about.liveChat': 'แชทสด',
+    'about.chatNow': 'แชทเลย',
+    'about.allRightsReserved': 'สงวนลิขสิทธิ์',
   },
   ja: {
     // Common
@@ -1490,6 +1526,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': '現在の通貨',
     'settings.currencyNote': '通貨設定はシステムから同期されます',
     'settings.about': 'について',
+    
+    // About page
+    'about.version': 'バージョン',
+    'about.description': '最先端のデジタル資産取引・管理アプリケーション。',
+    'about.contactSupport': 'サポートに連絡',
+    'about.phone': '電話',
+    'about.liveChat': 'ライブチャット',
+    'about.chatNow': '今すぐチャット',
+    'about.allRightsReserved': '全著作権所有',
   },
   ko: {
     // Common
@@ -1703,6 +1748,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': '현재 통화',
     'settings.currencyNote': '통화 설정은 시스템에서 동기화됩니다',
     'settings.about': '정보',
+    
+    // About page
+    'about.version': '버전',
+    'about.description': '최고의 디지털 자산 거래 및 관리 애플리케이션.',
+    'about.contactSupport': '지원 문의',
+    'about.phone': '전화',
+    'about.liveChat': '실시간 채팅',
+    'about.chatNow': '지금 채팅',
+    'about.allRightsReserved': '모든 권리 보유',
   },
   id: {
     // Common
@@ -1916,6 +1970,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': 'Mata Uang Saat Ini',
     'settings.currencyNote': 'Pengaturan mata uang disinkronkan dari sistem',
     'settings.about': 'Tentang',
+    
+    // About page
+    'about.version': 'Versi',
+    'about.description': 'Aplikasi perdagangan dan manajemen aset digital terkemuka.',
+    'about.contactSupport': 'Hubungi Dukungan',
+    'about.phone': 'Telepon',
+    'about.liveChat': 'Obrolan Langsung',
+    'about.chatNow': 'Obrolan Sekarang',
+    'about.allRightsReserved': 'Hak cipta dilindungi',
   },
   ms: {
     // Common
@@ -2129,6 +2192,15 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.currentCurrency': 'Mata Wang Semasa',
     'settings.currencyNote': 'Tetapan mata wang disegerakkan dari sistem',
     'settings.about': 'Mengenai',
+    
+    // About page
+    'about.version': 'Versi',
+    'about.description': 'Aplikasi perdagangan dan pengurusan aset digital terkemuka.',
+    'about.contactSupport': 'Hubungi Sokongan',
+    'about.phone': 'Telefon',
+    'about.liveChat': 'Sembang Langsung',
+    'about.chatNow': 'Sembang Sekarang',
+    'about.allRightsReserved': 'Hak cipta terpelihara',
   },
 };
 
