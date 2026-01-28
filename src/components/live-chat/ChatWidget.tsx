@@ -169,13 +169,13 @@ export function ChatWidget({
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button - hidden on mobile, use SupportMenuButton instead */}
       {!isOpen && (
         <Button
           onClick={handleOpen}
           size="lg"
           className={cn(
-            "fixed bottom-4 z-50 rounded-full h-14 w-14 shadow-lg",
+            "fixed bottom-4 z-50 rounded-full h-14 w-14 shadow-lg hidden md:flex",
             positionClasses
           )}
         >
