@@ -268,6 +268,177 @@ export type Database = {
         }
         Relationships: []
       }
+      live_chat_messages: {
+        Row: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          read_at: string | null
+          room_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_type: string
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          room_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_type: string
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          room_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_chat_notes: {
+        Row: {
+          author_email: string | null
+          author_id: string | null
+          author_name: string
+          content: string
+          created_at: string | null
+          id: string
+          room_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_email?: string | null
+          author_id?: string | null
+          author_name: string
+          content: string
+          created_at?: string | null
+          id?: string
+          room_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_email?: string | null
+          author_id?: string | null
+          author_name?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          room_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_chat_notes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_chat_rooms: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          customer_email: string | null
+          customer_id: string
+          customer_name: string
+          id: string
+          last_message: string | null
+          last_updated_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id: string
+          customer_name: string
+          id?: string
+          last_message?: string | null
+          last_updated_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id?: string
+          customer_name?: string
+          id?: string
+          last_message?: string | null
+          last_updated_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      live_chat_typing: {
+        Row: {
+          id: string
+          is_typing: boolean | null
+          room_id: string
+          updated_at: string | null
+          user_id: string
+          user_name: string
+          user_type: string
+        }
+        Insert: {
+          id?: string
+          is_typing?: boolean | null
+          room_id: string
+          updated_at?: string | null
+          user_id: string
+          user_name: string
+          user_type: string
+        }
+        Update: {
+          id?: string
+          is_typing?: boolean | null
+          room_id?: string
+          updated_at?: string | null
+          user_id?: string
+          user_name?: string
+          user_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_chat_typing_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news: {
         Row: {
           author_id: string | null

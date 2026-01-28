@@ -38,6 +38,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOptionTrades from "./pages/admin/AdminOptionTrades";
 import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications";
+import AdminLiveChat from "./pages/admin/AdminLiveChat";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ const App = () => (
                   <Route path="audit-logs" element={<AdminAuditLogs />} />
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="settings" element={<AdminSettings />} />
+                  <Route path="live-chat" element={<AdminLiveChat />} />
                 </Route>
                 <Route path="/deposit" element={<Deposit />} />
                 <Route path="/withdraw" element={<Withdraw />} />

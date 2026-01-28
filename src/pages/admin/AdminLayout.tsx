@@ -53,6 +53,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
   const items: AdminNavItem[] = useMemo(
     () => [
       { to: "/admin/overview", label: t('admin.overview'), icon: BarChart3 },
+      { to: "/admin/live-chat", label: "Live Chat", icon: MessageCircle },
       { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
       { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
       { to: "/admin/products", label: t('admin.products'), icon: Package },
