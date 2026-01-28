@@ -3,13 +3,17 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuickLogin } from '@/hooks/useQuickLogin';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
+import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
+import { QuickLoginUnlock } from '@/components/auth/QuickLoginUnlock';
 
 interface LocationState {
   prefillEmail?: string;
+  skipQuickLogin?: boolean;
 }
 
 export default function Login() {
@@ -18,18 +22,30 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showQuickLoginSetup, setShowQuickLoginSetup] = useState(false);
+  const [showQuickLoginUnlock, setShowQuickLoginUnlock] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const quickLogin = useQuickLogin();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
+
+  // Check if quick login is available on mount
+  useEffect(() => {
+    const state = location.state as LocationState;
+    if (quickLogin.isAvailable && quickLogin.email && !state?.skipQuickLogin) {
+      setShowQuickLoginUnlock(true);
+    }
+  }, [quickLogin.isAvailable, quickLogin.email, location.state]);
 
   // Handle prefill email from Switch Account page
   useEffect(() => {
@@ -76,9 +92,13 @@ export default function Login() {
     
     if (!validateLoginForm()) return;
     
+    await performLogin(loginEmail, loginPassword);
+  };
+
+  const performLogin = async (email: string, password: string) => {
     setIsLoading(true);
     
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error } = await signIn(email, password);
     
     setIsLoading(false);
     
@@ -96,6 +116,27 @@ export default function Login() {
       description: t('auth.welcomeSubtitle'),
     });
     
+    // Check if quick login is already set up for this email
+    if (!quickLogin.isSetupForEmail(email)) {
+      // Show quick login setup dialog
+      setPendingCredentials({ email, password });
+      setShowQuickLoginSetup(true);
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleQuickLoginUnlock = async (email: string, password: string) => {
+    await performLogin(email, password);
+  };
+
+  const handleSwitchToPasswordLogin = () => {
+    setShowQuickLoginUnlock(false);
+    // Navigate with flag to skip quick login prompt
+    navigate(location.pathname, { replace: true, state: { skipQuickLogin: true } });
+  };
+
+  const handleQuickLoginSetupComplete = () => {
     navigate('/');
   };
 
@@ -264,6 +305,25 @@ export default function Login() {
       </div>
 
       <GuestFooter />
+
+      {/* Quick Login Setup Dialog */}
+      {pendingCredentials && (
+        <QuickLoginSetup
+          open={showQuickLoginSetup}
+          onOpenChange={setShowQuickLoginSetup}
+          email={pendingCredentials.email}
+          password={pendingCredentials.password}
+          onComplete={handleQuickLoginSetupComplete}
+        />
+      )}
+
+      {/* Quick Login Unlock Dialog */}
+      <QuickLoginUnlock
+        open={showQuickLoginUnlock}
+        onOpenChange={setShowQuickLoginUnlock}
+        onUnlock={handleQuickLoginUnlock}
+        onSwitchAccount={handleSwitchToPasswordLogin}
+      />
     </div>
   );
 }
