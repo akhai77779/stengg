@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
@@ -15,6 +15,47 @@ import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, Shiel
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
+
+// Ripple effect hook for menu items
+function useRipple() {
+  const [ripples, setRipples] = useState<{ x: number; y: number; size: number; id: number }[]>([]);
+  const idRef = useRef(0);
+
+  const createRipple = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    const element = event.currentTarget;
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2;
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    const newRipple = { x, y, size, id: idRef.current++ };
+    setRipples(prev => [...prev, newRipple]);
+
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== newRipple.id));
+    }, 600);
+  }, []);
+
+  const RippleContainer = useCallback(() => (
+    <>
+      {ripples.map(ripple => (
+        <span
+          key={ripple.id}
+          className="absolute rounded-full animate-ripple pointer-events-none bg-white/20"
+          style={{
+            left: ripple.x,
+            top: ripple.y,
+            width: ripple.size,
+            height: ripple.size,
+          }}
+        />
+      ))}
+    </>
+  ), [ripples]);
+
+  return { createRipple, RippleContainer };
+}
+
 interface Profile {
   id: string;
   full_name: string | null;
@@ -37,6 +78,10 @@ export default function Profile() {
   const [todayProductEarnings, setTodayProductEarnings] = useState<number>(0);
   const [todayCharityEarnings, setTodayCharityEarnings] = useState<number>(0);
   const [totalCharityBalance, setTotalCharityBalance] = useState<number>(0);
+  
+  // Ripple effects for menu sections
+  const accountRipple = useRipple();
+  const systemRipple = useRipple();
   const {
     user,
     signOut,
@@ -454,20 +499,33 @@ export default function Profile() {
           {/* Account Section */}
           <div className="mb-4 md:mb-6">
             <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2 md:mb-3 px-1">{t('profile.account')}</h3>
-            <Card className="bg-card border-border">
+            <Card className="bg-card border-border overflow-hidden">
               <CardContent className="p-0 divide-y divide-border">
-                {accountSettings.map(item => <Link key={item.label} to={item.href} onClick={e => handleAccountItemClick(item, e)} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-colors rounded-2xl min-h-[52px] active:bg-muted/50 touch-action-manipulation">
+                {accountSettings.map(item => (
+                  <Link 
+                    key={item.label} 
+                    to={item.href} 
+                    onClick={(e) => {
+                      accountRipple.createRipple(e);
+                      handleAccountItemClick(item, e);
+                    }} 
+                    className="relative flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-all duration-200 min-h-[52px] active:scale-[0.99] touch-action-manipulation overflow-hidden"
+                  >
                     <div className="flex items-center gap-3">
-                      <item.icon className="w-5 h-5 text-muted-foreground" />
+                      <item.icon className="w-5 h-5 text-muted-foreground transition-transform group-active:scale-95" />
                       <span className="text-sm text-foreground">{item.label}</span>
-                      {item.badge && <span className={cn("text-xs", item.badge.color)}>
+                      {item.badge && (
+                        <span className={cn("text-xs", item.badge.color)}>
                           {item.badge.label}
-                        </span>}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
                     </div>
-                  </Link>)}
+                    <accountRipple.RippleContainer />
+                  </Link>
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -475,10 +533,10 @@ export default function Profile() {
           {/* System Section */}
           <div className="mb-4 md:mb-6">
             <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2 md:mb-3 px-1">{t('profile.system')}</h3>
-            <Card className="bg-card border-border">
+            <Card className="bg-card border-border overflow-hidden">
               <CardContent className="p-0 divide-y divide-border">
               {/* Language Selector */}
-                <div className="flex items-center justify-between p-3 md:p-4 rounded-xl min-h-[52px]">
+                <div className="flex items-center justify-between p-3 md:p-4 min-h-[52px]">
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm text-foreground">{t('settings.language')}</span>
@@ -486,19 +544,27 @@ export default function Profile() {
                   <LanguageSelect />
                 </div>
                 
-                {systemSettings.map(item => <Link key={item.label} to={item.href} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-colors rounded-xl min-h-[52px] active:bg-muted/50 touch-action-manipulation">
+                {systemSettings.map(item => (
+                  <Link 
+                    key={item.label} 
+                    to={item.href} 
+                    onClick={systemRipple.createRipple}
+                    className="relative flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-all duration-200 min-h-[52px] active:scale-[0.99] touch-action-manipulation overflow-hidden"
+                  >
                     <div className="flex items-center gap-3">
                       <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span className="text-sm text-foreground">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {item.value && <span className="text-xs text-muted-foreground">{item.value}</span>}
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
                     </div>
-                  </Link>)}
+                    <systemRipple.RippleContainer />
+                  </Link>
+                ))}
                 
                 {/* Sign Out */}
-                <button onClick={handleSignOut} className="p-3 md:p-4 w-full transition-colors flex items-center justify-center text-white bg-[#cc0000] gap-[10px] text-base font-sans font-medium border-double rounded-3xl min-h-[52px] active:bg-[#aa0000] touch-action-manipulation">
+                <button onClick={handleSignOut} className="relative p-3 md:p-4 w-full transition-all duration-200 flex items-center justify-center text-white bg-[#cc0000] gap-[10px] text-base font-sans font-medium border-double rounded-3xl min-h-[52px] active:scale-[0.98] active:bg-[#aa0000] touch-action-manipulation overflow-hidden">
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm">{t('nav.logout')}</span>
                 </button>
