@@ -12,6 +12,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 
 const languages: { code: Language; name: string; flag: string }[] = [
   { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
@@ -150,6 +152,9 @@ export default function Settings() {
                   <SheetTitle>{t('settings.currencySettings')}</SheetTitle>
                 </SheetHeader>
                 <div className="py-4 overflow-y-auto space-y-4">
+                  <div className="flex justify-center mb-2">
+                    <img src={stEngineeringLogo} alt="ST Engineering Logo" className="h-10 object-contain" />
+                  </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Tại ST Engineering, chúng tôi ứng dụng công nghệ và sự đổi mới để giải quyết các vấn đề thực tế và cải thiện cuộc sống. Sự tận tâm hướng đến sự xuất sắc và thành tích vững chắc đã mang lại cho chúng tôi danh tiếng đặc biệt về chất lượng và sự tin cậy với tư cách là một tập đoàn công nghệ, quốc phòng và kỹ thuật toàn cầu.
                   </p>
@@ -171,6 +176,12 @@ export default function Settings() {
                   <p className="text-sm text-primary font-medium leading-relaxed">
                     Hãy cùng tìm hiểu về lịch sử phong phú và hành trình huy hoàng đưa chúng tôi đến vị trí hiện tại.
                   </p>
+                  <Button 
+                    onClick={() => navigate('/about')} 
+                    className="w-full mt-2"
+                  >
+                    {t('about.learnMore') || 'Tìm hiểu thêm'}
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
