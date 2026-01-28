@@ -469,6 +469,19 @@ const translations: Record<Language, Record<string, string>> = {
     'quickLogin.maxAttemptsDesc': 'Đăng nhập nhanh đã bị vô hiệu hóa',
     'quickLogin.biometricFailed': 'Xác thực thất bại',
     'quickLogin.biometricFailedDesc': 'Vui lòng thử lại hoặc sử dụng mật khẩu',
+    // Quick Login Management
+    'quickLogin.title': 'Đăng nhập nhanh',
+    'quickLogin.manageDesc': 'Quản lý phương thức đăng nhập nhanh của bạn',
+    'quickLogin.notSetup': 'Chưa thiết lập',
+    'quickLogin.changeMethod': 'Đổi phương thức',
+    'quickLogin.delete': 'Xóa',
+    'quickLogin.setup': 'Thiết lập đăng nhập nhanh',
+    'quickLogin.setupDescBiometric': 'PIN hoặc Sinh trắc học',
+    'quickLogin.setupDescPin': 'Mã PIN 6 số',
+    'quickLogin.deleteTitle': 'Xóa đăng nhập nhanh',
+    'quickLogin.deleteDesc': 'Bạn sẽ cần nhập lại mật khẩu cho lần đăng nhập tiếp theo.',
+    'quickLogin.deleted': 'Đã xóa đăng nhập nhanh',
+    'security.passwords': 'Mật khẩu',
   },
   en: {
     // Common
@@ -927,6 +940,19 @@ const translations: Record<Language, Record<string, string>> = {
     'quickLogin.maxAttemptsDesc': 'Quick login has been disabled',
     'quickLogin.biometricFailed': 'Authentication failed',
     'quickLogin.biometricFailedDesc': 'Please try again or use password',
+    // Quick Login Management
+    'quickLogin.title': 'Quick Login',
+    'quickLogin.manageDesc': 'Manage your quick login method',
+    'quickLogin.notSetup': 'Not set up',
+    'quickLogin.changeMethod': 'Change method',
+    'quickLogin.delete': 'Delete',
+    'quickLogin.setup': 'Set up Quick Login',
+    'quickLogin.setupDescBiometric': 'PIN or Biometrics',
+    'quickLogin.setupDescPin': '6-digit PIN',
+    'quickLogin.deleteTitle': 'Delete Quick Login',
+    'quickLogin.deleteDesc': 'You will need to enter your password for the next login.',
+    'quickLogin.deleted': 'Quick login deleted',
+    'security.passwords': 'Passwords',
   },
   zh: {
     // Common
