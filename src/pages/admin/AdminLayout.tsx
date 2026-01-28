@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { NotificationHistory } from "@/components/admin/NotificationHistory";
+import { CSKHReminder } from "@/components/admin/CSKHReminder";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
@@ -193,6 +194,9 @@ export default function AdminLayout() {
                   </SheetContent>
                 </Sheet>
               </div>
+
+              {/* CSKH Reminder Widget */}
+              <CSKHReminder />
 
               {/* Notification History Button */}
               <NotificationHistory
