@@ -380,6 +380,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'Chat trực tuyến',
     'about.chatNow': 'Chat ngay',
     'about.allRightsReserved': 'Tất cả quyền được bảo lưu',
+    'about.learnMore': 'Tìm hiểu thêm',
+    'about.intro1': 'Tại ST Engineering, chúng tôi ứng dụng công nghệ và sự đổi mới để giải quyết các vấn đề thực tế và cải thiện cuộc sống. Sự tận tâm hướng đến sự xuất sắc và thành tích vững chắc đã mang lại cho chúng tôi danh tiếng đặc biệt về chất lượng và sự tin cậy với tư cách là một tập đoàn công nghệ, quốc phòng và kỹ thuật toàn cầu.',
+    'about.intro2': 'Danh mục kinh doanh đa dạng của chúng tôi trải rộng trên các lĩnh vực hàng không vũ trụ, thành phố thông minh, giải pháp kỹ thuật số, quốc phòng và an ninh công cộng, và mạng lưới toàn cầu gồm các công ty con và công ty liên kết của chúng tôi trải rộng khắp châu Á, châu Âu, Trung Đông và Hoa Kỳ.',
+    'about.intro3': 'Chúng tôi thành công nhờ khả năng đáp ứng nhu cầu của các đối tác và khách hàng. Trên toàn Tập đoàn, chúng tôi có hơn 27.000 nhân viên với nền tảng và kỹ năng đa dạng, bao gồm hơn 19.000 kỹ sư và chuyên gia công nghệ tận tâm giải quyết các vấn đề thực tế cho khách hàng. Cùng nhau, chúng tôi chuyển đổi và bảo vệ tương lai các thành phố, giúp chúng trở nên năng động hơn, an toàn hơn và đáng sống hơn cho cộng đồng. Với chuyên môn và cơ sở vật chất trên toàn thế giới, chúng tôi đảm bảo máy bay bay an toàn và tàu thuyền hoạt động hiệu quả.',
+    'about.intro4': 'Chúng tôi giúp các quốc gia bảo vệ công dân của họ bằng cách đáp ứng nhu cầu quốc phòng trên không, trên bộ và trên biển, đồng thời trang bị cho lực lượng chiến đấu của họ để hoạt động hiệu quả trên chiến trường. An ninh mạng và các hệ thống quan trọng của chúng tôi giúp khách hàng tăng cường an ninh công cộng và an ninh quốc gia trong một thế giới ngày càng số hóa. Và thiết bị truyền thông vệ tinh của chúng tôi đóng góp vào phần lớn khả năng kết nối mạng lưới toàn cầu.',
+    'about.intro5': 'Chúng tôi đón nhận mọi thách thức bằng những giải pháp hiệu quả và cạnh tranh, giúp khách hàng tại hơn 100 quốc gia được chuẩn bị tốt hơn, bảo vệ tốt hơn và kết nối tốt hơn cho một tương lai bền vững. Sức mạnh đằng sau tất cả điều này là đội ngũ nhân viên toàn cầu của chúng tôi, được truyền cảm hứng bởi một cam kết và mục tiêu chung. Chúng tôi là một đội ngũ hiểu rõ những gì cần thiết và cam kết thách thức, thay đổi và bảo vệ tương lai.',
+    'about.intro6': 'Tại Mỹ, các hoạt động chính của chúng tôi trải rộng trên hơn 50 thành phố thuộc 21 tiểu bang, với khoảng 6.000 nhân viên cung cấp các sản phẩm và giải pháp sáng tạo cho khách hàng thương mại và chính phủ trên nhiều phân khúc thị trường khác nhau.',
+    'about.intro7': 'Hãy cùng tìm hiểu về lịch sử phong phú và hành trình huy hoàng đưa chúng tôi đến vị trí hiện tại.',
     
     // Options Trading
     'options.limitedTime': 'Thời gian giới hạn',
@@ -788,6 +796,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'Live Chat',
     'about.chatNow': 'Chat Now',
     'about.allRightsReserved': 'All rights reserved',
+    'about.learnMore': 'Learn More',
+    'about.intro1': 'At ST Engineering, we apply technology and innovation to solve real-world problems and improve lives. Our commitment to excellence and strong track record have earned us an exceptional reputation for quality and reliability as a global technology, defence and engineering group.',
+    'about.intro2': 'Our diverse business portfolio spans aerospace, smart city, digital solutions, defence and public security, and our global network of subsidiaries and affiliates extends across Asia, Europe, the Middle East and the United States.',
+    'about.intro3': 'We succeed through our ability to meet the needs of our partners and customers. Across the Group, we have more than 27,000 employees with diverse backgrounds and skills, including over 19,000 engineers and technology professionals dedicated to solving real-world problems for customers. Together, we transform and protect the future of cities, making them more dynamic, safer and more livable for communities. With our expertise and facilities worldwide, we ensure aircraft fly safely and ships operate efficiently.',
+    'about.intro4': 'We help nations protect their citizens by meeting defence needs on land, in the air and at sea, while equipping their fighting forces to operate effectively on the battlefield. Our cybersecurity and critical systems help customers strengthen public security and national security in an increasingly digital world. And our satellite communications equipment contributes to much of the global network connectivity.',
+    'about.intro5': 'We embrace every challenge with effective and competitive solutions, helping customers in more than 100 countries be better prepared, better protected and better connected for a sustainable future. The strength behind all of this is our global workforce, inspired by a shared commitment and purpose. We are a team that understands what it takes and is committed to challenging, changing and protecting the future.',
+    'about.intro6': 'In the United States, our main operations span more than 50 cities across 21 states, with approximately 6,000 employees providing innovative products and solutions to commercial and government customers across various market segments.',
+    'about.intro7': 'Discover our rich history and the remarkable journey that has brought us to where we are today.',
     
     // Options Trading
     'options.limitedTime': 'Limited Time',
@@ -1098,6 +1114,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': '在线聊天',
     'about.chatNow': '立即聊天',
     'about.allRightsReserved': '版权所有',
+    'about.learnMore': '了解更多',
+    'about.intro1': '在ST Engineering，我们运用技术和创新解决现实问题，改善生活。我们对卓越的执着和坚实的成绩，为我们赢得了作为全球科技、国防和工程集团的卓越品质和可靠性声誉。',
+    'about.intro2': '我们多元化的业务组合涵盖航空航天、智慧城市、数字解决方案、国防和公共安全，我们的子公司和关联公司遍布亚洲、欧洲、中东和美国。',
+    'about.intro3': '我们通过满足合作伙伴和客户的需求而取得成功。集团拥有超过27,000名具有不同背景和技能的员工，包括超过19,000名致力于为客户解决实际问题的工程师和技术专家。我们共同转型和保护城市的未来，使它们对社区更加充满活力、更安全、更宜居。凭借我们遍布全球的专业知识和设施，我们确保飞机安全飞行，船舶高效运营。',
+    'about.intro4': '我们帮助各国通过满足陆、空、海防务需求来保护公民，同时装备其战斗部队在战场上有效作战。我们的网络安全和关键系统帮助客户在日益数字化的世界中加强公共安全和国家安全。我们的卫星通信设备为全球大部分网络连接做出贡献。',
+    'about.intro5': '我们以高效和有竞争力的解决方案迎接每一个挑战，帮助100多个国家的客户为可持续的未来做好更好的准备、获得更好的保护和更好的连接。这一切背后的力量是我们的全球员工队伍，他们被共同的承诺和目标所激励。我们是一支了解所需并致力于挑战、改变和保护未来的团队。',
+    'about.intro6': '在美国，我们的主要业务遍布21个州的50多个城市，约有6,000名员工为不同市场细分的商业和政府客户提供创新产品和解决方案。',
+    'about.intro7': '让我们一起了解我们丰富的历史和将我们带到今天这一位置的辉煌旅程。',
   },
   th: {
     // Common
@@ -1321,6 +1345,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'แชทสด',
     'about.chatNow': 'แชทเลย',
     'about.allRightsReserved': 'สงวนลิขสิทธิ์',
+    'about.learnMore': 'เรียนรู้เพิ่มเติม',
+    'about.intro1': 'ที่ ST Engineering เราประยุกต์ใช้เทคโนโลยีและนวัตกรรมเพื่อแก้ไขปัญหาในโลกแห่งความเป็นจริงและปรับปรุงชีวิต ความมุ่งมั่นสู่ความเป็นเลิศและผลงานที่แข็งแกร่งทำให้เราได้รับชื่อเสียงพิเศษด้านคุณภาพและความน่าเชื่อถือในฐานะกลุ่มเทคโนโลยี การป้องกัน และวิศวกรรมระดับโลก',
+    'about.intro2': 'พอร์ตโฟลิโอธุรกิจที่หลากหลายของเราครอบคลุมอวกาศ เมืองอัจฉริยะ โซลูชันดิจิทัล การป้องกันประเทศและความปลอดภัยสาธารณะ และเครือข่ายบริษัทในเครือและบริษัทร่วมทุนของเราครอบคลุมเอเชีย ยุโรป ตะวันออกกลาง และสหรัฐอเมริกา',
+    'about.intro3': 'เราประสบความสำเร็จผ่านความสามารถในการตอบสนองความต้องการของพันธมิตรและลูกค้า ทั่วทั้งกลุ่ม เรามีพนักงานมากกว่า 27,000 คนที่มีพื้นหลังและทักษะที่หลากหลาย รวมถึงวิศวกรและผู้เชี่ยวชาญด้านเทคโนโลยีมากกว่า 19,000 คนที่ทุ่มเทเพื่อแก้ไขปัญหาในโลกแห่งความจริงให้กับลูกค้า เราร่วมกันเปลี่ยนแปลงและปกป้องอนาคตของเมือง ทำให้เมืองมีพลวัตมากขึ้น ปลอดภัยมากขึ้น และน่าอยู่มากขึ้นสำหรับชุมชน ด้วยความเชี่ยวชาญและสิ่งอำนวยความสะดวกทั่วโลก เรารับประกันว่าเครื่องบินบินอย่างปลอดภัยและเรือทำงานอย่างมีประสิทธิภาพ',
+    'about.intro4': 'เราช่วยให้ประเทศต่างๆ ปกป้องพลเมืองของตนโดยตอบสนองความต้องการด้านการป้องกันประเทศทางบก ทางอากาศ และทางทะเล พร้อมทั้งจัดเตรียมกองกำลังรบให้ปฏิบัติการได้อย่างมีประสิทธิภาพในสนามรบ ความปลอดภัยทางไซเบอร์และระบบที่สำคัญของเราช่วยให้ลูกค้าเสริมสร้างความปลอดภัยสาธารณะและความมั่นคงแห่งชาติในโลกที่เป็นดิจิทัลมากขึ้น และอุปกรณ์สื่อสารผ่านดาวเทียมของเรามีส่วนร่วมในการเชื่อมต่อเครือข่ายทั่วโลกส่วนใหญ่',
+    'about.intro5': 'เราต้อนรับทุกความท้าทายด้วยโซลูชันที่มีประสิทธิภาพและแข่งขันได้ ช่วยให้ลูกค้าในกว่า 100 ประเทศเตรียมพร้อมมากขึ้น ได้รับการปกป้องมากขึ้น และเชื่อมต่อมากขึ้นเพื่ออนาคตที่ยั่งยืน พลังเบื้องหลังทั้งหมดนี้คือพนักงานทั่วโลกของเรา ซึ่งได้รับแรงบันดาลใจจากความมุ่งมั่นและเป้าหมายร่วมกัน เราเป็นทีมที่เข้าใจสิ่งที่จำเป็นและมุ่งมั่นที่จะท้าทาย เปลี่ยนแปลง และปกป้องอนาคต',
+    'about.intro6': 'ในสหรัฐอเมริกา การดำเนินงานหลักของเราครอบคลุมมากกว่า 50 เมืองใน 21 รัฐ โดยมีพนักงานประมาณ 6,000 คนที่ให้บริการผลิตภัณฑ์และโซลูชันที่เป็นนวัตกรรมแก่ลูกค้าเชิงพาณิชย์และภาครัฐในกลุ่มตลาดต่างๆ',
+    'about.intro7': 'มาค้นพบประวัติศาสตร์อันยาวนานและการเดินทางอันน่าทึ่งที่นำเรามาสู่จุดที่เราอยู่ในปัจจุบัน',
   },
   ja: {
     // Common
@@ -1545,6 +1577,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'ライブチャット',
     'about.chatNow': '今すぐチャット',
     'about.allRightsReserved': '全著作権所有',
+    'about.learnMore': '詳しく見る',
+    'about.intro1': 'ST Engineeringでは、テクノロジーとイノベーションを活用して現実の問題を解決し、生活を改善しています。卓越性への取り組みと確かな実績により、グローバルなテクノロジー、防衛、エンジニアリンググループとして品質と信頼性において卓越した評価を得ています。',
+    'about.intro2': '私たちの多様な事業ポートフォリオは、航空宇宙、スマートシティ、デジタルソリューション、防衛および公共安全に及び、子会社と関連会社のグローバルネットワークはアジア、ヨーロッパ、中東、米国に広がっています。',
+    'about.intro3': '私たちはパートナーと顧客のニーズに応える能力によって成功しています。グループ全体で、さまざまな背景とスキルを持つ27,000人以上の従業員がおり、そのうち19,000人以上のエンジニアと技術専門家が顧客の現実の問題解決に専念しています。私たちは共に都市の未来を変革し保護し、コミュニティにとってより活力があり、より安全で、より住みやすいものにしています。世界中の専門知識と施設により、航空機の安全な飛行と船舶の効率的な運航を確保しています。',
+    'about.intro4': '私たちは陸・空・海での防衛ニーズに応え、戦場で効果的に活動できるよう戦闘部隊を装備することで、各国が市民を保護するのを支援しています。私たちのサイバーセキュリティと重要システムは、ますますデジタル化する世界で顧客の公共安全と国家安全保障を強化するのに役立っています。そして私たちの衛星通信機器は、グローバルネットワーク接続の大部分に貢献しています。',
+    'about.intro5': '私たちは効果的で競争力のあるソリューションであらゆる課題に取り組み、100カ国以上の顧客が持続可能な未来に向けてより良い準備、より良い保護、より良い接続を実現できるよう支援しています。この背後にある力は、共通のコミットメントと目的に触発されたグローバルな従業員です。私たちは何が必要かを理解し、未来に挑戦し、変革し、保護することにコミットしたチームです。',
+    'about.intro6': '米国では、21州50以上の都市で主要な事業を展開し、約6,000人の従業員がさまざまな市場セグメントの商業および政府顧客に革新的な製品とソリューションを提供しています。',
+    'about.intro7': '私たちの豊かな歴史と、今日の地位に導いた輝かしい旅をご覧ください。',
   },
   ko: {
     // Common
@@ -1769,6 +1809,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': '실시간 채팅',
     'about.chatNow': '지금 채팅',
     'about.allRightsReserved': '모든 권리 보유',
+    'about.learnMore': '더 알아보기',
+    'about.intro1': 'ST Engineering에서 우리는 기술과 혁신을 활용하여 실제 문제를 해결하고 삶을 개선합니다. 우수성에 대한 헌신과 탄탄한 실적을 통해 글로벌 기술, 방위 및 엔지니어링 그룹으로서 품질과 신뢰성에 대한 탁월한 명성을 얻었습니다.',
+    'about.intro2': '우리의 다양한 사업 포트폴리오는 항공우주, 스마트 시티, 디지털 솔루션, 국방 및 공공 안전에 걸쳐 있으며, 자회사 및 계열사의 글로벌 네트워크는 아시아, 유럽, 중동 및 미국 전역에 걸쳐 있습니다.',
+    'about.intro3': '우리는 파트너와 고객의 요구를 충족시키는 능력을 통해 성공합니다. 그룹 전체에 다양한 배경과 기술을 가진 27,000명 이상의 직원이 있으며, 그 중 19,000명 이상의 엔지니어와 기술 전문가가 고객의 실제 문제를 해결하는 데 전념하고 있습니다. 우리는 함께 도시의 미래를 변화시키고 보호하여 커뮤니티를 위해 더 역동적이고, 더 안전하고, 더 살기 좋게 만듭니다. 전 세계의 전문 지식과 시설을 통해 항공기의 안전한 비행과 선박의 효율적인 운항을 보장합니다.',
+    'about.intro4': '우리는 육해공 방위 요구를 충족하고 전장에서 효과적으로 작전할 수 있도록 전투 부대를 장비하여 국가가 시민을 보호할 수 있도록 돕습니다. 우리의 사이버 보안 및 핵심 시스템은 점점 더 디지털화되는 세상에서 고객이 공공 보안과 국가 안보를 강화하는 데 도움이 됩니다. 그리고 우리의 위성 통신 장비는 글로벌 네트워크 연결의 대부분에 기여합니다.',
+    'about.intro5': '우리는 효과적이고 경쟁력 있는 솔루션으로 모든 도전을 받아들여 100개국 이상의 고객이 지속 가능한 미래를 위해 더 잘 준비되고, 더 잘 보호받고, 더 잘 연결될 수 있도록 돕습니다. 이 모든 것의 원동력은 공유된 헌신과 목적에 영감을 받은 글로벌 인력입니다. 우리는 필요한 것을 이해하고 미래에 도전하고, 변화시키고, 보호하기 위해 헌신하는 팀입니다.',
+    'about.intro6': '미국에서 우리의 주요 운영은 21개 주 50개 이상의 도시에 걸쳐 있으며, 약 6,000명의 직원이 다양한 시장 부문의 상업 및 정부 고객에게 혁신적인 제품과 솔루션을 제공합니다.',
+    'about.intro7': '오늘날의 우리를 있게 한 풍부한 역사와 놀라운 여정을 함께 알아보세요.',
   },
   id: {
     // Common
@@ -1993,6 +2041,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'Obrolan Langsung',
     'about.chatNow': 'Obrolan Sekarang',
     'about.allRightsReserved': 'Hak cipta dilindungi',
+    'about.learnMore': 'Pelajari Lebih Lanjut',
+    'about.intro1': 'Di ST Engineering, kami menerapkan teknologi dan inovasi untuk memecahkan masalah dunia nyata dan meningkatkan kehidupan. Komitmen kami terhadap keunggulan dan rekam jejak yang kuat telah memberi kami reputasi luar biasa untuk kualitas dan keandalan sebagai grup teknologi, pertahanan, dan teknik global.',
+    'about.intro2': 'Portofolio bisnis kami yang beragam mencakup dirgantara, kota pintar, solusi digital, pertahanan dan keamanan publik, dan jaringan global anak perusahaan dan afiliasi kami tersebar di Asia, Eropa, Timur Tengah, dan Amerika Serikat.',
+    'about.intro3': 'Kami berhasil melalui kemampuan kami untuk memenuhi kebutuhan mitra dan pelanggan. Di seluruh Grup, kami memiliki lebih dari 27.000 karyawan dengan latar belakang dan keterampilan yang beragam, termasuk lebih dari 19.000 insinyur dan profesional teknologi yang berdedikasi untuk memecahkan masalah dunia nyata bagi pelanggan. Bersama-sama, kami mentransformasi dan melindungi masa depan kota, menjadikannya lebih dinamis, lebih aman, dan lebih layak huni bagi masyarakat. Dengan keahlian dan fasilitas kami di seluruh dunia, kami memastikan pesawat terbang dengan aman dan kapal beroperasi secara efisien.',
+    'about.intro4': 'Kami membantu negara-negara melindungi warganya dengan memenuhi kebutuhan pertahanan di darat, udara, dan laut, sambil melengkapi pasukan tempur mereka untuk beroperasi secara efektif di medan perang. Keamanan siber dan sistem kritis kami membantu pelanggan memperkuat keamanan publik dan keamanan nasional di dunia yang semakin digital. Dan peralatan komunikasi satelit kami berkontribusi pada sebagian besar konektivitas jaringan global.',
+    'about.intro5': 'Kami menerima setiap tantangan dengan solusi yang efektif dan kompetitif, membantu pelanggan di lebih dari 100 negara lebih siap, lebih terlindungi, dan lebih terhubung untuk masa depan yang berkelanjutan. Kekuatan di balik semua ini adalah tenaga kerja global kami, yang terinspirasi oleh komitmen dan tujuan bersama. Kami adalah tim yang memahami apa yang diperlukan dan berkomitmen untuk menantang, mengubah, dan melindungi masa depan.',
+    'about.intro6': 'Di Amerika Serikat, operasi utama kami tersebar di lebih dari 50 kota di 21 negara bagian, dengan sekitar 6.000 karyawan yang menyediakan produk dan solusi inovatif kepada pelanggan komersial dan pemerintah di berbagai segmen pasar.',
+    'about.intro7': 'Mari temukan sejarah kaya kami dan perjalanan luar biasa yang membawa kami ke posisi kami saat ini.',
   },
   ms: {
     // Common
@@ -2217,6 +2273,14 @@ const translations: Record<Language, Record<string, string>> = {
     'about.liveChat': 'Sembang Langsung',
     'about.chatNow': 'Sembang Sekarang',
     'about.allRightsReserved': 'Hak cipta terpelihara',
+    'about.learnMore': 'Ketahui Lebih Lanjut',
+    'about.intro1': 'Di ST Engineering, kami mengaplikasikan teknologi dan inovasi untuk menyelesaikan masalah dunia sebenar dan meningkatkan kehidupan. Komitmen kami terhadap kecemerlangan dan rekod prestasi yang kukuh telah memberikan kami reputasi luar biasa untuk kualiti dan kebolehpercayaan sebagai kumpulan teknologi, pertahanan dan kejuruteraan global.',
+    'about.intro2': 'Portfolio perniagaan pelbagai kami merangkumi aeroangkasa, bandar pintar, penyelesaian digital, pertahanan dan keselamatan awam, dan rangkaian global anak syarikat dan sekutu kami tersebar di Asia, Eropah, Timur Tengah dan Amerika Syarikat.',
+    'about.intro3': 'Kami berjaya melalui keupayaan kami untuk memenuhi keperluan rakan kongsi dan pelanggan. Di seluruh Kumpulan, kami mempunyai lebih 27,000 pekerja dengan latar belakang dan kemahiran yang pelbagai, termasuk lebih 19,000 jurutera dan profesional teknologi yang berdedikasi untuk menyelesaikan masalah dunia sebenar untuk pelanggan. Bersama-sama, kami mentransformasi dan melindungi masa depan bandar, menjadikannya lebih dinamik, lebih selamat dan lebih selesa untuk didiami oleh komuniti. Dengan kepakaran dan kemudahan kami di seluruh dunia, kami memastikan pesawat terbang dengan selamat dan kapal beroperasi dengan cekap.',
+    'about.intro4': 'Kami membantu negara-negara melindungi rakyat mereka dengan memenuhi keperluan pertahanan di darat, udara dan laut, sambil melengkapkan pasukan tempur mereka untuk beroperasi dengan berkesan di medan perang. Keselamatan siber dan sistem kritikal kami membantu pelanggan mengukuhkan keselamatan awam dan keselamatan negara dalam dunia yang semakin digital. Dan peralatan komunikasi satelit kami menyumbang kepada sebahagian besar ketersambungan rangkaian global.',
+    'about.intro5': 'Kami menerima setiap cabaran dengan penyelesaian yang berkesan dan kompetitif, membantu pelanggan di lebih 100 negara lebih bersedia, lebih terlindung dan lebih berhubung untuk masa depan yang mampan. Kekuatan di sebalik semua ini adalah tenaga kerja global kami, yang diilhamkan oleh komitmen dan tujuan bersama. Kami adalah pasukan yang memahami apa yang diperlukan dan komited untuk mencabar, mengubah dan melindungi masa depan.',
+    'about.intro6': 'Di Amerika Syarikat, operasi utama kami merangkumi lebih 50 bandar di 21 negeri, dengan kira-kira 6,000 pekerja yang menyediakan produk dan penyelesaian inovatif kepada pelanggan komersial dan kerajaan merentasi pelbagai segmen pasaran.',
+    'about.intro7': 'Mari terokai sejarah kaya kami dan perjalanan luar biasa yang membawa kami ke kedudukan hari ini.',
   },
 };
 
