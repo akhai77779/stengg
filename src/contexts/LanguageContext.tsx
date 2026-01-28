@@ -366,8 +366,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'Chế độ ban đêm',
     'settings.lightMode': 'Chế độ ban ngày',
     'settings.whoWeAre': 'Chúng tôi là ai',
-    'settings.currentCurrency': 'Tiền tệ hiện tại',
-    'settings.currencyNote': 'Cấu hình tiền tệ được đồng bộ từ hệ thống',
     'settings.about': 'Thông tin liên hệ',
     
     // About page
@@ -782,8 +780,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'Dark Mode',
     'settings.lightMode': 'Light Mode',
     'settings.whoWeAre': 'Who We Are',
-    'settings.currentCurrency': 'Current Currency',
-    'settings.currencyNote': 'Currency settings synced from system',
     'settings.about': 'About',
     
     // About page
@@ -1100,10 +1096,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': '夜间模式',
     'settings.lightMode': '日间模式',
     'settings.whoWeAre': '我们是谁',
-    'settings.currentCurrency': '当前货币',
-    'settings.currencyNote': '货币设置从系统同步',
     'settings.about': '关于',
-    
     // About page
     'about.version': '版本',
     'about.description': '领先的数字资产交易和管理应用程序。',
@@ -1331,8 +1324,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'โหมดกลางคืน',
     'settings.lightMode': 'โหมดกลางวัน',
     'settings.whoWeAre': 'เราคือใคร',
-    'settings.currentCurrency': 'สกุลเงินปัจจุบัน',
-    'settings.currencyNote': 'การตั้งค่าสกุลเงินซิงค์จากระบบ',
     'settings.about': 'เกี่ยวกับ',
     
     // About page
@@ -1563,8 +1554,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'ダークモード',
     'settings.lightMode': 'ライトモード',
     'settings.whoWeAre': '私たちについて',
-    'settings.currentCurrency': '現在の通貨',
-    'settings.currencyNote': '通貨設定はシステムから同期されます',
     'settings.about': 'について',
     
     // About page
@@ -1795,8 +1784,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': '다크 모드',
     'settings.lightMode': '라이트 모드',
     'settings.whoWeAre': '우리는 누구인가',
-    'settings.currentCurrency': '현재 통화',
-    'settings.currencyNote': '통화 설정은 시스템에서 동기화됩니다',
     'settings.about': '정보',
     
     // About page
@@ -2027,8 +2014,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'Mode Gelap',
     'settings.lightMode': 'Mode Terang',
     'settings.whoWeAre': 'Siapa Kami',
-    'settings.currentCurrency': 'Mata Uang Saat Ini',
-    'settings.currencyNote': 'Pengaturan mata uang disinkronkan dari sistem',
     'settings.about': 'Tentang',
     
     // About page
@@ -2259,8 +2244,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.darkMode': 'Mod Gelap',
     'settings.lightMode': 'Mod Terang',
     'settings.whoWeAre': 'Siapa Kami',
-    'settings.currentCurrency': 'Mata Wang Semasa',
-    'settings.currencyNote': 'Tetapan mata wang disegerakkan dari sistem',
     'settings.about': 'Mengenai',
     
     // About page
