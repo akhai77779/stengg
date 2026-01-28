@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { MessageCircle, ExternalLink, Maximize2, Minimize2, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,16 +10,22 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveChatUnread } from "@/hooks/useLiveChatUnread";
+import { cn } from "@/lib/utils";
 
 interface LiveChatAdminSheetProps {
   trigger?: React.ReactNode;
+  showBadge?: boolean;
 }
 
-export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
+export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminSheetProps) {
   const [open, setOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminUrl, setAdminUrl] = useState("https://support.stengg.it.com/admin");
   const [iframeKey, setIframeKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  const { unreadCount, clearUnread, hasUnread } = useLiveChatUnread();
 
   // Load admin URL from settings
   useEffect(() => {
@@ -33,7 +39,6 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
         
         if (data?.value) {
           const baseUrl = (data.value as { url?: string })?.url || "";
-          // Extract base domain and add /admin
           if (baseUrl) {
             const url = new URL(baseUrl);
             setAdminUrl(`${url.origin}/admin`);
@@ -46,6 +51,17 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
     loadSettings();
   }, []);
 
+  // Clear unread when sheet opens
+  useEffect(() => {
+    if (open) {
+      // Delay to allow iframe to load and sync
+      const timer = setTimeout(() => {
+        clearUnread();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [open, clearUnread]);
+
   const handleRefresh = () => {
     setIframeKey(prev => prev + 1);
   };
@@ -54,13 +70,27 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
     window.open(adminUrl, "_blank", "noopener,noreferrer");
   };
 
+  // Default trigger with unread badge
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2">
-      <MessageCircle className="h-4 w-4" />
-      <span className="hidden sm:inline">Live Chat Admin</span>
-      <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-        Panel
-      </Badge>
+    <Button variant="outline" size="sm" className="gap-2 relative">
+      <span className="relative">
+        <MessageCircle className="h-4 w-4" />
+        {showBadge && hasUnread && (
+          <span className="absolute -right-1 -top-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive" />
+          </span>
+        )}
+      </span>
+      <span className="hidden sm:inline">Live Chat</span>
+      {showBadge && hasUnread && (
+        <Badge 
+          variant="destructive" 
+          className="h-5 min-w-5 px-1.5 text-xs animate-pulse"
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </Badge>
+      )}
     </Button>
   );
 
@@ -71,15 +101,21 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
       </SheetTrigger>
       <SheetContent 
         side="right" 
-        className={`p-0 flex flex-col transition-all duration-300 ${
+        className={cn(
+          "p-0 flex flex-col transition-all duration-300",
           isFullscreen ? "w-full sm:max-w-full" : "w-full sm:max-w-[600px] lg:max-w-[800px]"
-        }`}
+        )}
       >
         <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-primary" />
               Live Chat Admin Panel
+              {hasUnread && (
+                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                  {unreadCount} tin nhắn mới
+                </Badge>
+              )}
             </SheetTitle>
             <div className="flex items-center gap-1">
               <Button
@@ -89,22 +125,7 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
                 title="Refresh"
                 className="h-8 w-8"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                  <path d="M16 16h5v5" />
-                </svg>
+                <RefreshCw className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -142,6 +163,7 @@ export function LiveChatAdminSheet({ trigger }: LiveChatAdminSheetProps) {
         
         <div className="flex-1 relative bg-muted/30">
           <iframe
+            ref={iframeRef}
             key={iframeKey}
             src={adminUrl}
             className="absolute inset-0 w-full h-full border-0"
