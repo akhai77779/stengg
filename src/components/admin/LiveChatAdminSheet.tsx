@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,7 +30,17 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
   const [iframeKey, setIframeKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  const { unreadCount, clearUnread, hasUnread, soundEnabled, toggleSound, playSound } = useLiveChatUnread();
+  const { 
+    unreadCount, 
+    clearUnread, 
+    hasUnread, 
+    soundEnabled, 
+    toggleSound, 
+    desktopNotificationEnabled,
+    toggleDesktopNotification,
+    notificationPermission,
+    playSound 
+  } = useLiveChatUnread();
 
   // Load admin URL from settings
   useEffect(() => {
@@ -144,6 +154,30 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
                 </TooltipTrigger>
                 <TooltipContent>
                   {soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleDesktopNotification}
+                    title={desktopNotificationEnabled ? "Tắt desktop notification" : "Bật desktop notification"}
+                    className="h-8 w-8"
+                  >
+                    {desktopNotificationEnabled && notificationPermission === "granted" ? (
+                      <Bell className="h-4 w-4 text-primary" />
+                    ) : (
+                      <BellOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {notificationPermission === "denied" 
+                    ? "Desktop notification đã bị chặn bởi trình duyệt"
+                    : desktopNotificationEnabled 
+                      ? "Tắt desktop notification" 
+                      : "Bật desktop notification"}
                 </TooltipContent>
               </Tooltip>
               <Button
