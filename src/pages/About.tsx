@@ -13,7 +13,7 @@ export default function About() {
   const supportEmail = 'stengg.com@stengg.it.com';
   const supportPhone = '+65 6722 1234';
   const website = 'https://stengg.it.com';
-  const liveChatUrl = 'https://direct.lc.chat/19460523/';
+  const liveChatUrl = 'https://support.stengg.it.com';
   return <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8">
         <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
