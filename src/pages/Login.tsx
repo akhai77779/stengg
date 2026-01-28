@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -7,6 +7,10 @@ import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
+
+interface LocationState {
+  prefillEmail?: string;
+}
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +21,7 @@ export default function Login() {
   
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -25,6 +30,17 @@ export default function Login() {
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
+
+  // Handle prefill email from Switch Account page
+  useEffect(() => {
+    const state = location.state as LocationState;
+    if (state?.prefillEmail) {
+      setLoginEmail(state.prefillEmail);
+      setLoginMethod('email'); // Switch to email method
+      // Clear the state to prevent re-filling on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
     if (user) {
