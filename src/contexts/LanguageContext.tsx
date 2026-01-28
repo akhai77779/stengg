@@ -279,6 +279,17 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.uidCopied': 'Đã sao chép UID',
     'profile.walletDetails': 'Chi tiết ví',
     'profile.defaultUser': 'Người dùng',
+
+    // Switch Account
+    'switchAccount.title': 'Chuyển đổi tài khoản',
+    'switchAccount.currentAccount': 'Tài khoản hiện tại',
+    'switchAccount.otherAccounts': 'Các tài khoản khác',
+    'switchAccount.addNewAccount': 'Thêm tài khoản mới',
+    'switchAccount.lastLogin': 'Đăng nhập cuối cùng',
+    'switchAccount.switch': 'Chuyển',
+    'switchAccount.deleteConfirm': 'Xóa tài khoản đã lưu?',
+    'switchAccount.deleteConfirmDesc': 'Bạn có chắc muốn xóa tài khoản',
+    'switchAccount.accountRemoved': 'Đã xóa tài khoản',
     
     // Wallet
     'wallet.assets': 'Tài sản',
@@ -694,6 +705,18 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.uidCopied': 'UID copied',
     'profile.walletDetails': 'Wallet Details',
     'profile.defaultUser': 'User',
+
+    // Switch Account
+    'switchAccount.title': 'Switch Account',
+    'switchAccount.currentAccount': 'Current Account',
+    'switchAccount.otherAccounts': 'Other Accounts',
+    'switchAccount.addNewAccount': 'Add New Account',
+    'switchAccount.lastLogin': 'Last login',
+    'switchAccount.switch': 'Switch',
+    'switchAccount.deleteConfirm': 'Remove saved account?',
+    'switchAccount.deleteConfirmDesc': 'Are you sure you want to remove',
+    'switchAccount.accountRemoved': 'Account removed',
+
     // Wallet
     'wallet.assets': 'Assets',
     'wallet.overview': 'Overview',
@@ -1078,6 +1101,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': '系统',
     'profile.switchAccount': '切换账户',
     'profile.uidCopied': 'UID已复制',
+    'profile.walletDetails': '钱包详情',
+    'profile.defaultUser': '用户',
+
+    // Switch Account
+    'switchAccount.title': '切换账户',
+    'switchAccount.currentAccount': '当前账户',
+    'switchAccount.otherAccounts': '其他账户',
+    'switchAccount.addNewAccount': '添加新账户',
+    'switchAccount.lastLogin': '最后登录',
+    'switchAccount.switch': '切换',
+    'switchAccount.deleteConfirm': '删除已保存的账户？',
+    'switchAccount.deleteConfirmDesc': '您确定要删除账户',
+    'switchAccount.accountRemoved': '账户已删除',
+
     'profile.customerService': '客服',
     'profile.settings': '设置',
     'profile.invite': '邀请好友',
@@ -1310,6 +1347,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'ระบบ',
     'profile.switchAccount': 'เปลี่ยนบัญชี',
     'profile.uidCopied': 'คัดลอก UID แล้ว',
+    'profile.walletDetails': 'รายละเอียดกระเป๋าเงิน',
+    'profile.defaultUser': 'ผู้ใช้',
+
+    // Switch Account
+    'switchAccount.title': 'เปลี่ยนบัญชี',
+    'switchAccount.currentAccount': 'บัญชีปัจจุบัน',
+    'switchAccount.otherAccounts': 'บัญชีอื่นๆ',
+    'switchAccount.addNewAccount': 'เพิ่มบัญชีใหม่',
+    'switchAccount.lastLogin': 'เข้าสู่ระบบล่าสุด',
+    'switchAccount.switch': 'สลับ',
+    'switchAccount.deleteConfirm': 'ลบบัญชีที่บันทึก?',
+    'switchAccount.deleteConfirmDesc': 'คุณแน่ใจหรือว่าต้องการลบ',
+    'switchAccount.accountRemoved': 'ลบบัญชีแล้ว',
+
     'profile.customerService': 'ฝ่ายบริการ',
     'profile.settings': 'ตั้งค่า',
     'profile.invite': 'เชิญเพื่อน',
@@ -1539,6 +1590,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'システム',
     'profile.switchAccount': 'アカウント切り替え',
     'profile.uidCopied': 'UIDをコピーしました',
+    'profile.walletDetails': 'ウォレット詳細',
+    'profile.defaultUser': 'ユーザー',
+
+    // Switch Account
+    'switchAccount.title': 'アカウント切り替え',
+    'switchAccount.currentAccount': '現在のアカウント',
+    'switchAccount.otherAccounts': '他のアカウント',
+    'switchAccount.addNewAccount': '新しいアカウントを追加',
+    'switchAccount.lastLogin': '最終ログイン',
+    'switchAccount.switch': '切り替え',
+    'switchAccount.deleteConfirm': '保存済みアカウントを削除しますか？',
+    'switchAccount.deleteConfirmDesc': 'このアカウントを削除してもよろしいですか',
+    'switchAccount.accountRemoved': 'アカウントを削除しました',
+
     'profile.customerService': 'サポート',
     'profile.settings': '設定',
     'profile.invite': '友達を招待',
@@ -1769,6 +1834,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': '시스템',
     'profile.switchAccount': '계정 전환',
     'profile.uidCopied': 'UID 복사됨',
+    'profile.walletDetails': '지갑 상세',
+    'profile.defaultUser': '사용자',
+
+    // Switch Account
+    'switchAccount.title': '계정 전환',
+    'switchAccount.currentAccount': '현재 계정',
+    'switchAccount.otherAccounts': '다른 계정',
+    'switchAccount.addNewAccount': '새 계정 추가',
+    'switchAccount.lastLogin': '마지막 로그인',
+    'switchAccount.switch': '전환',
+    'switchAccount.deleteConfirm': '저장된 계정을 삭제하시겠습니까?',
+    'switchAccount.deleteConfirmDesc': '이 계정을 삭제하시겠습니까',
+    'switchAccount.accountRemoved': '계정이 삭제됨',
+
     'profile.customerService': '고객 지원',
     'profile.settings': '설정',
     'profile.invite': '친구 초대',
@@ -1999,6 +2078,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'Sistem',
     'profile.switchAccount': 'Ganti Akun',
     'profile.uidCopied': 'UID disalin',
+    'profile.walletDetails': 'Detail Dompet',
+    'profile.defaultUser': 'Pengguna',
+
+    // Switch Account
+    'switchAccount.title': 'Ganti Akun',
+    'switchAccount.currentAccount': 'Akun Saat Ini',
+    'switchAccount.otherAccounts': 'Akun Lainnya',
+    'switchAccount.addNewAccount': 'Tambah Akun Baru',
+    'switchAccount.lastLogin': 'Login terakhir',
+    'switchAccount.switch': 'Ganti',
+    'switchAccount.deleteConfirm': 'Hapus akun tersimpan?',
+    'switchAccount.deleteConfirmDesc': 'Apakah Anda yakin ingin menghapus',
+    'switchAccount.accountRemoved': 'Akun dihapus',
+
     'profile.customerService': 'Dukungan',
     'profile.settings': 'Pengaturan',
     'profile.invite': 'Undang Teman',
@@ -2229,6 +2322,20 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.system': 'Sistem',
     'profile.switchAccount': 'Tukar Akaun',
     'profile.uidCopied': 'UID disalin',
+    'profile.walletDetails': 'Butiran Dompet',
+    'profile.defaultUser': 'Pengguna',
+
+    // Switch Account
+    'switchAccount.title': 'Tukar Akaun',
+    'switchAccount.currentAccount': 'Akaun Semasa',
+    'switchAccount.otherAccounts': 'Akaun Lain',
+    'switchAccount.addNewAccount': 'Tambah Akaun Baru',
+    'switchAccount.lastLogin': 'Log masuk terakhir',
+    'switchAccount.switch': 'Tukar',
+    'switchAccount.deleteConfirm': 'Padam akaun tersimpan?',
+    'switchAccount.deleteConfirmDesc': 'Adakah anda pasti mahu memadam',
+    'switchAccount.accountRemoved': 'Akaun dipadam',
+
     'profile.customerService': 'Sokongan',
     'profile.settings': 'Tetapan',
     'profile.invite': 'Jemput Rakan',

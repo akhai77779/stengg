@@ -315,7 +315,7 @@ export default function Profile() {
   }, {
     icon: ArrowLeftRight,
     label: t('profile.switchAccount'),
-    href: '#',
+    href: '/switch-account',
     value: null,
     isLink: true
   }];

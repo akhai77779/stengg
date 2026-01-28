@@ -23,6 +23,7 @@ import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import BankAccounts from "./pages/BankAccounts";
 import Settings from "./pages/Settings";
+import SwitchAccount from "./pages/SwitchAccount";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="/withdraw" element={<Withdraw />} />
                 <Route path="/bank-accounts" element={<BankAccounts />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/switch-account" element={<SwitchAccount />} />
                 <Route path="/about" element={<About />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
