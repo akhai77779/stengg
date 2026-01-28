@@ -98,6 +98,15 @@ export default {
           "50%": { opacity: "1" },
           "75%": { opacity: "0.4", color: "hsl(0 0% 100%)" },
         },
+        ripple: {
+          "0%": { transform: "scale(0)", opacity: "0.6" },
+          "100%": { transform: "scale(1)", opacity: "0" },
+        },
+        "menu-press": {
+          "0%": { transform: "scale(1)" },
+          "50%": { transform: "scale(0.97)" },
+          "100%": { transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -107,6 +116,8 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         "price-flash": "price-flash 0.6s ease-in-out",
+        ripple: "ripple 0.6s ease-out forwards",
+        "menu-press": "menu-press 0.15s ease-out",
       },
       backgroundImage: {
         "grid-pattern": "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
