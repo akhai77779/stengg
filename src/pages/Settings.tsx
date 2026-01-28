@@ -140,7 +140,7 @@ export default function Settings() {
               <SheetTrigger asChild>
                 <button className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]">
                   <span className="text-sm md:text-base text-foreground">
-                    {t('settings.currencySettings')}
+                    {t('settings.whoWeAre')}
                   </span>
                   <div className="flex items-center gap-2">
                     <Info className="w-4 h-4 text-blue-500" />
@@ -150,7 +150,7 @@ export default function Settings() {
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh]">
                 <SheetHeader>
-                  <SheetTitle>{t('settings.currencySettings')}</SheetTitle>
+                  <SheetTitle>{t('settings.whoWeAre')}</SheetTitle>
                 </SheetHeader>
                 <div className="py-4 overflow-y-auto space-y-4">
                   <div className="flex justify-center mb-2">
