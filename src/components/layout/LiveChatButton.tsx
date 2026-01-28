@@ -6,7 +6,7 @@ export function LiveChatButton() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleOpenChat = () => {
-    window.open('https://support.stengg.it.com', '_blank', 'width=400,height=600');
+    window.open('https://direct.lc.chat/19460523/', '_blank', 'width=400,height=600');
   };
 
   return (

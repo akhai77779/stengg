@@ -23,14 +23,11 @@ import {
   Settings,
   Clock,
   UserCheck,
-  MessageCircle,
-  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { NotificationHistory } from "@/components/admin/NotificationHistory";
-import { CSKHReminder } from "@/components/admin/CSKHReminder";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
@@ -38,7 +35,6 @@ type AdminNavItem = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   badgeKey?: 'verification' | 'transaction';
-  external?: boolean;
 };
 
 interface AdminSidebarProps {
@@ -65,7 +61,6 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
       { to: "/admin/users", label: t('admin.users'), icon: Users },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
-      { to: "https://support.stengg.it.com/admin", label: "Admin CSKH", icon: MessageCircle, external: true },
     ],
     [t]
   );
@@ -85,28 +80,9 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       </div>
       <div className="px-2 pb-4">
         {items.map((item) => {
-          const active = !item.external && location.pathname === item.to;
+          const active = location.pathname === item.to;
           const Icon = item.icon;
           const badgeCount = getBadgeCount(item.badgeKey);
-          
-          if (item.external) {
-            return (
-              <Button
-                key={item.to}
-                variant="ghost"
-                className="w-full justify-start gap-2 text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => {
-                  window.open(item.to, "_blank", "noopener,noreferrer");
-                  onNavigate?.();
-                }}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="flex-1 text-left">{item.label}</span>
-                <ExternalLink className="h-3 w-3 opacity-60" />
-              </Button>
-            );
-          }
-          
           return (
             <Button
               key={item.to}
@@ -194,9 +170,6 @@ export default function AdminLayout() {
                   </SheetContent>
                 </Sheet>
               </div>
-
-              {/* CSKH Reminder Widget */}
-              <CSKHReminder />
 
               {/* Notification History Button */}
               <NotificationHistory

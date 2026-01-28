@@ -617,28 +617,16 @@ Deno.serve(async (req) => {
       console.error("Error fetching from getOptionTime API:", optionErr);
     }
 
-    // Save kefu_link to app_settings ONLY if not already set (preserve admin configuration)
+    // Save kefu_link to app_settings if available
     if (dataContainer.wilsonlink?.kefu_link) {
       try {
-        // Check if live_chat_url already exists - do NOT overwrite if present
-        const { data: existingChatUrl } = await supabase
+        await supabase
           .from("app_settings")
-          .select("key")
-          .eq("key", "live_chat_url")
-          .maybeSingle();
-
-        if (!existingChatUrl) {
-          // Only insert if no existing configuration
-          await supabase
-            .from("app_settings")
-            .insert({
-              key: "live_chat_url",
-              value: { url: dataContainer.wilsonlink.kefu_link },
-            });
-          console.log("Inserted live_chat_url (first time):", dataContainer.wilsonlink.kefu_link);
-        } else {
-          console.log("Skipped live_chat_url update - preserving existing admin configuration");
-        }
+          .upsert({
+            key: "live_chat_url",
+            value: { url: dataContainer.wilsonlink.kefu_link },
+          }, { onConflict: "key" });
+        console.log("Updated live_chat_url:", dataContainer.wilsonlink.kefu_link);
       } catch {
         // Ignore
       }

@@ -10,8 +10,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { QuickLoginManagement } from '@/components/security/QuickLoginManagement';
-import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
 import { 
   ArrowLeft,
   Smartphone,
@@ -31,8 +29,6 @@ export default function SecuritySettings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showQuickLoginSetup, setShowQuickLoginSetup] = useState(false);
-  const [tempCredentials, setTempCredentials] = useState<{ email: string; password: string } | null>(null);
   
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -256,85 +252,45 @@ export default function SecuritySettings() {
             </div>
           </div>
 
-          {/* Quick Login Management */}
-          <div className="mb-8">
-            <h2 className="text-sm font-medium text-foreground mb-2">
-              {t('quickLogin.title')}
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              {t('quickLogin.manageDesc')}
-            </p>
-            
-            <QuickLoginManagement 
-              onSetupNew={() => {
-                // For setup from settings, we need to prompt for password first
-                setTempCredentials({ email: user?.email || '', password: '' });
-                setShowQuickLoginSetup(true);
-              }}
-            />
-          </div>
-
           {/* Password Settings */}
-          <div className="mb-8">
-            <h2 className="text-sm font-medium text-foreground mb-2">
-              {t('security.passwords')}
-            </h2>
-            <div className="space-y-3">
-              {/* Login Password */}
-              <Card 
-                className="bg-card border-border cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => setIsChangePasswordOpen(true)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <span className="text-sm text-foreground">
-                    {t('security.loginPassword')}
-                  </span>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-xs">{t('security.change')}</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="space-y-3">
+            {/* Login Password */}
+            <Card 
+              className="bg-card border-border cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => setIsChangePasswordOpen(true)}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <span className="text-sm text-foreground">
+                  {t('security.loginPassword')}
+                </span>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="text-xs">{t('security.change')}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Withdrawal Password */}
-              <Card 
-                className="bg-card border-border cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => setIsWithdrawalPasswordOpen(true)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <span className="text-sm text-foreground">
-                    {t('security.withdrawalPassword')}
+            {/* Withdrawal Password */}
+            <Card 
+              className="bg-card border-border cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => setIsWithdrawalPasswordOpen(true)}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <span className="text-sm text-foreground">
+                  {t('security.withdrawalPassword')}
+                </span>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="text-xs">
+                    {hasWithdrawalPassword ? t('security.change') : t('security.create')}
                   </span>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-xs">
-                      {hasWithdrawalPassword ? t('security.change') : t('security.create')}
-                    </span>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
         </div>
       </div>
-      
-      {/* Quick Login Setup Dialog */}
-      {tempCredentials && (
-        <QuickLoginSetup
-          open={showQuickLoginSetup}
-          onOpenChange={(open) => {
-            setShowQuickLoginSetup(open);
-            if (!open) setTempCredentials(null);
-          }}
-          email={tempCredentials.email}
-          password={tempCredentials.password}
-          onComplete={() => {
-            setShowQuickLoginSetup(false);
-            setTempCredentials(null);
-          }}
-        />
-      )}
 
       {/* Change Login Password Dialog */}
       <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
