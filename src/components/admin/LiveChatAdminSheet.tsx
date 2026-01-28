@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw } from "lucide-react";
+import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,6 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveChatUnread } from "@/hooks/useLiveChatUnread";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LiveChatAdminSheetProps {
   trigger?: React.ReactNode;
@@ -25,7 +30,7 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
   const [iframeKey, setIframeKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  const { unreadCount, clearUnread, hasUnread } = useLiveChatUnread();
+  const { unreadCount, clearUnread, hasUnread, soundEnabled, toggleSound, playSound } = useLiveChatUnread();
 
   // Load admin URL from settings
   useEffect(() => {
@@ -118,6 +123,29 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
               )}
             </SheetTitle>
             <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      toggleSound();
+                      if (!soundEnabled) playSound(); // Play demo sound when enabling
+                    }}
+                    title={soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"}
+                    className="h-8 w-8"
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-4 w-4 text-primary" />
+                    ) : (
+                      <VolumeX className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
+                </TooltipContent>
+              </Tooltip>
               <Button
                 variant="ghost"
                 size="icon"
