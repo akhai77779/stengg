@@ -23,11 +23,13 @@ import {
   Settings,
   Clock,
   UserCheck,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { NotificationHistory } from "@/components/admin/NotificationHistory";
+import { LiveChatAdminSheet } from "@/components/admin/LiveChatAdminSheet";
 import { cn } from "@/lib/utils";
 
 type AdminNavItem = {
@@ -170,6 +172,16 @@ export default function AdminLayout() {
                   </SheetContent>
                 </Sheet>
               </div>
+
+              {/* Live Chat Admin Button */}
+              <LiveChatAdminSheet 
+                trigger={
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline">Live Chat</span>
+                  </Button>
+                }
+              />
 
               {/* Notification History Button */}
               <NotificationHistory
