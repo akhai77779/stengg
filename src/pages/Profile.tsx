@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
@@ -15,46 +15,7 @@ import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, Shiel
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
-
-// Ripple effect hook for menu items
-function useRipple() {
-  const [ripples, setRipples] = useState<{ x: number; y: number; size: number; id: number }[]>([]);
-  const idRef = useRef(0);
-
-  const createRipple = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    const element = event.currentTarget;
-    const rect = element.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height) * 2;
-    const x = event.clientX - rect.left - size / 2;
-    const y = event.clientY - rect.top - size / 2;
-    
-    const newRipple = { x, y, size, id: idRef.current++ };
-    setRipples(prev => [...prev, newRipple]);
-
-    setTimeout(() => {
-      setRipples(prev => prev.filter(r => r.id !== newRipple.id));
-    }, 600);
-  }, []);
-
-  const RippleContainer = useCallback(() => (
-    <>
-      {ripples.map(ripple => (
-        <span
-          key={ripple.id}
-          className="absolute rounded-full animate-ripple pointer-events-none bg-white/20"
-          style={{
-            left: ripple.x,
-            top: ripple.y,
-            width: ripple.size,
-            height: ripple.size,
-          }}
-        />
-      ))}
-    </>
-  ), [ripples]);
-
-  return { createRipple, RippleContainer };
-}
+import { useRipple } from '@/hooks/useRipple';
 
 interface Profile {
   id: string;

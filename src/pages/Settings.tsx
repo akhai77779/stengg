@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import stEngineeringLogo from '@/assets/st-engineering-logo.png';
+import { useRipple } from '@/hooks/useRipple';
 
 const languages: { code: Language; name: string; flag: string }[] = [
   { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
@@ -33,6 +34,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
+  const ripple = useRipple();
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -76,7 +78,10 @@ export default function Settings() {
             {/* Language Settings */}
             <Sheet open={languageSheetOpen} onOpenChange={setLanguageSheetOpen}>
               <SheetTrigger asChild>
-                <button className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]">
+                <button 
+                  onClick={ripple.createRipple}
+                  className="relative w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-all duration-200 active:scale-[0.99] touch-action-manipulation min-h-[52px] overflow-hidden"
+                >
                   <span className="text-sm md:text-base text-foreground">
                     {t('settings.language')}
                   </span>
@@ -85,8 +90,9 @@ export default function Settings() {
                     <span className="text-sm text-muted-foreground">
                       {currentLanguage?.name}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
                   </div>
+                  <ripple.RippleContainer />
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh]">
@@ -121,8 +127,11 @@ export default function Settings() {
 
             {/* Theme Mode */}
             <button
-              onClick={handleThemeChange}
-              className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]"
+              onClick={(e) => {
+                ripple.createRipple(e);
+                handleThemeChange();
+              }}
+              className="relative w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-all duration-200 active:scale-[0.99] touch-action-manipulation min-h-[52px] overflow-hidden"
             >
               <span className="text-sm md:text-base text-foreground">
                 {t('settings.themeMode')}
@@ -131,21 +140,26 @@ export default function Settings() {
                 <span className="text-sm text-muted-foreground">
                   {themeLabel}
                 </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
               </div>
+              <ripple.RippleContainer />
             </button>
 
             {/* About Us */}
             <Sheet>
               <SheetTrigger asChild>
-                <button className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]">
+                <button 
+                  onClick={ripple.createRipple}
+                  className="relative w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-all duration-200 active:scale-[0.99] touch-action-manipulation min-h-[52px] overflow-hidden"
+                >
                   <span className="text-sm md:text-base text-foreground">
                     {t('settings.whoWeAre')}
                   </span>
                   <div className="flex items-center gap-2">
                     <Info className="w-4 h-4 text-blue-500" />
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
                   </div>
+                  <ripple.RippleContainer />
                 </button>
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh]">
@@ -189,13 +203,17 @@ export default function Settings() {
 
             {/* Contact Info */}
             <button 
-              onClick={() => navigate('/about')}
-              className="w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-colors active:bg-muted/40 touch-action-manipulation min-h-[52px]"
+              onClick={(e) => {
+                ripple.createRipple(e);
+                navigate('/about');
+              }}
+              className="relative w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-all duration-200 active:scale-[0.99] touch-action-manipulation min-h-[52px] overflow-hidden"
             >
               <span className="text-sm md:text-base text-foreground">
                 {t('settings.about')}
               </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
+              <ripple.RippleContainer />
             </button>
           </div>
         </div>
