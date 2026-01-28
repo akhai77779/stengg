@@ -242,14 +242,14 @@ export function useLiveChatUnread() {
     if (soundEnabled) {
       playNotificationSound();
     }
-    if (desktopNotificationEnabled) {
+    if (desktopNotificationEnabled && notificationPermission === "granted") {
       sendDesktopNotification(
         "💬 Tin nhắn hỗ trợ mới",
         `Bạn có ${count} tin nhắn mới từ khách hàng`
       );
     }
     setUnreadCount((prev) => prev + count);
-  }, [soundEnabled, desktopNotificationEnabled]);
+  }, [soundEnabled, desktopNotificationEnabled, notificationPermission]);
   
   // Toggle sound
   const toggleSound = useCallback(() => {
