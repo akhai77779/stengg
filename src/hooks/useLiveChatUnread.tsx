@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 const STORAGE_KEY = "live_chat_admin_unread";
 const SOUND_ENABLED_KEY = "live_chat_sound_enabled";
+const DESKTOP_NOTIFICATION_KEY = "live_chat_desktop_notification_enabled";
 
 interface LiveChatMessage {
   type: "unread_count" | "new_message" | "messages_read";
@@ -65,6 +66,54 @@ function playNotificationSound() {
 }
 
 /**
+ * Request browser notification permission
+ */
+async function requestNotificationPermission(): Promise<boolean> {
+  if (!("Notification" in window)) {
+    console.warn("This browser does not support desktop notifications");
+    return false;
+  }
+  
+  if (Notification.permission === "granted") {
+    return true;
+  }
+  
+  if (Notification.permission !== "denied") {
+    const permission = await Notification.requestPermission();
+    return permission === "granted";
+  }
+  
+  return false;
+}
+
+/**
+ * Send a desktop notification
+ */
+function sendDesktopNotification(title: string, body: string, onClick?: () => void) {
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    return;
+  }
+  
+  const notification = new Notification(title, {
+    body,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: `live-chat-${Date.now()}`,
+    requireInteraction: false,
+  });
+  
+  // Auto close after 5 seconds
+  setTimeout(() => notification.close(), 5000);
+  
+  // Focus window when clicked
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+    onClick?.();
+  };
+}
+
+/**
  * Hook to track unread live chat messages for admin panel.
  * Listens to postMessage from iframe and persists count in localStorage.
  * Plays notification sound when new messages arrive.
@@ -81,7 +130,16 @@ export function useLiveChatUnread() {
     return stored !== "false"; // Default to true
   });
   
-  // Track if component is mounted to prevent playing sound on initial load
+  const [desktopNotificationEnabled, setDesktopNotificationEnabled] = useState<boolean>(() => {
+    const stored = localStorage.getItem(DESKTOP_NOTIFICATION_KEY);
+    return stored !== "false"; // Default to true
+  });
+  
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    "Notification" in window ? Notification.permission : "denied"
+  );
+  
+  // Track if component is mounted to prevent notifications on initial load
   const isMounted = useRef(false);
 
   // Persist to localStorage
@@ -93,6 +151,20 @@ export function useLiveChatUnread() {
   useEffect(() => {
     localStorage.setItem(SOUND_ENABLED_KEY, String(soundEnabled));
   }, [soundEnabled]);
+  
+  // Persist desktop notification preference
+  useEffect(() => {
+    localStorage.setItem(DESKTOP_NOTIFICATION_KEY, String(desktopNotificationEnabled));
+  }, [desktopNotificationEnabled]);
+  
+  // Request notification permission on mount if enabled
+  useEffect(() => {
+    if (desktopNotificationEnabled && notificationPermission === "default") {
+      requestNotificationPermission().then((granted) => {
+        setNotificationPermission(granted ? "granted" : "denied");
+      });
+    }
+  }, [desktopNotificationEnabled, notificationPermission]);
   
   // Set mounted flag after initial render
   useEffect(() => {
@@ -116,13 +188,36 @@ export function useLiveChatUnread() {
 
         if (data.type === "unread_count" && typeof data.count === "number") {
           const prevCount = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
-          if (data.count > prevCount && isMounted.current && soundEnabled) {
-            playNotificationSound();
+          if (data.count > prevCount && isMounted.current) {
+            if (soundEnabled) {
+              playNotificationSound();
+            }
+            if (desktopNotificationEnabled) {
+              const newMessages = data.count - prevCount;
+              sendDesktopNotification(
+                "💬 Tin nhắn hỗ trợ mới",
+                `Bạn có ${newMessages} tin nhắn mới từ khách hàng`
+              );
+            }
           }
           setUnreadCount(data.count);
         } else if (data.type === "new_message") {
-          if (isMounted.current && soundEnabled) {
-            playNotificationSound();
+          if (isMounted.current) {
+            if (soundEnabled) {
+              playNotificationSound();
+            }
+            if (desktopNotificationEnabled) {
+              const senderName = data.message?.sender || "Khách hàng";
+              const messagePreview = data.message?.text 
+                ? (data.message.text.length > 50 
+                    ? data.message.text.substring(0, 50) + "..." 
+                    : data.message.text)
+                : "Tin nhắn mới";
+              sendDesktopNotification(
+                `💬 ${senderName}`,
+                messagePreview
+              );
+            }
           }
           setUnreadCount((prev) => prev + 1);
         } else if (data.type === "messages_read") {
@@ -135,25 +230,45 @@ export function useLiveChatUnread() {
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [soundEnabled]);
+  }, [soundEnabled, desktopNotificationEnabled]);
 
   // Manual clear function
   const clearUnread = useCallback(() => {
     setUnreadCount(0);
   }, []);
 
-  // Increment for testing/demo (plays sound)
+  // Increment for testing/demo (plays sound and desktop notification)
   const incrementUnread = useCallback((count = 1) => {
     if (soundEnabled) {
       playNotificationSound();
     }
+    if (desktopNotificationEnabled) {
+      sendDesktopNotification(
+        "💬 Tin nhắn hỗ trợ mới",
+        `Bạn có ${count} tin nhắn mới từ khách hàng`
+      );
+    }
     setUnreadCount((prev) => prev + count);
-  }, [soundEnabled]);
+  }, [soundEnabled, desktopNotificationEnabled]);
   
   // Toggle sound
   const toggleSound = useCallback(() => {
     setSoundEnabled((prev) => !prev);
   }, []);
+  
+  // Toggle desktop notification
+  const toggleDesktopNotification = useCallback(async () => {
+    if (!desktopNotificationEnabled) {
+      // Request permission when enabling
+      const granted = await requestNotificationPermission();
+      setNotificationPermission(granted ? "granted" : "denied");
+      if (granted) {
+        setDesktopNotificationEnabled(true);
+      }
+    } else {
+      setDesktopNotificationEnabled(false);
+    }
+  }, [desktopNotificationEnabled]);
 
   return {
     unreadCount,
@@ -162,6 +277,9 @@ export function useLiveChatUnread() {
     hasUnread: unreadCount > 0,
     soundEnabled,
     toggleSound,
+    desktopNotificationEnabled,
+    toggleDesktopNotification,
+    notificationPermission,
     playSound: playNotificationSound,
   };
 }
