@@ -97,20 +97,21 @@ export default function Settings() {
                   </SheetTitle>
                 </SheetHeader>
                 <div className="py-4 space-y-1 overflow-y-auto">
-                  {languages.map((lang) => (
+                  {languages.map((lang, index) => (
                     <button
                       key={lang.code}
                       onClick={() => handleLanguageSelect(lang.code)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 animate-fade-in ${
                         language === lang.code 
-                          ? 'bg-primary/10 text-primary' 
-                          : 'hover:bg-muted/50 active:bg-muted/70'
+                          ? 'bg-primary/10 text-primary scale-[1.02]' 
+                          : 'hover:bg-muted/50 active:bg-muted/70 hover:scale-[1.01]'
                       }`}
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <span className="text-xl">{lang.flag}</span>
+                      <span className="text-xl transition-transform duration-200 hover:scale-110">{lang.flag}</span>
                       <span className="text-sm md:text-base font-medium">{lang.name}</span>
                       {language === lang.code && (
-                        <span className="ml-auto text-primary">✓</span>
+                        <span className="ml-auto text-primary animate-scale-in">✓</span>
                       )}
                     </button>
                   ))}
