@@ -1,7 +1,7 @@
 # 🔐 Tài liệu Bảo mật Dự án ST Engineering Trading Platform
 
-> **Phiên bản:** 2.1  
-> **Cập nhật:** 26/01/2026  
+> **Phiên bản:** 2.2  
+> **Cập nhật:** 28/01/2026  
 > **Loại dự án:** Demo/Training Application  
 > **Trạng thái bảo mật:** ✅ Đã xác minh - Không có lỗ hổng nghiêm trọng
 
@@ -21,11 +21,12 @@ Tài liệu này mô tả các biện pháp bảo mật đã được triển kh
 
 | Thành phần | Trạng thái | Ghi chú |
 |------------|------------|---------|
-| RLS Policies | ✅ Đã bảo vệ | Tất cả 17 bảng đều có RLS |
+| RLS Policies | ✅ Đã bảo vệ | Tất cả 21 bảng đều có RLS |
 | Sensitive Data | ✅ Đã bảo vệ | View `profiles_safe` ẩn dữ liệu nhạy cảm |
 | Admin Functions | ✅ Đã bảo vệ | Atomic RPCs với audit logging |
 | Storage | ✅ Đã bảo vệ | Private bucket cho identity documents |
 | Audit Logs | ✅ Immutable | Không cho phép sửa/xóa |
+| Live Chat | ✅ Đã bảo vệ | RLS + Realtime + Admin-only notes |
 
 ---
 
@@ -457,6 +458,8 @@ const ALLOWED_ORIGINS = [
 | 26/01/2026 | **Thêm admin-reset withdrawal password:** Cho phép admin đổi mật khẩu rút tiền của user với đầy đủ audit logging |
 | 26/01/2026 | Thêm section "Edge Functions Security" với chi tiết về withdrawal-password function |
 | 26/01/2026 | **Security scan verification:** Xác minh tất cả error-level findings đều là false positives |
+| 28/01/2026 | **Thêm Live Chat System:** 4 tables với RLS + Realtime |
+| 28/01/2026 | Thêm `live_chat_rooms`, `live_chat_messages`, `live_chat_typing`, `live_chat_notes` |
 | 26/01/2026 | Cập nhật documentation với trạng thái bảo mật mới nhất |
 | 26/01/2026 | Thêm section "Security Scan Decisions" |
 | 25/01/2026 | **Sửa lỗi bảo mật nghiêm trọng:** Tạo view `profiles_safe` để ẩn `withdrawal_password_hash` và `last_login_ip` |
