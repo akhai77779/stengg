@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 
 export function GuestFooter() {
   const { t } = useLanguage();
+  const { openChat } = useLiveChat();
 
   return (
     <footer className="bg-[#0a0e1a] text-gray-300">
@@ -40,7 +42,14 @@ export function GuestFooter() {
             <h3 className="text-sm uppercase tracking-wide text-gray-400 mb-4">{t('guest.contact')}</h3>
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="hover:text-white">{t('guest.contactUs')}</a></li>
-              <li><a href="https://direct.lc.chat/19460523/" target="_blank" rel="noopener noreferrer" className="hover:text-white">{t('guest.support')}</a></li>
+              <li>
+                <button 
+                  onClick={openChat}
+                  className="hover:text-white transition-colors"
+                >
+                  {t('guest.support')}
+                </button>
+              </li>
               <li><a href="#" className="hover:text-white">{t('guest.newsroom')}</a></li>
             </ul>
           </div>
