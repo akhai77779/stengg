@@ -213,49 +213,60 @@ export function SupportMenuButton() {
         <span className="sr-only">CSKH</span>
       </Button>
 
-      {/* Fullscreen chat overlay for mobile */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[9999] bg-background md:hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground safe-area-top">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              <span className="font-medium">Chat với chúng tôi</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-primary-foreground/20"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+      {/* Fullscreen chat overlay for mobile with animation */}
+      <div
+        className={cn(
+          "fixed inset-0 z-[9999] bg-background md:hidden flex flex-col transition-all duration-300 ease-out",
+          isOpen
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-full pointer-events-none"
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground safe-area-top">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            <span className="font-medium">Chat với chúng tôi</span>
           </div>
-
-          {/* Message list */}
-          <div className="flex-1 overflow-hidden">
-            <MessageList
-              messages={messages}
-              currentUserId={customerId}
-              typingText={typingText}
-              isLoading={isLoading}
-            />
-          </div>
-
-          {/* Input */}
-          <div className="safe-area-bottom">
-            <MessageInput
-              onSend={handleSend}
-              onTyping={startTyping}
-              onUpload={uploadAttachment}
-              disabled={isSending || !roomId}
-              placeholder="Nhập tin nhắn..."
-            />
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-primary-foreground/20 active:scale-95 transition-transform"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
         </div>
-      )}
+
+        {/* Message list with fade animation */}
+        <div className={cn(
+          "flex-1 overflow-hidden transition-opacity duration-200 delay-100",
+          isOpen ? "opacity-100" : "opacity-0"
+        )}>
+          <MessageList
+            messages={messages}
+            currentUserId={customerId}
+            typingText={typingText}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Input with slide up animation */}
+        <div className={cn(
+          "safe-area-bottom transition-all duration-200 delay-150",
+          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        )}>
+          <MessageInput
+            onSend={handleSend}
+            onTyping={startTyping}
+            onUpload={uploadAttachment}
+            disabled={isSending || !roomId}
+            placeholder="Nhập tin nhắn..."
+          />
+        </div>
+      </div>
     </>
   );
 }
