@@ -145,7 +145,7 @@ export function FeaturedProducts() {
             {displayProducts.map((product, index) => (
               <Link key={product.id} to={`/products/${product.id}`}>
                 <Card 
-                  className="group bg-card border-border hover:border-primary/50 hover:glow transition-all duration-300 overflow-hidden h-full"
+                  className="group bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-300 ease-out overflow-hidden h-full animate-fade-in"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   {/* Image */}
@@ -153,19 +153,25 @@ export function FeaturedProducts() {
                     <img
                       src={product.image_url || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop'}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                     />
-                    <div className="absolute inset-0 hero-overlay" />
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 hero-overlay group-hover:opacity-50 transition-opacity duration-300" />
+                    {/* Hover overlay with gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-primary/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    {/* View indicator */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="bg-background/90 backdrop-blur-sm text-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                        Xem chi tiết
+                      </span>
+                    </div>
                   </div>
 
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 mb-2">
+                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-1 mb-2">
                       {product.name}
                     </h3>
                     {product.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3 group-hover:text-muted-foreground/80 transition-colors duration-300">
                         {product.description}
                       </p>
                     )}
