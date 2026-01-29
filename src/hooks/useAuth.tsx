@@ -1,6 +1,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { clearProfileCache } from '@/hooks/useProfile';
+import { clearBalanceCache } from '@/hooks/useExternalBalance';
 
 /**
  * Authentication Context and Provider
@@ -194,6 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear all cached data before signing out
+    clearProfileCache();
+    clearBalanceCache();
+    console.log('All user caches cleared on logout');
+    
     await supabase.auth.signOut();
   };
 
