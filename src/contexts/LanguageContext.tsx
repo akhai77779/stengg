@@ -35,6 +35,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': 'Đang xử lý...',
     'common.error': 'Có lỗi xảy ra',
     'common.copied': 'Đã sao chép',
+    'common.date': 'Ngày',
+    'common.success': 'Thành công',
     
     // Navigation
     'nav.home': 'Trang chủ',
@@ -493,6 +495,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': 'Processing...',
     'common.error': 'An error occurred',
     'common.copied': 'Copied',
+    'common.date': 'Date',
+    'common.success': 'Success',
     
     // Navigation
     'nav.home': 'Home',
@@ -951,6 +955,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': '处理中...',
     'common.error': '发生错误',
     'common.copied': '已复制',
+    'common.date': '日期',
+    'common.success': '成功',
     
     // Navigation
     'nav.home': '首页',
@@ -1240,6 +1246,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': 'กำลังดำเนินการ...',
     'common.error': 'เกิดข้อผิดพลาด',
     'common.copied': 'คัดลอกแล้ว',
+    'common.date': 'วันที่',
+    'common.success': 'สำเร็จ',
     
     // Navigation
     'nav.home': 'หน้าแรก',
@@ -1483,6 +1491,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': '処理中...',
     'common.error': 'エラーが発生しました',
     'common.copied': 'コピーしました',
+    'common.date': '日付',
+    'common.success': '成功',
     
     // Navigation
     'nav.home': 'ホーム',
@@ -1727,6 +1737,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': '처리 중...',
     'common.error': '오류가 발생했습니다',
     'common.copied': '복사됨',
+    'common.date': '날짜',
+    'common.success': '성공',
     
     // Navigation
     'nav.home': '홈',
@@ -1971,6 +1983,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': 'Memproses...',
     'common.error': 'Terjadi kesalahan',
     'common.copied': 'Disalin',
+    'common.date': 'Tanggal',
+    'common.success': 'Berhasil',
     
     // Navigation
     'nav.home': 'Beranda',
@@ -2215,6 +2229,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.processing': 'Memproses...',
     'common.error': 'Ralat berlaku',
     'common.copied': 'Disalin',
+    'common.date': 'Tarikh',
+    'common.success': 'Berjaya',
     
     // Navigation
     'nav.home': 'Laman Utama',
