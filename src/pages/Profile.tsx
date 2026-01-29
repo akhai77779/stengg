@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
+import { useProfile } from '@/hooks/useProfile';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, ArrowLeftRight, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
 import { useLiveChat } from '@/contexts/LiveChatContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,22 +19,11 @@ import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
 import { useRipple } from '@/hooks/useRipple';
 
-interface Profile {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  department: string | null;
-  position: string | null;
-  balance: number | null;
-  total_income: number | null;
-  user_code: number | null;
-}
 interface IdentityVerification {
   status: 'pending' | 'approved' | 'rejected';
 }
+
 export default function Profile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
@@ -62,7 +52,14 @@ export default function Profile() {
   } = useCurrency();
   const navigate = useNavigate();
 
-  // Fetch external balance from API
+  // Use cached profile hook
+  const {
+    profile,
+    isLoading: profileLoading,
+    refetch: refetchProfile
+  } = useProfile(user?.id);
+
+  // Fetch external balance from API (also cached)
   const {
     balance: externalBalance,
     frozen: frozenBalance,
@@ -129,18 +126,7 @@ export default function Profile() {
   }, [user, authLoading, navigate]);
   useEffect(() => {
     if (user) {
-      fetchProfile();
       fetchTodayEarnings();
-
-      // Subscribe to realtime balance updates
-      const channel = supabase.channel('profile-balance').on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${user.id}`
-      }, () => {
-        fetchProfile();
-      }).subscribe();
 
       // Subscribe to option_trades updates for earnings
       const tradesChannel = supabase.channel('profile-trades').on('postgres_changes', {
@@ -153,25 +139,10 @@ export default function Profile() {
       }).subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
         supabase.removeChannel(tradesChannel);
       };
     }
   }, [user]);
-
-  const fetchProfile = async () => {
-    // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
-    const {
-      data,
-      error
-    } = await supabase.from('profiles_safe').select('*').eq('id', user!.id).single();
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching profile:', error);
-    } else if (data) {
-      setProfile(data as Profile);
-    }
-    setIsLoading(false);
-  };
 
   const fetchTodayEarnings = async () => {
     if (!user?.id) return;
@@ -252,7 +223,7 @@ export default function Profile() {
     }
     return email.slice(0, 2).toUpperCase();
   };
-  if (authLoading || isLoading || !user) {
+  if (authLoading || profileLoading || !user) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>;
