@@ -159,10 +159,11 @@ export default function Login() {
             <div className="flex items-center gap-3">
               <button 
                 onClick={openChat}
-                className="text-red-500 hover:text-red-400 transition-colors" 
+                className="group relative p-2 -m-2 text-red-500 hover:text-red-400 transition-all duration-300 hover:scale-110" 
                 title="Support"
               >
-                <Headphones className="h-4 w-4" />
+                <span className="absolute inset-0 rounded-full bg-red-500/0 group-hover:bg-red-500/10 transition-all duration-300 group-hover:scale-125" />
+                <Headphones className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:animate-[wiggle_0.5s_ease-in-out]" />
               </button>
               <LanguageSelect />
             </div>
