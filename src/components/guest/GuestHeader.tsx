@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import stLogoWhite from '@/assets/st-logo-white-footer.png';
 import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 import { Button } from '@/components/ui/button';
@@ -16,14 +15,27 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
-import { Menu, ChevronRight, MapPin, Mail, Phone, Globe, MessageCircle } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Menu, ChevronRight, MapPin, Mail, Phone, Globe, MessageCircle, Check } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLiveChat } from '@/contexts/LiveChatContext';
 
 export function GuestHeader() {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { openChat } = useLiveChat();
   const [contactOpen, setContactOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+
+  const languages = [
+    { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+    { code: 'en', label: 'English', flag: '🇺🇸' },
+    { code: 'zh', label: '中文', flag: '🇨🇳' },
+    { code: 'ko', label: '한국어', flag: '🇰🇷' },
+  ] as const;
 
   const supportEmail = 'stengg.com@stengg.it.com';
   const supportPhone = '+65 6722 1234';
@@ -55,7 +67,38 @@ export function GuestHeader() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-10 text-xs text-muted-foreground">
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-foreground">{t('guest.global')}</a>
+              <Popover open={langOpen} onOpenChange={setLangOpen}>
+                <PopoverTrigger asChild>
+                  <button className="hover:text-foreground cursor-pointer bg-transparent border-none p-0 flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {t('guest.global')}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1" align="start">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setLanguage(lang.code);
+                        setLangOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${
+                        language === lang.code 
+                          ? 'bg-primary/10 text-primary' 
+                          : 'hover:bg-muted/50 text-foreground'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                      </span>
+                      {language === lang.code && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
               <button 
                 onClick={() => setContactOpen(true)} 
                 className="hover:text-foreground cursor-pointer bg-transparent border-none p-0"
@@ -71,7 +114,6 @@ export function GuestHeader() {
             </div>
             <div className="flex items-center gap-3">
               <Link to="/login" className="hover:text-foreground">{t('nav.login')}</Link>
-              <LanguageSelect variant="compact" />
             </div>
           </div>
         </div>
@@ -129,7 +171,27 @@ export function GuestHeader() {
 
                     <div className="space-y-2">
                       <div className="text-xs text-muted-foreground">{t('guest.global')}</div>
-                      <LanguageSelect variant="full" />
+                      <div className="space-y-1">
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => setLanguage(lang.code)}
+                            className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${
+                              language === lang.code 
+                                ? 'bg-primary/10 text-primary' 
+                                : 'hover:bg-muted/50 text-foreground'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span>{lang.flag}</span>
+                              <span>{lang.label}</span>
+                            </span>
+                            {language === lang.code && (
+                              <Check className="w-4 h-4 text-primary" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
