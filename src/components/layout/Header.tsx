@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageCurrencySelector } from '@/components/settings/LanguageCurrencySelector';
-import { SupportMenuButton } from '@/components/layout/SupportMenuButton';
+
 import { 
   Home, 
   Newspaper, 
@@ -97,8 +97,6 @@ export function Header() {
           {/* Language/Currency Selector + User Menu */}
           <div className="flex items-center gap-2">
             <LanguageCurrencySelector showCurrency={false} />
-            {/* Mobile: keep header minimal (bottom nav already exists) */}
-            <SupportMenuButton />
 
             {/* Desktop: user menu/login */}
             <div className="hidden md:block">
