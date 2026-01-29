@@ -121,7 +121,10 @@ export default function GuestHome() {
             <p className="text-gray-600 leading-relaxed mb-8">
               {t('guest.aiDesc2')}
             </p>
-            <button className="px-6 py-3 bg-[#0066cc] text-white hover:bg-[#0052a3] text-sm">
+            <button 
+              className="px-8 py-4 min-h-[48px] bg-[#0066cc] text-white hover:bg-[#0052a3] active:bg-[#004080] active:scale-95 text-base transition-all duration-200 touch-manipulation select-none"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
               {t('guest.readMore')}
             </button>
             <p className="text-sm text-gray-500 mt-8">{t('guest.enablingFuture')}</p>
@@ -171,7 +174,10 @@ export default function GuestHome() {
           <p className="text-lg text-gray-400 leading-relaxed mb-8">
             {t('guest.ctaDesc')}
           </p>
-          <button className="px-8 py-3 border border-white text-white hover:bg-white hover:text-[#0a0e1a] text-sm tracking-wide">
+          <button 
+            className="px-8 py-4 min-h-[48px] min-w-[120px] border border-white text-white hover:bg-white hover:text-[#0a0e1a] active:bg-white/90 active:scale-95 text-base tracking-wide transition-all duration-200 touch-manipulation select-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+          >
             {t('guest.discover')}
           </button>
         </div>
@@ -198,7 +204,7 @@ export default function GuestHome() {
                 <p className="text-gray-600 mb-6 leading-relaxed">
                   {t('guest.smartCityDesc')}
                 </p>
-                <button className="text-[#0066cc] text-sm font-medium">{t('auth.learnMore')} →</button>
+                <button className="text-[#0066cc] text-base font-medium min-h-[44px] px-2 py-2 hover:underline active:opacity-70 transition-opacity touch-manipulation select-none">{t('auth.learnMore')} →</button>
               </div>
             </div>
             <div className="bg-white overflow-hidden shadow-lg">
@@ -215,7 +221,7 @@ export default function GuestHome() {
                 <p className="text-gray-600 mb-6 leading-relaxed">
                   {t('guest.cybersecurityDesc')}
                 </p>
-                <button className="text-[#0066cc] text-sm font-medium">{t('auth.learnMore')} →</button>
+                <button className="text-[#0066cc] text-base font-medium min-h-[44px] px-2 py-2 hover:underline active:opacity-70 transition-opacity touch-manipulation select-none">{t('auth.learnMore')} →</button>
               </div>
             </div>
           </div>
@@ -237,7 +243,10 @@ export default function GuestHome() {
             <p className="text-gray-600 leading-relaxed mb-8">
               {t('guest.careersDesc')}
             </p>
-            <button className="px-6 py-3 bg-[#0066cc] text-white hover:bg-[#0052a3] text-sm">
+            <button 
+              className="px-8 py-4 min-h-[48px] bg-[#0066cc] text-white hover:bg-[#0052a3] active:bg-[#004080] active:scale-95 text-base transition-all duration-200 touch-manipulation select-none"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
               {t('guest.viewCareers')}
             </button>
           </div>
