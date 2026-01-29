@@ -65,7 +65,8 @@ export default function GuestHome() {
           </p>
           <Link
             to="/login"
-            className="inline-block px-6 py-3 border border-white text-white hover:bg-white hover:text-[#0a0e1a] transition-all duration-300 text-sm tracking-wide"
+            className="inline-block px-8 py-4 min-h-[48px] min-w-[120px] border border-white text-white hover:bg-white hover:text-[#0a0e1a] active:bg-white/90 active:scale-95 transition-all duration-300 text-base tracking-wide text-center touch-manipulation select-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {t('nav.login')}
           </Link>
