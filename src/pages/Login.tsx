@@ -192,7 +192,7 @@ export default function Login() {
             </button>
           </div>
 
-          <form onSubmit={handleLogin} className="mt-8 space-y-6">
+          <form onSubmit={handleLogin} className="mt-8 space-y-6" key={loginMethod}>
             {loginMethod === 'email' ? (
               <div className="border-b border-gray-700 pb-3">
                 <input
@@ -202,6 +202,7 @@ export default function Login() {
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="w-full bg-transparent text-sm placeholder:text-gray-500 outline-none"
                   disabled={isLoading}
+                  autoComplete="email"
                 />
               </div>
             ) : (
@@ -212,9 +213,11 @@ export default function Login() {
                   <option className="bg-[#1a1f2e]">+66</option>
                 </select>
                 <input
+                  type="tel"
                   placeholder={t('auth.enterPhone')}
                   className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
                   disabled={isLoading}
+                  autoComplete="tel"
                 />
               </div>
             )}
@@ -230,6 +233,7 @@ export default function Login() {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
                 disabled={isLoading}
+                autoComplete="current-password"
               />
               <button 
                 type="button" 
