@@ -5,7 +5,6 @@ import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
 import { NetworkStatus } from './NetworkStatus';
 import { MobileSupportButton } from './MobileSupportButton';
-import { ChatWidget } from '@/components/live-chat';
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,13 +30,8 @@ export function Layout({ children, hideFooter = false, hideChatWidget = false }:
       {!hideFooter && <Footer />}
       <BottomNavigation />
       
-      {/* Live Chat - Desktop: floating widget, Mobile: floating button */}
-      {!hideChatWidget && !isAdminPage && (
-        <>
-          <ChatWidget />
-          <MobileSupportButton />
-        </>
-      )}
+      {/* Live Chat - Global support button */}
+      {!hideChatWidget && !isAdminPage && <MobileSupportButton />}
     </div>
   );
 }

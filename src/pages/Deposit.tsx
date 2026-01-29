@@ -4,16 +4,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Layout } from "@/components/layout/Layout";
-
-const CSKH_URL = "https://direct.lc.chat/19460523/";
+import { useLiveChat } from "@/contexts/LiveChatContext";
 
 const Deposit = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-
-  const handleContactSupport = () => {
-    window.open(CSKH_URL, "_blank", "noopener,noreferrer");
-  };
+  const { openChat } = useLiveChat();
 
   return (
     <Layout hideFooter>
@@ -54,7 +50,7 @@ const Deposit = () => {
 
                 {/* CTA Button */}
                 <Button
-                  onClick={handleContactSupport}
+                  onClick={openChat}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 min-h-[48px] text-sm md:text-base"
                   size="lg"
                 >

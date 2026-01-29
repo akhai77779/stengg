@@ -12,6 +12,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, ArrowLeftRight, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
@@ -256,6 +257,8 @@ export default function Profile() {
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>;
   }
+  const { openChat } = useLiveChat();
+  
   const quickActions = [{
     icon: ArrowDownToLine,
     label: t('transaction.deposit'),
@@ -275,8 +278,7 @@ export default function Profile() {
     icon: Headphones,
     label: t('profile.customerService'),
     color: 'text-purple-400',
-    href: 'https://direct.lc.chat/19460523/',
-    external: true
+    onClick: openChat
   }];
   const accountSettings = [{
     icon: Wallet,
@@ -412,20 +414,7 @@ export default function Profile() {
               {/* Quick Actions */}
               <div className="grid grid-cols-4 gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
                 {quickActions.map(action => 
-                  action.external ? (
-                    <a 
-                      key={action.label} 
-                      href={action.href} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-lg transition-colors bg-primary-foreground text-center text-white min-h-[72px] active:scale-[0.98] touch-action-manipulation"
-                    >
-                      <div className={cn('p-1.5 md:p-2 rounded-full bg-card', action.color)}>
-                        <action.icon className="w-4 h-4 md:w-5 md:h-5" />
-                      </div>
-                      <span className="text-[9px] md:text-[10px] text-muted-foreground text-center leading-tight">{action.label}</span>
-                    </a>
-                  ) : action.onClick ? (
+                  action.onClick ? (
                     <button 
                       key={action.label} 
                       onClick={action.onClick}
