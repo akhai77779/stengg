@@ -145,11 +145,13 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'Tin tức',
+    'news.subtitle': 'Cập nhật thông tin mới nhất từ ST Engineering',
     'news.latest': 'Tin tức mới nhất',
     'news.readMore': 'Xem thêm',
     'news.views': 'lượt xem',
     'news.comments': 'Bình luận',
     'news.writeComment': 'Viết bình luận...',
+    'news.noNews': 'Không có tin tức nào',
     
     // Charity
     'charity.title': 'Chương trình thiện nguyện',
@@ -606,11 +608,13 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'News',
+    'news.subtitle': 'Latest updates from ST Engineering',
     'news.latest': 'Latest News',
     'news.readMore': 'Read More',
     'news.views': 'views',
     'news.comments': 'Comments',
     'news.writeComment': 'Write a comment...',
+    'news.noNews': 'No news available',
     
     // Charity
     'charity.title': 'Charity Programs',
@@ -1069,11 +1073,13 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': '新闻',
+    'news.subtitle': 'ST Engineering 最新动态',
     'news.latest': '最新新闻',
     'news.readMore': '阅读更多',
     'news.views': '浏览',
     'news.comments': '评论',
     'news.writeComment': '写评论...',
+    'news.noNews': '暂无新闻',
     
     // Charity
     'charity.title': '慈善项目',
@@ -1335,12 +1341,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'ข่าวสาร',
+    'news.subtitle': 'ข่าวล่าสุดจาก ST Engineering',
     'news.latest': 'ข่าวล่าสุด',
     'news.readMore': 'อ่านเพิ่มเติม',
     'news.views': 'ครั้ง',
     'news.comments': 'ความคิดเห็น',
     'news.writeComment': 'เขียนความคิดเห็น...',
-    
+    'news.noNews': 'ไม่มีข่าว',
+
     // Charity
     'charity.title': 'โครงการการกุศล',
     'charity.progress': 'ความคืบหน้า',
@@ -1581,12 +1589,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'ニュース',
+    'news.subtitle': 'ST Engineeringからの最新情報',
     'news.latest': '最新ニュース',
     'news.readMore': '続きを読む',
     'news.views': '閲覧',
     'news.comments': 'コメント',
     'news.writeComment': 'コメントを書く...',
-    
+    'news.noNews': 'ニュースはありません',
+
     // Charity
     'charity.title': 'チャリティプログラム',
     'charity.progress': '進捗',
@@ -1828,12 +1838,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': '뉴스',
+    'news.subtitle': 'ST Engineering 최신 소식',
     'news.latest': '최신 뉴스',
     'news.readMore': '더 보기',
     'news.views': '조회',
     'news.comments': '댓글',
     'news.writeComment': '댓글 작성...',
-    
+    'news.noNews': '뉴스가 없습니다',
+
     // Charity
     'charity.title': '자선 프로그램',
     'charity.progress': '진행률',
@@ -2075,12 +2087,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'Berita',
+    'news.subtitle': 'Berita terbaru dari ST Engineering',
     'news.latest': 'Berita Terbaru',
     'news.readMore': 'Baca Selengkapnya',
     'news.views': 'dilihat',
     'news.comments': 'Komentar',
     'news.writeComment': 'Tulis komentar...',
-    
+    'news.noNews': 'Tidak ada berita',
+
     // Charity
     'charity.title': 'Program Amal',
     'charity.progress': 'Progres',
@@ -2322,12 +2336,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // News
     'news.title': 'Berita',
+    'news.subtitle': 'Berita terkini dari ST Engineering',
     'news.latest': 'Berita Terkini',
     'news.readMore': 'Baca Lagi',
     'news.views': 'tontonan',
     'news.comments': 'Komen',
     'news.writeComment': 'Tulis komen...',
-    
+    'news.noNews': 'Tiada berita',
+
     // Charity
     'charity.title': 'Program Amal',
     'charity.progress': 'Kemajuan',
