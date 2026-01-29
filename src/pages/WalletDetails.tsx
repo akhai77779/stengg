@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
+import { useProfile } from '@/hooks/useProfile';
 import { 
   ArrowLeft,
   Eye,
@@ -49,21 +50,12 @@ function IncomeCardSkeleton() {
   );
 }
 
-interface Profile {
-  id: string;
-  full_name: string | null;
-  balance: number | null;
-  total_income: number | null;
-}
-
 interface DailyIncome {
   date: string;
   amount: number;
 }
 
 export default function WalletDetails() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
   const [todayTradeIncome, setTodayTradeIncome] = useState(0);
   const [charityIncome, setCharityIncome] = useState(0);
@@ -72,6 +64,12 @@ export default function WalletDetails() {
   const { t } = useLanguage();
   const { formatCurrency, currency } = useCurrency();
   const navigate = useNavigate();
+  
+  // Use cached profile hook
+  const { 
+    profile,
+    isLoading: profileLoading
+  } = useProfile(user?.id);
   
   const { 
     balance: externalBalance, 
@@ -89,7 +87,6 @@ export default function WalletDetails() {
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
       fetchTodayIncome();
       fetchDailyIncomeHistory();
       
@@ -116,23 +113,9 @@ export default function WalletDetails() {
     }
   }, [user]);
 
-  const fetchProfile = async () => {
-    // Use profiles_safe view to exclude sensitive fields (withdrawal_password_hash, last_login_ip)
-    const { data, error } = await supabase
-      .from('profiles_safe')
-      .select('id, full_name, balance, total_income')
-      .eq('id', user!.id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching profile:', error);
-    } else if (data) {
-      setProfile(data as Profile);
-    }
-    setIsLoading(false);
-  };
-
   const fetchTodayIncome = async () => {
+    if (!user?.id) return;
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -140,7 +123,7 @@ export default function WalletDetails() {
     const { data: trades, error } = await supabase
       .from('option_trades')
       .select('profit_loss')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .in('status', ['won', 'lost'])
       .gte('settled_at', today.toISOString());
 
@@ -151,6 +134,8 @@ export default function WalletDetails() {
   };
 
   const fetchDailyIncomeHistory = async () => {
+    if (!user?.id) return;
+    
     // Get last 30 days of income grouped by day
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -158,7 +143,7 @@ export default function WalletDetails() {
     const { data: trades, error } = await supabase
       .from('option_trades')
       .select('profit_loss, settled_at')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .in('status', ['won', 'lost'])
       .gte('settled_at', thirtyDaysAgo.toISOString())
       .order('settled_at', { ascending: false });
@@ -195,7 +180,7 @@ export default function WalletDetails() {
   }
 
   // Show skeleton while loading data
-  const showSkeleton = isLoading || externalLoading;
+  const showSkeleton = profileLoading || externalLoading;
 
   return (
     <Layout hideFooter>
