@@ -9,13 +9,14 @@ import { useLiveChatTyping } from "@/hooks/useLiveChatTyping";
 import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageList, MessageInput } from "@/components/live-chat/MessageComponents";
+import { useLiveChat } from "@/contexts/LiveChatContext";
 
 /**
- * Mobile-only floating support button with fullscreen chat overlay.
- * Visible on all pages (except admin).
+ * Global floating support button with fullscreen chat overlay.
+ * Works on both mobile (FAB) and desktop (inline modal).
  */
 export function MobileSupportButton() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, openChat, closeChat } = useLiveChat();
   const [supportEnabled, setSupportEnabled] = useState(true);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [guestInfo, setGuestInfo] = useState<{
@@ -98,6 +99,17 @@ export function MobileSupportButton() {
     }
   }, [isOpen, roomId, messages.length, markAsRead]);
 
+  // Auto-generate guest info when opening
+  useEffect(() => {
+    if (isOpen && !isAuthenticated && !guestInfo) {
+      const guestId = generateGuestId();
+      setGuestInfo({
+        id: guestId,
+        name: `Khách #${guestId.slice(-4)}`,
+      });
+    }
+  }, [isOpen, isAuthenticated, guestInfo]);
+
   const initRoom = async () => {
     if (!customerId) return;
 
@@ -121,18 +133,6 @@ export function MobileSupportButton() {
       localStorage.setItem("live_chat_guest_id", guestId);
     }
     return guestId;
-  };
-
-  // Handle open chat
-  const handleOpen = () => {
-    if (!isAuthenticated && !guestInfo) {
-      const guestId = generateGuestId();
-      setGuestInfo({
-        id: guestId,
-        name: `Khách #${guestId.slice(-4)}`,
-      });
-    }
-    setIsOpen(true);
   };
 
   // Handle send message
@@ -192,9 +192,9 @@ export function MobileSupportButton() {
 
   return (
     <>
-      {/* Floating button - positioned above bottom navigation */}
+      {/* Floating button - positioned above bottom navigation (mobile only) */}
       <Button
-        onClick={handleOpen}
+        onClick={openChat}
         size="lg"
         className={cn(
           "fixed z-[60] rounded-full h-14 w-14 shadow-xl md:hidden",
@@ -214,7 +214,7 @@ export function MobileSupportButton() {
         )}
       </Button>
 
-      {/* Fullscreen chat overlay with animation */}
+      {/* Fullscreen chat overlay - Mobile */}
       <div
         className={cn(
           "fixed inset-0 z-[9999] bg-background md:hidden flex flex-col transition-all duration-300 ease-out",
@@ -233,7 +233,7 @@ export function MobileSupportButton() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 hover:bg-primary-foreground/20 active:scale-95 transition-transform"
-            onClick={() => setIsOpen(false)}
+            onClick={closeChat}
           >
             <X className="h-5 w-5" />
           </Button>
@@ -270,6 +270,46 @@ export function MobileSupportButton() {
           />
         </div>
       </div>
+
+      {/* Desktop chat modal */}
+      {isOpen && (
+        <div className="fixed bottom-4 right-4 z-[9999] hidden md:block w-[400px] h-[550px] rounded-xl shadow-2xl overflow-hidden border border-border bg-background">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              <span className="font-medium">Chat với chúng tôi</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 hover:bg-primary-foreground/20"
+              onClick={closeChat}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Message list */}
+          <div className="h-[calc(100%-110px)]">
+            <MessageList
+              messages={messages}
+              currentUserId={customerId}
+              typingText={typingText}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {/* Input */}
+          <MessageInput
+            onSend={handleSend}
+            onTyping={startTyping}
+            onUpload={uploadAttachment}
+            disabled={isSending || !roomId}
+            placeholder="Nhập tin nhắn..."
+          />
+        </div>
+      )}
     </>
   );
 }
