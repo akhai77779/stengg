@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import stLogoWhite from '@/assets/st-logo-white-footer.png';
+import stEngineeringLogo from '@/assets/st-engineering-logo.png';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -10,10 +12,27 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Menu, ChevronRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
+import { Menu, ChevronRight, MapPin, Mail, Phone, Globe, MessageCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 
 export function GuestHeader() {
   const { t } = useLanguage();
+  const { openChat } = useLiveChat();
+  const [contactOpen, setContactOpen] = useState(false);
+
+  const supportEmail = 'stengg.com@stengg.it.com';
+  const supportPhone = '+65 6722 1234';
+  const website = 'https://stengg.it.com';
+
+  const handleLiveChatClick = () => {
+    setContactOpen(false);
+    openChat();
+  };
 
   const menuItems = [
     { label: t('guest.aboutUs'), href: '#' },
@@ -25,7 +44,8 @@ export function GuestHeader() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-transparent">
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-transparent">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/80 via-background/35 to-transparent backdrop-blur-md"
@@ -36,8 +56,18 @@ export function GuestHeader() {
           <div className="flex items-center justify-between h-10 text-xs text-muted-foreground">
             <div className="flex items-center gap-4">
               <a href="#" className="hover:text-foreground">{t('guest.global')}</a>
-              <a href="#" className="hover:text-foreground">{t('guest.contact')}</a>
-              <a href="https://direct.lc.chat/19460523/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{t('guest.support')}</a>
+              <button 
+                onClick={() => setContactOpen(true)} 
+                className="hover:text-foreground cursor-pointer bg-transparent border-none p-0"
+              >
+                {t('guest.contact')}
+              </button>
+              <button 
+                onClick={openChat} 
+                className="hover:text-foreground cursor-pointer bg-transparent border-none p-0"
+              >
+                {t('guest.support')}
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/login" className="hover:text-foreground">{t('nav.login')}</Link>
@@ -118,5 +148,91 @@ export function GuestHeader() {
         </div>
       </div>
     </header>
+
+      {/* Contact Dialog */}
+      <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-border p-0 gap-0">
+          {/* Header with logo */}
+          <div className="p-6 pb-4 text-center border-b border-border/30">
+            <img 
+              src={stEngineeringLogo} 
+              alt="ST Engineering" 
+              className="h-10 mx-auto mb-4 object-contain" 
+            />
+            <p className="text-sm text-muted-foreground">
+              {t('about.portalDescription')}
+            </p>
+          </div>
+
+          {/* Contact Support Section */}
+          <Card className="border-0 rounded-none shadow-none">
+            <CardContent className="p-0">
+              <h3 className="text-sm font-medium text-foreground px-4 py-3 border-b border-border/30 text-center">
+                {t('about.contactSupport')}
+              </h3>
+              
+              {/* Address */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.address')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">ST Engineering Hub, Singapore</span>
+              </div>
+
+              {/* Email */}
+              <a 
+                href={`mailto:${supportEmail}`} 
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">Email</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{supportEmail}</span>
+              </a>
+
+              {/* Phone */}
+              <a 
+                href={`tel:${supportPhone.replace(/\s/g, '')}`} 
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.phone')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{supportPhone}</span>
+              </a>
+
+              {/* Website */}
+              <a 
+                href={website} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center justify-between px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">Website</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{website.replace('https://', '')}</span>
+              </a>
+
+              {/* Live Chat */}
+              <button 
+                onClick={handleLiveChatClick}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors text-left bg-transparent border-none cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-foreground">{t('about.liveChat')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{t('about.chatNow')}</span>
+              </button>
+            </CardContent>
+          </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
