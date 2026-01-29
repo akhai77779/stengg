@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuickLogin } from '@/hooks/useQuickLogin';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { Typewriter } from '@/components/ui/typewriter';
@@ -33,6 +34,7 @@ export default function Login() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const quickLogin = useQuickLogin();
+  const { openChat } = useLiveChat();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -155,9 +157,13 @@ export default function Login() {
               />
             </Link>
             <div className="flex items-center gap-3">
-              <a href="https://direct.lc.chat/19460523/" target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-400" title="Support">
+              <button 
+                onClick={openChat}
+                className="text-red-500 hover:text-red-400 transition-colors" 
+                title="Support"
+              >
                 <Headphones className="h-4 w-4" />
-              </a>
+              </button>
               <LanguageSelect />
             </div>
           </div>
