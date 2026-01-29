@@ -1,19 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 import { ChevronLeft, Mail, Phone, Globe, MessageCircle, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import stEngineeringLogo from '@/assets/st-engineering-logo.png';
+
 export default function About() {
   const navigate = useNavigate();
-  const {
-    t
-  } = useLanguage();
-  const appVersion = '1.0.0';
+  const { t } = useLanguage();
+  const { openChat } = useLiveChat();
+  
   const supportEmail = 'stengg.com@stengg.it.com';
   const supportPhone = '+65 6722 1234';
   const website = 'https://stengg.it.com';
-  const liveChatUrl = 'https://direct.lc.chat/19460523/';
   return <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8">
         <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
@@ -83,13 +83,16 @@ export default function About() {
               </a>
 
               {/* Live Chat */}
-              <a href={liveChatUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors active:bg-muted/40">
+              <button 
+                onClick={openChat}
+                className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors active:bg-muted/40 w-full text-left"
+              >
                 <div className="flex items-center gap-3">
                   <MessageCircle className="w-5 h-5 text-primary" />
                   <span className="text-sm text-foreground">{t('about.liveChat')}</span>
                 </div>
-                <span className="text-sm text-muted-foreground">{t('about.chatNow')}</span>
-              </a>
+                <span className="text-sm text-primary font-medium">{t('about.chatNow')}</span>
+              </button>
             </CardContent>
           </Card>
 
