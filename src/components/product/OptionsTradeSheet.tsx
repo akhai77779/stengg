@@ -237,7 +237,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             {/* Product Info */}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t('options.productName')}</span>
-              <span className="font-semibold">{product.symbol ? `${product.symbol}/USD` : product.name}</span>
+              <span className="font-semibold">{product.symbol || product.name}</span>
             </div>
 
             {/* Buy/Sell Toggle and Price */}
@@ -395,7 +395,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
         <DialogContent className="sm:max-w-md bg-card border-border rounded-2xl">
           <div className="flex flex-col items-center py-6 space-y-6">
             {/* Product Symbol */}
-            <h2 className="text-xl font-semibold">{product.symbol ? `${product.symbol}/USD` : product.name}</h2>
+            <h2 className="text-xl font-semibold">{product.symbol || product.name}</h2>
             
             {/* Countdown Circle */}
             <div className="relative w-40 h-40">
