@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuickLogin } from '@/hooks/useQuickLogin';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
+import { Typewriter } from '@/components/ui/typewriter';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
@@ -171,7 +172,9 @@ export default function Login() {
 
           {/* Login Form */}
           <div className="mt-8 space-y-1">
-            <h1 className="text-2xl font-semibold">{t('auth.welcomeTitle')}</h1>
+            <h1 className="text-2xl font-semibold">
+              <Typewriter text={t('auth.welcomeTitle')} speed={60} />
+            </h1>
             <p className="text-sm text-gray-400">{t('auth.welcomeSubtitle')}</p>
             <p className="text-sm text-gray-400">{t('auth.internalPortal')}</p>
           </div>
