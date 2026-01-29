@@ -158,12 +158,6 @@ export function FeaturedProducts() {
                     <div className="absolute inset-0 hero-overlay" />
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <Badge 
-                      variant="outline" 
-                      className={`absolute top-3 right-3 ${statusColors[product.status]}`}
-                    >
-                      {statusLabels[product.status]}
-                    </Badge>
                   </div>
 
                   <CardContent className="p-4">
