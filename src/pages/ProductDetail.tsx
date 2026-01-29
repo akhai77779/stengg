@@ -502,7 +502,7 @@ const ProductDetail = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate max-w-[120px]">{product.name}</h1>
+            <h1 className="text-base font-medium truncate max-w-[120px]">{product.symbol ? `${product.symbol}/USD` : product.name}</h1>
             {/* Mini sparkline chart */}
             <MiniPriceChart 
               data={candleData.slice(-20).map(c => c.close)} 

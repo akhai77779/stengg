@@ -46,6 +46,7 @@ const getCategoryIcon = (name: string, category: string | null) => {
 interface Product {
   id: string;
   name: string;
+  symbol: string | null;
   description: string | null;
   image_url: string | null;
   price: number | null;
@@ -94,7 +95,7 @@ export default function Products() {
     const {
       data,
       error
-    } = await supabase.from('products').select('id, name, description, image_url, price, volume, price_change, category').order('created_at', {
+    } = await supabase.from('products').select('id, name, symbol, description, image_url, price, volume, price_change, category').order('created_at', {
       ascending: false
     });
     if (error) {
@@ -196,7 +197,7 @@ export default function Products() {
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground text-sm md:text-base line-clamp-1 mb-1">
-                            {product.name}
+                            {product.symbol ? `${product.symbol}/USD` : product.name}
                           </h3>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>24HVOL:</span>

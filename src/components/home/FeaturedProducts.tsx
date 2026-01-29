@@ -12,6 +12,7 @@ type ProductStatus = Database['public']['Enums']['product_status'];
 interface Product {
   id: string;
   name: string;
+  symbol: string | null;
   description: string | null;
   image_url: string | null;
   price: number | null;
@@ -42,7 +43,7 @@ export function FeaturedProducts() {
   const fetchProducts = async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, image_url, price, status, category')
+      .select('id, name, symbol, description, image_url, price, status, category')
       .eq('status', 'available')
       .order('created_at', { ascending: false })
       .limit(4);
@@ -60,6 +61,7 @@ export function FeaturedProducts() {
     {
       id: '1',
       name: 'Smart Sensor Kit Pro',
+      symbol: 'SSK',
       description: 'Bộ cảm biến thông minh cho các dự án IoT',
       image_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop',
       price: 2500000,
@@ -69,6 +71,7 @@ export function FeaturedProducts() {
     {
       id: '2',
       name: 'Development Board V2',
+      symbol: 'DBV2',
       description: 'Bo mạch phát triển đa năng thế hệ mới',
       image_url: 'https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400&h=300&fit=crop',
       price: 1200000,
@@ -78,6 +81,7 @@ export function FeaturedProducts() {
     {
       id: '3',
       name: 'Security Camera System',
+      symbol: 'SCS',
       description: 'Hệ thống camera an ninh thông minh AI',
       image_url: 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400&h=300&fit=crop',
       price: 8500000,
@@ -87,6 +91,7 @@ export function FeaturedProducts() {
     {
       id: '4',
       name: 'Drone Controller Unit',
+      symbol: 'DCU',
       description: 'Bộ điều khiển drone chuyên nghiệp',
       image_url: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=400&h=300&fit=crop',
       price: 4200000,
@@ -173,7 +178,7 @@ export function FeaturedProducts() {
 
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 mb-2">
-                      {product.name}
+                      {product.symbol ? `${product.symbol}/USD` : product.name}
                     </h3>
                     {product.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
