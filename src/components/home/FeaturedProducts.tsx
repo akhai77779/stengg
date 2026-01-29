@@ -164,11 +164,6 @@ export function FeaturedProducts() {
                     >
                       {statusLabels[product.status]}
                     </Badge>
-                    {product.category && (
-                      <Badge variant="secondary" className="absolute top-3 left-3">
-                        {product.category}
-                      </Badge>
-                    )}
                   </div>
 
                   <CardContent className="p-4">
@@ -180,10 +175,6 @@ export function FeaturedProducts() {
                         {product.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-1 text-primary font-semibold">
-                      <Tag className="w-4 h-4" />
-                      {formatPrice(product.price)}
-                    </div>
                   </CardContent>
                 </Card>
               </Link>
