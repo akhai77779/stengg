@@ -159,12 +159,6 @@ export default function Products() {
               <span>Singapore Technologies Engineering</span>
             </div>
             
-            <div className="flex-wrap gap-4 text-sm text-muted-foreground items-center justify-center flex flex-row">
-              <span className="flex items-center gap-1">
-                <Activity className="w-4 h-4 text-primary" />
-                {t('products.transactions')}: {totalVolume.toLocaleString()}
-              </span>
-            </div>
           </div>
         </div>
 
