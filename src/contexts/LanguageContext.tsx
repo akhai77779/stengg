@@ -37,6 +37,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'Đã sao chép',
     'common.date': 'Ngày',
     'common.success': 'Thành công',
+    'common.failed': 'Thất bại',
     
     // Navigation
     'nav.home': 'Trang chủ',
@@ -497,6 +498,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'Copied',
     'common.date': 'Date',
     'common.success': 'Success',
+    'common.failed': 'Failed',
     
     // Navigation
     'nav.home': 'Home',
@@ -957,6 +959,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': '已复制',
     'common.date': '日期',
     'common.success': '成功',
+    'common.failed': '失败',
     
     // Navigation
     'nav.home': '首页',
@@ -1248,6 +1251,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'คัดลอกแล้ว',
     'common.date': 'วันที่',
     'common.success': 'สำเร็จ',
+    'common.failed': 'ล้มเหลว',
     
     // Navigation
     'nav.home': 'หน้าแรก',
@@ -1493,6 +1497,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'コピーしました',
     'common.date': '日付',
     'common.success': '成功',
+    'common.failed': '失敗',
     
     // Navigation
     'nav.home': 'ホーム',
@@ -1739,6 +1744,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': '복사됨',
     'common.date': '날짜',
     'common.success': '성공',
+    'common.failed': '실패',
     
     // Navigation
     'nav.home': '홈',
@@ -1985,6 +1991,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'Disalin',
     'common.date': 'Tanggal',
     'common.success': 'Berhasil',
+    'common.failed': 'Gagal',
     
     // Navigation
     'nav.home': 'Beranda',
@@ -2231,6 +2238,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.copied': 'Disalin',
     'common.date': 'Tarikh',
     'common.success': 'Berjaya',
+    'common.failed': 'Gagal',
     
     // Navigation
     'nav.home': 'Laman Utama',
