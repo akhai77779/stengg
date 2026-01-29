@@ -190,29 +190,11 @@ export function MobileSupportButton() {
 
   if (!supportEnabled) return null;
 
+  // Chat only opens via CSKH buttons (no floating FAB)
+  if (!isOpen) return null;
+
   return (
     <>
-      {/* Floating button - positioned above bottom navigation (mobile only) */}
-      <Button
-        onClick={openChat}
-        size="lg"
-        className={cn(
-          "fixed z-[60] rounded-full h-14 w-14 shadow-xl md:hidden",
-          "bottom-20 right-4", // Above bottom nav (h-16 + some margin)
-          "bg-primary hover:bg-primary/90 active:scale-95 transition-transform",
-          isOpen && "hidden"
-        )}
-      >
-        <MessageCircle className="h-6 w-6" />
-        {unreadCount > 0 && (
-          <Badge
-            variant="destructive"
-            className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-xs animate-pulse"
-          >
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </Badge>
-        )}
-      </Button>
 
       {/* Fullscreen chat overlay - Mobile */}
       <div
