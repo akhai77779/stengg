@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GuestHeader } from './GuestHeader';
 import { GuestFooter } from './GuestFooter';
-import { LiveChatButton } from '@/components/layout/LiveChatButton';
+import { MobileSupportButton } from '@/components/layout/MobileSupportButton';
 
 interface GuestLayoutProps {
   children: ReactNode;
@@ -28,7 +28,7 @@ export function GuestLayout({ children, showHeaderOnMobile = true }: GuestLayout
         {children}
       </main>
       <GuestFooter />
-      <LiveChatButton />
+      <MobileSupportButton />
     </div>
   );
 }
