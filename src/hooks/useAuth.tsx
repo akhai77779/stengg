@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,40 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // SECURITY: isAdmin is UI-only. Actual authorization is enforced by server-side RLS policies.
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminLoading, setIsAdminLoading] = useState(true);
+  
+  // Optimization: Track last checked user ID to prevent duplicate calls
+  const lastCheckedUserIdRef = useRef<string | null>(null);
+  const checkInProgressRef = useRef<boolean>(false);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer role check with setTimeout to prevent deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminRole(session.user.id);
-      }
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkAdminRole = async (userId: string) => {
+  const checkAdminRole = useCallback(async (userId: string) => {
+    // Skip if already checked for this user or check is in progress
+    if (lastCheckedUserIdRef.current === userId || checkInProgressRef.current) {
+      console.log('Admin role check skipped - already checked or in progress for:', userId);
+      return;
+    }
+    
+    checkInProgressRef.current = true;
     setIsAdminLoading(true);
+    
     try {
       console.log('Checking admin role for user:', userId);
       const { data, error } = await supabase
@@ -102,13 +83,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('Setting isAdmin to:', !!data);
       setIsAdmin(!!data);
+      // Mark this user as checked
+      lastCheckedUserIdRef.current = userId;
     } catch (error) {
       console.error('Error checking admin role:', error);
       setIsAdmin(false);
     } finally {
       setIsAdminLoading(false);
+      checkInProgressRef.current = false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Reset cache when user changes (sign out or sign in with different user)
+        if (event === 'SIGNED_OUT') {
+          lastCheckedUserIdRef.current = null;
+          setIsAdmin(false);
+          setIsAdminLoading(false);
+        } else if (session?.user) {
+          // Defer role check with setTimeout to prevent deadlock
+          setTimeout(() => {
+            checkAdminRole(session.user.id);
+          }, 0);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      } else {
+        setIsAdminLoading(false);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAdminRole]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
