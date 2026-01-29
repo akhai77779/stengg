@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
 import { NetworkStatus } from './NetworkStatus';
+import { MobileSupportButton } from './MobileSupportButton';
 import { ChatWidget } from '@/components/live-chat';
 
 interface LayoutProps {
@@ -30,8 +31,13 @@ export function Layout({ children, hideFooter = false, hideChatWidget = false }:
       {!hideFooter && <Footer />}
       <BottomNavigation />
       
-      {/* Live Chat Widget - hide on admin pages */}
-      {!hideChatWidget && !isAdminPage && <ChatWidget />}
+      {/* Live Chat - Desktop: floating widget, Mobile: floating button */}
+      {!hideChatWidget && !isAdminPage && (
+        <>
+          <ChatWidget />
+          <MobileSupportButton />
+        </>
+      )}
     </div>
   );
 }
