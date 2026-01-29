@@ -15,7 +15,7 @@ import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, Shiel
 import { useLiveChat } from '@/contexts/LiveChatContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { TransactionHistory } from '@/components/profile/TransactionHistory';
+
 import { useRipple } from '@/hooks/useRipple';
 
 interface Profile {
@@ -35,7 +35,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
-  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  
   const [identityVerification, setIdentityVerification] = useState<IdentityVerification | null>(null);
   const [todayProductEarnings, setTodayProductEarnings] = useState<number>(0);
   const [todayCharityEarnings, setTodayCharityEarnings] = useState<number>(0);
@@ -270,11 +270,6 @@ export default function Profile() {
     color: 'text-orange-400',
     href: '/withdraw'
   }, {
-    icon: CreditCard,
-    label: t('profile.transactionHistory'),
-    color: 'text-blue-400',
-    onClick: () => setShowTransactionHistory(!showTransactionHistory)
-  }, {
     icon: Headphones,
     label: t('profile.customerService'),
     color: 'text-purple-400',
@@ -436,12 +431,6 @@ export default function Profile() {
                 )}
               </div>
               
-              {/* Transaction History Inline */}
-              {showTransactionHistory && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <TransactionHistory />
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -522,10 +511,6 @@ export default function Profile() {
             </Card>
           </div>
 
-          {/* Transaction History */}
-          <div className="mb-4 md:mb-6">
-            <TransactionHistory />
-          </div>
 
           {/* Security Notice */}
           <p className="text-[10px] md:text-xs text-center text-muted-foreground px-4">
