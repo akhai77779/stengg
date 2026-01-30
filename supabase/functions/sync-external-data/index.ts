@@ -520,6 +520,9 @@ Deno.serve(async (req) => {
             const low24h = parseFloat(String(coin.low_24h || coin.low || 0)) || null;
             // Parse turnover (trading volume in money terms)
             const turnover = String(coin.turnover || "0");
+            // Build symbol for matching
+            const pairName = coin.pair_name || "";
+            const coinSymbol = pairName.includes("/") ? pairName : (pairName ? `${pairName}/USDT` : null);
 
             const productData = {
               name: productName,
@@ -539,12 +542,26 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Check if product with same name exists
-            const { data: existing } = await supabase
-              .from("products")
-              .select("id")
-              .eq("name", productData.name)
-              .maybeSingle();
+            // Try to find product by symbol first, then by name
+            let existing = null;
+            
+            if (coinSymbol) {
+              const { data: bySymbol } = await supabase
+                .from("products")
+                .select("id, name")
+                .eq("symbol", coinSymbol)
+                .maybeSingle();
+              existing = bySymbol;
+            }
+            
+            if (!existing) {
+              const { data: byName } = await supabase
+                .from("products")
+                .select("id, name")
+                .eq("name", productData.name)
+                .maybeSingle();
+              existing = byName;
+            }
 
             if (existing) {
               const { error } = await supabase
@@ -563,15 +580,15 @@ Deno.serve(async (req) => {
                 .eq("id", existing.id);
 
               if (error) {
-                console.error(`Error updating product from coinList ${productData.name}:`, error.message);
+                console.error(`Error updating product from coinList ${existing.name || productData.name}:`, error.message);
                 results.products.errors++;
               } else {
-                console.log(`Updated product from coinList: ${productData.name}`);
+                console.log(`Updated product from coinList: ${existing.name || productData.name} (symbol: ${coinSymbol}, vol: ${volume}, turnover: ${turnover})`);
                 results.products.synced++;
               }
             } else {
               // Skip creating new products - only update existing ones
-              console.log(`Skipping new product from coinList (auto-create disabled): ${productData.name}`);
+              console.log(`Skipping new product from coinList (no match by name or symbol): ${productData.name} (symbol: ${coinSymbol})`);
               results.products.skipped++;
             }
           } catch (err) {

@@ -50,6 +50,7 @@ interface Product {
   image_url: string | null;
   price: number | null;
   volume: string | null;
+  turnover: string | null;
   price_change: number | null;
   category: string | null;
 }
@@ -94,7 +95,7 @@ export default function Products() {
     const {
       data,
       error
-    } = await supabase.from('products').select('id, name, description, image_url, price, volume, price_change, category').order('created_at', {
+    } = await supabase.from('products').select('id, name, description, image_url, price, volume, turnover, price_change, category').order('created_at', {
       ascending: false
     });
     if (error) {
@@ -114,9 +115,19 @@ export default function Products() {
     if (price === null || price === undefined) return formatCurrency(0);
     return formatCurrency(price);
   };
-  const formatVolume = (volume: string | null) => {
-    if (!volume) return '0';
-    return volume;
+  const formatVolume = (volume: string | null, turnover: string | null) => {
+    // Prefer turnover (trading volume in currency) over volume
+    const value = turnover || volume;
+    if (!value || value === '0' || value === 'null') return '-';
+    
+    // Format large numbers with K, M, B suffixes
+    const num = parseFloat(value.replace(/[^0-9.]/g, ''));
+    if (isNaN(num) || num === 0) return '-';
+    
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num.toFixed(2);
   };
   const formatChange = (change: number | null) => {
     if (change === null || change === undefined) return '0.00';
@@ -194,7 +205,7 @@ export default function Products() {
                           </h3>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>24HVOL:</span>
-                            <span className="text-foreground">{formatVolume(product.volume)}</span>
+                            <span className="text-foreground">{formatVolume(product.volume, product.turnover)}</span>
                           </div>
                         </div>
                         
