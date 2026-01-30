@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Wifi, WifiOff, AlertTriangle } from "lucide-react";
+import { Wifi, WifiOff, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type NetworkState = "online" | "offline" | "slow";
 
@@ -55,6 +56,10 @@ export function NetworkStatus() {
     };
   }, []);
 
+  const handleDismiss = () => {
+    setShowBanner(false);
+  };
+
   if (!showBanner) return null;
 
   return (
@@ -67,23 +72,38 @@ export function NetworkStatus() {
         networkState === "online" && "network-online"
       )}
     >
-      {networkState === "offline" && (
-        <>
-          <WifiOff className="h-4 w-4" />
-          <span>Mất kết nối mạng</span>
-        </>
-      )}
-      {networkState === "slow" && (
-        <>
-          <AlertTriangle className="h-4 w-4" />
-          <span>Kết nối chậm</span>
-        </>
-      )}
-      {networkState === "online" && (
-        <>
-          <Wifi className="h-4 w-4" />
-          <span>Đã kết nối lại</span>
-        </>
+      <div className="flex items-center gap-2">
+        {networkState === "offline" && (
+          <>
+            <WifiOff className="h-4 w-4" />
+            <span>Mất kết nối mạng</span>
+          </>
+        )}
+        {networkState === "slow" && (
+          <>
+            <AlertTriangle className="h-4 w-4" />
+            <span>Kết nối chậm</span>
+          </>
+        )}
+        {networkState === "online" && (
+          <>
+            <Wifi className="h-4 w-4" />
+            <span>Đã kết nối lại</span>
+          </>
+        )}
+      </div>
+      
+      {/* Close button - only show for slow connection (offline should stay visible) */}
+      {networkState !== "offline" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 h-6 w-6 min-h-0 min-w-0 p-0 hover:bg-white/20"
+          onClick={handleDismiss}
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Đóng</span>
+        </Button>
       )}
     </div>
   );
