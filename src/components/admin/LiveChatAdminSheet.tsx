@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { MessageCircle, ExternalLink, Maximize2, Minimize2, X, RefreshCw, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MessageCircle, Maximize2, Minimize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -9,14 +9,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { useLiveChatUnread } from "@/hooks/useLiveChatUnread";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { LiveChatAdminPanel } from "./LiveChatAdminPanel";
 
 interface LiveChatAdminSheetProps {
   trigger?: React.ReactNode;
@@ -26,64 +21,22 @@ interface LiveChatAdminSheetProps {
 export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminSheetProps) {
   const [open, setOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [adminUrl, setAdminUrl] = useState("https://support.stengg.it.com/admin");
-  const [iframeKey, setIframeKey] = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   
   const { 
     unreadCount, 
     clearUnread, 
-    hasUnread, 
-    soundEnabled, 
-    toggleSound, 
-    desktopNotificationEnabled,
-    toggleDesktopNotification,
-    notificationPermission,
-    playSound 
+    hasUnread,
   } = useLiveChatUnread();
-
-  // Load admin URL from settings
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const { data } = await supabase
-          .from("app_settings")
-          .select("value")
-          .eq("key", "live_chat_url")
-          .single();
-        
-        if (data?.value) {
-          const baseUrl = (data.value as { url?: string })?.url || "";
-          if (baseUrl) {
-            const url = new URL(baseUrl);
-            setAdminUrl(`${url.origin}/admin`);
-          }
-        }
-      } catch {
-        // Use default URL
-      }
-    };
-    loadSettings();
-  }, []);
 
   // Clear unread when sheet opens
   useEffect(() => {
     if (open) {
-      // Delay to allow iframe to load and sync
       const timer = setTimeout(() => {
         clearUnread();
       }, 1000);
       return () => clearTimeout(timer);
     }
   }, [open, clearUnread]);
-
-  const handleRefresh = () => {
-    setIframeKey(prev => prev + 1);
-  };
-
-  const handleOpenExternal = () => {
-    window.open(adminUrl, "_blank", "noopener,noreferrer");
-  };
 
   // Default trigger with unread badge
   const defaultTrigger = (
@@ -118,77 +71,21 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
         side="right" 
         className={cn(
           "p-0 flex flex-col transition-all duration-300",
-          isFullscreen ? "w-full sm:max-w-full" : "w-full sm:max-w-[600px] lg:max-w-[800px]"
+          isFullscreen ? "w-full sm:max-w-full" : "w-full sm:max-w-[700px] lg:max-w-[900px]"
         )}
       >
         <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-primary" />
-              Live Chat Admin Panel
+              Live Chat
               {hasUnread && (
                 <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                  {unreadCount} tin nhắn mới
+                  {unreadCount} mới
                 </Badge>
               )}
             </SheetTitle>
             <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      toggleSound();
-                      if (!soundEnabled) playSound(); // Play demo sound when enabling
-                    }}
-                    title={soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"}
-                    className="h-8 w-8"
-                  >
-                    {soundEnabled ? (
-                      <Volume2 className="h-4 w-4 text-primary" />
-                    ) : (
-                      <VolumeX className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleDesktopNotification}
-                    title={desktopNotificationEnabled ? "Tắt desktop notification" : "Bật desktop notification"}
-                    className="h-8 w-8"
-                  >
-                    {desktopNotificationEnabled && notificationPermission === "granted" ? (
-                      <Bell className="h-4 w-4 text-primary" />
-                    ) : (
-                      <BellOff className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {notificationPermission === "denied" 
-                    ? "Desktop notification đã bị chặn bởi trình duyệt"
-                    : desktopNotificationEnabled 
-                      ? "Tắt desktop notification" 
-                      : "Bật desktop notification"}
-                </TooltipContent>
-              </Tooltip>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleRefresh}
-                title="Refresh"
-                className="h-8 w-8"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -205,15 +102,6 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleOpenExternal}
-                title="Mở trong tab mới"
-                className="h-8 w-8"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
                 onClick={() => setOpen(false)}
                 className="h-8 w-8 -mr-2"
               >
@@ -223,16 +111,8 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
           </div>
         </SheetHeader>
         
-        <div className="flex-1 relative bg-muted/30">
-          <iframe
-            ref={iframeRef}
-            key={iframeKey}
-            src={adminUrl}
-            className="absolute inset-0 w-full h-full border-0"
-            title="Live Chat Admin Panel"
-            allow="clipboard-write; clipboard-read"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-          />
+        <div className="flex-1 overflow-hidden">
+          <LiveChatAdminPanel isEmbedded onClearUnread={clearUnread} />
         </div>
       </SheetContent>
     </Sheet>
