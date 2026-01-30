@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { NotificationHistory } from "@/components/admin/NotificationHistory";
 import { LiveChatAdminSheet } from "@/components/admin/LiveChatAdminSheet";
 import { cn } from "@/lib/utils";
@@ -36,16 +37,17 @@ type AdminNavItem = {
   to: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  badgeKey?: 'verification' | 'transaction';
+  badgeKey?: 'verification' | 'transaction' | 'livechat';
 };
 
 interface AdminSidebarProps {
   onNavigate?: () => void;
   pendingVerificationCount: number;
   pendingTransactionCount: number;
+  liveChatUnreadCount: number;
 }
 
-function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransactionCount }: AdminSidebarProps) {
+function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransactionCount, liveChatUnreadCount }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
@@ -53,14 +55,14 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
   const items: AdminNavItem[] = useMemo(
     () => [
       { to: "/admin/overview", label: t('admin.overview'), icon: BarChart3 },
-      { to: "/admin/live-chat", label: "Live Chat", icon: MessageCircle },
+      { to: "/admin/live-chat", label: "Live Chat", icon: MessageCircle, badgeKey: 'livechat' as const },
       { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
       { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
       { to: "/admin/products", label: t('admin.products'), icon: Package },
       { to: "/admin/option-trades", label: "Option Trades", icon: Clock },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
-      { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' },
-      { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck, badgeKey: 'verification' },
+      { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' as const },
+      { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck, badgeKey: 'verification' as const },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
       { to: "/admin/users", label: t('admin.users'), icon: Users },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
@@ -68,9 +70,10 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
     [t]
   );
 
-  const getBadgeCount = (badgeKey?: 'verification' | 'transaction') => {
+  const getBadgeCount = (badgeKey?: 'verification' | 'transaction' | 'livechat') => {
     if (badgeKey === 'verification') return pendingVerificationCount;
     if (badgeKey === 'transaction') return pendingTransactionCount;
+    if (badgeKey === 'livechat') return liveChatUnreadCount;
     return 0;
   };
 
@@ -124,6 +127,7 @@ export default function AdminLayout() {
     markAsRead,
     clearAllNotifications
   } = useAdminNotifications();
+  const { totalUnread: liveChatUnreadCount } = useLiveChatRooms();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -144,6 +148,7 @@ export default function AdminLayout() {
               <AdminSidebar 
                 pendingVerificationCount={pendingVerificationCount}
                 pendingTransactionCount={pendingTransactionCount}
+                liveChatUnreadCount={liveChatUnreadCount}
               />
             </div>
           </div>
@@ -168,6 +173,7 @@ export default function AdminLayout() {
                         onNavigate={() => undefined}
                         pendingVerificationCount={pendingVerificationCount}
                         pendingTransactionCount={pendingTransactionCount}
+                        liveChatUnreadCount={liveChatUnreadCount}
                       />
                     </div>
                   </SheetContent>
