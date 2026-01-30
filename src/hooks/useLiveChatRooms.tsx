@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,10 +23,11 @@ interface UseLiveChatRoomsOptions {
 }
 
 export function useLiveChatRooms(options: UseLiveChatRoomsOptions = {}) {
-  const { autoRefresh = true, refreshInterval = 5000 } = options;
+  const { autoRefresh = true, refreshInterval = 30000 } = options; // Increased to 30s since we use realtime
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const lastFetchRef = useRef<number>(0);
 
   // Fetch all rooms (admin)
   const {
@@ -46,28 +47,48 @@ export function useLiveChatRooms(options: UseLiveChatRoomsOptions = {}) {
       return data as LiveChatRoom[];
     },
     refetchInterval: autoRefresh ? refreshInterval : false,
+    staleTime: 10000, // Consider data fresh for 10s
   });
 
-  // Fetch unread counts for each room
+  // Fetch unread counts efficiently using a single aggregated query
   const fetchUnreadCounts = useCallback(async () => {
     if (!rooms.length) return;
 
-    const counts: Record<string, number> = {};
+    // Debounce: prevent fetching more than once per second
+    const now = Date.now();
+    if (now - lastFetchRef.current < 1000) return;
+    lastFetchRef.current = now;
 
-    for (const room of rooms) {
-      const { count } = await supabase
+    try {
+      // Fetch all unread messages in a single query and group by room_id in JS
+      const roomIds = rooms.map(r => r.id);
+      const { data: unreadMessages, error } = await supabase
         .from("live_chat_messages")
-        .select("*", { count: "exact", head: true })
-        .eq("room_id", room.id)
+        .select("room_id")
+        .in("room_id", roomIds)
         .eq("sender_type", "customer")
         .eq("is_read", false);
 
-      counts[room.id] = count || 0;
-    }
+      if (error) {
+        console.error("Error fetching unread counts:", error);
+        return;
+      }
 
-    setUnreadCounts(counts);
+      // Count messages per room
+      const counts: Record<string, number> = {};
+      roomIds.forEach(id => { counts[id] = 0; });
+      
+      (unreadMessages || []).forEach(msg => {
+        counts[msg.room_id] = (counts[msg.room_id] || 0) + 1;
+      });
+
+      setUnreadCounts(counts);
+    } catch (err) {
+      console.error("Error in fetchUnreadCounts:", err);
+    }
   }, [rooms]);
 
+  // Fetch unread counts when rooms change
   useEffect(() => {
     fetchUnreadCounts();
   }, [fetchUnreadCounts]);
@@ -166,9 +187,9 @@ export function useLiveChatRooms(options: UseLiveChatRoomsOptions = {}) {
     [createRoom]
   );
 
-  // Realtime subscription
+  // Realtime subscription for rooms AND messages (to update unread counts)
   useEffect(() => {
-    const channel = supabase
+    const roomChannel = supabase
       .channel("live-chat-rooms-changes")
       .on(
         "postgres_changes",
@@ -183,10 +204,31 @@ export function useLiveChatRooms(options: UseLiveChatRoomsOptions = {}) {
       )
       .subscribe();
 
+    // Subscribe to message changes to update unread counts in realtime
+    const messageChannel = supabase
+      .channel("live-chat-messages-unread")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "live_chat_messages",
+        },
+        (payload) => {
+          // Refresh unread counts when messages change
+          // Use a small delay to batch rapid updates
+          setTimeout(() => {
+            fetchUnreadCounts();
+          }, 100);
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(roomChannel);
+      supabase.removeChannel(messageChannel);
     };
-  }, [queryClient]);
+  }, [queryClient, fetchUnreadCounts]);
 
   // Rooms with unread counts
   const roomsWithUnread = rooms.map((room) => ({
