@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { useAutoSync } from '@/hooks/useAutoSync';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, TrendingDown, Activity, Loader2, Plane, Cpu, Car, Ship, Shield, Building2, GraduationCap, Briefcase, Satellite, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 const getCategoryIcon = (name: string, category: string | null) => {
   const iconClass = "w-10 h-10 p-2 rounded-lg";
   if (name.includes('Aerospace') || category === 'Aerospace') {
@@ -43,6 +43,7 @@ const getCategoryIcon = (name: string, category: string | null) => {
   }
   return <Activity className={cn(iconClass, "bg-primary/20 text-primary")} />;
 };
+
 interface Product {
   id: string;
   name: string;
@@ -54,42 +55,60 @@ interface Product {
   price_change: number | null;
   category: string | null;
 }
+
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [totalVolume, setTotalVolume] = useState(0);
   const {
     user,
     isLoading: authLoading
   } = useAuth();
-  const {
-    t,
-    language
-  } = useLanguage();
-  const {
-    formatCurrency
-  } = useCurrency();
+  const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
-  // Auto-sync external data every 3 seconds and refresh products list
-  useAutoSync({ 
-    enabled: !!user,
-    interval: 3000,
-    onSuccess: () => {
-      // Refresh products after sync
-      if (user) fetchProducts();
-    }
-  });
 
+  // Fetch products on mount
   useEffect(() => {
     if (user) {
       fetchProducts();
     }
   }, [user]);
+
+  // Subscribe to realtime updates for products
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('products-list-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+        },
+        (payload) => {
+          // Update the product in state
+          setProducts(prev => prev.map(p => 
+            p.id === payload.new.id 
+              ? { ...p, ...payload.new as Product }
+              : p
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const fetchProducts = async () => {
     setIsLoading(true);
     const {
@@ -102,12 +121,6 @@ export default function Products() {
       console.error('Error fetching products:', error);
     } else {
       setProducts(data || []);
-      // Calculate total volume
-      const total = (data || []).reduce((sum, p) => {
-        const vol = parseFloat(p.volume?.replace(/[^0-9.]/g, '') || '0');
-        return sum + vol;
-      }, 0);
-      setTotalVolume(total);
     }
     setIsLoading(false);
   };
@@ -132,26 +145,6 @@ export default function Products() {
   const formatChange = (change: number | null) => {
     if (change === null || change === undefined) return '0.00';
     return change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
-  };
-  const getLocalizedDate = () => {
-    const locales: Record<string, string> = {
-      vi: 'vi-VN',
-      en: 'en-US',
-      zh: 'zh-CN',
-      th: 'th-TH',
-      ja: 'ja-JP',
-      ko: 'ko-KR',
-      id: 'id-ID',
-      ms: 'ms-MY'
-    };
-    return new Date().toLocaleString(locales[language] || 'vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
   };
   if (authLoading || !user) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
