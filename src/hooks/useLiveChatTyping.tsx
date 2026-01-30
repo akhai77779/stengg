@@ -108,14 +108,10 @@ export function useLiveChatTyping(
     }
   }, [roomId, userId]);
 
-  // Poll for typing status
+  // Initial fetch only - no polling, use realtime instead
   useEffect(() => {
     if (!roomId) return;
-
     fetchTypingStatuses();
-    const interval = setInterval(fetchTypingStatuses, 1000);
-
-    return () => clearInterval(interval);
   }, [roomId, fetchTypingStatuses]);
 
   // Realtime subscription for typing
