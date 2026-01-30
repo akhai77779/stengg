@@ -53,9 +53,9 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <MobileSupportButton />
             <BrowserRouter>
               <AuthProvider>
+                <MobileSupportButton />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
