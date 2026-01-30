@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLiveChat } from '@/contexts/LiveChatContext';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
-import { Loader2, Eye, EyeOff, ChevronLeft } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
@@ -20,6 +21,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { openChat } = useLiveChat();
 
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -117,7 +119,17 @@ export default function Register() {
               <ChevronLeft className="h-4 w-4" />
             </button>
             <h1 className="text-base font-medium">{t('auth.register')}</h1>
-            <LanguageSelect />
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={openChat}
+                className="group relative p-2 -m-2 text-red-500 hover:text-red-400 transition-all duration-300 hover:scale-110" 
+                title="Support"
+              >
+                <span className="absolute inset-0 rounded-full bg-red-500/0 group-hover:bg-red-500/10 transition-all duration-300 group-hover:scale-125" />
+                <Headphones className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:animate-[wiggle_0.5s_ease-in-out]" />
+              </button>
+              <LanguageSelect />
+            </div>
           </div>
 
           {/* Register method tabs */}
