@@ -20,9 +20,25 @@ interface PendingVerification {
   created_at: string;
 }
 
+interface PendingOptionTrade {
+  id: string;
+  user_id: string;
+  amount: number;
+  direction: string;
+  status: string;
+  created_at: string;
+}
+
+interface NewProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  created_at: string;
+}
+
 export interface NotificationItem {
   id: string;
-  type: 'transaction' | 'verification';
+  type: 'transaction' | 'verification' | 'option_trade' | 'new_user';
   title: string;
   description: string;
   timestamp: Date;
@@ -108,6 +124,8 @@ const sendDesktopNotification = (title: string, body: string) => {
 export function useAdminNotifications() {
   const [pendingTransactionCount, setPendingTransactionCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+  const [pendingOptionTradeCount, setPendingOptionTradeCount] = useState(0);
+  const [newUserCount, setNewUserCount] = useState(0);
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const isInitialLoad = useRef(true);
   const { user, isAdmin } = useAuth();
@@ -122,7 +140,7 @@ export function useAdminNotifications() {
 
   // Add notification to history
   const addNotification = useCallback((
-    type: 'transaction' | 'verification',
+    type: 'transaction' | 'verification' | 'option_trade' | 'new_user',
     title: string,
     description: string
   ) => {
@@ -155,7 +173,7 @@ export function useAdminNotifications() {
   const fetchPendingCounts = useCallback(async () => {
     if (!user || !isAdmin) return;
     
-    const [txResult, verifyResult] = await Promise.all([
+    const [txResult, verifyResult, optionTradeResult] = await Promise.all([
       supabase
         .from('transactions')
         .select('id', { count: 'exact', head: true })
@@ -163,11 +181,16 @@ export function useAdminNotifications() {
       supabase
         .from('identity_verifications')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending')
+        .eq('status', 'pending'),
+      supabase
+        .from('option_trades')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
     ]);
     
     setPendingTransactionCount(txResult.count || 0);
     setPendingVerificationCount(verifyResult.count || 0);
+    setPendingOptionTradeCount(optionTradeResult.count || 0);
   }, [user, isAdmin]);
 
   useEffect(() => {
@@ -283,9 +306,97 @@ export function useAdminNotifications() {
       )
       .subscribe();
 
+    // Set up real-time subscription for option trades
+    const optionTradeChannel = supabase
+      .channel('admin-option-trades')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'option_trades'
+        },
+        (payload) => {
+          const newTrade = payload.new as PendingOptionTrade;
+          const direction = newTrade.direction === 'up' ? '📈 Lên' : '📉 Xuống';
+          const amount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+          }).format(newTrade.amount);
+
+          const title = '⚡ Option Trade mới';
+          const description = `Đặt lệnh ${direction} với ${amount}`;
+
+          // Add to history
+          addNotification('option_trade', title, description);
+
+          // Play notification sound and send desktop notification (only after initial load)
+          if (!isInitialLoad.current) {
+            playNotificationSound();
+            sendDesktopNotification(title, description);
+          }
+
+          toast({ title, description });
+          if (newTrade.status === 'active') {
+            setPendingOptionTradeCount(prev => prev + 1);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'option_trades',
+        },
+        (payload) => {
+          const oldStatus = (payload.old as { status: string })?.status;
+          const newStatus = (payload.new as { status: string })?.status;
+          
+          if (oldStatus === 'active' && newStatus !== 'active') {
+            setPendingOptionTradeCount(prev => Math.max(0, prev - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    // Set up real-time subscription for new user registrations (profiles table)
+    const userChannel = supabase
+      .channel('admin-new-users')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          const newProfile = payload.new as NewProfile;
+          const userName = newProfile.full_name || newProfile.email || 'Người dùng mới';
+
+          const title = '👤 Người dùng mới đăng ký';
+          const description = `${userName} vừa tạo tài khoản`;
+
+          // Add to history
+          addNotification('new_user', title, description);
+
+          // Play notification sound and send desktop notification (only after initial load)
+          if (!isInitialLoad.current) {
+            playNotificationSound();
+            sendDesktopNotification(title, description);
+          }
+
+          toast({ title, description });
+          setNewUserCount(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(txChannel);
       supabase.removeChannel(verifyChannel);
+      supabase.removeChannel(optionTradeChannel);
+      supabase.removeChannel(userChannel);
     };
   }, [user, isAdmin, toast, fetchPendingCounts, addNotification]);
 
@@ -295,7 +406,9 @@ export function useAdminNotifications() {
   return { 
     pendingCount,
     pendingTransactionCount, 
-    pendingVerificationCount, 
+    pendingVerificationCount,
+    pendingOptionTradeCount,
+    newUserCount,
     notificationHistory,
     unreadNotificationCount,
     markAsRead,
