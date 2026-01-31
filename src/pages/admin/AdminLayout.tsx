@@ -36,16 +36,18 @@ type AdminNavItem = {
   to: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  badgeKey?: 'verification' | 'transaction';
+  badgeKey?: 'verification' | 'transaction' | 'option_trade' | 'new_user';
 };
 
 interface AdminSidebarProps {
   onNavigate?: () => void;
   pendingVerificationCount: number;
   pendingTransactionCount: number;
+  pendingOptionTradeCount: number;
+  newUserCount: number;
 }
 
-function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransactionCount }: AdminSidebarProps) {
+function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransactionCount, pendingOptionTradeCount, newUserCount }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
@@ -57,20 +59,22 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
       { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
       { to: "/admin/products", label: t('admin.products'), icon: Package },
-      { to: "/admin/option-trades", label: "Option Trades", icon: Clock },
+      { to: "/admin/option-trades", label: "Option Trades", icon: Clock, badgeKey: 'option_trade' },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
       { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' },
       { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck, badgeKey: 'verification' },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
-      { to: "/admin/users", label: t('admin.users'), icon: Users },
+      { to: "/admin/users", label: t('admin.users'), icon: Users, badgeKey: 'new_user' },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
     ],
     [t]
   );
 
-  const getBadgeCount = (badgeKey?: 'verification' | 'transaction') => {
+  const getBadgeCount = (badgeKey?: 'verification' | 'transaction' | 'option_trade' | 'new_user') => {
     if (badgeKey === 'verification') return pendingVerificationCount;
     if (badgeKey === 'transaction') return pendingTransactionCount;
+    if (badgeKey === 'option_trade') return pendingOptionTradeCount;
+    if (badgeKey === 'new_user') return newUserCount;
     return 0;
   };
 
@@ -119,6 +123,8 @@ export default function AdminLayout() {
   const { 
     pendingVerificationCount, 
     pendingTransactionCount,
+    pendingOptionTradeCount,
+    newUserCount,
     notificationHistory,
     unreadNotificationCount,
     markAsRead,
@@ -144,6 +150,8 @@ export default function AdminLayout() {
               <AdminSidebar 
                 pendingVerificationCount={pendingVerificationCount}
                 pendingTransactionCount={pendingTransactionCount}
+                pendingOptionTradeCount={pendingOptionTradeCount}
+                newUserCount={newUserCount}
               />
             </div>
           </div>
@@ -168,6 +176,8 @@ export default function AdminLayout() {
                         onNavigate={() => undefined}
                         pendingVerificationCount={pendingVerificationCount}
                         pendingTransactionCount={pendingTransactionCount}
+                        pendingOptionTradeCount={pendingOptionTradeCount}
+                        newUserCount={newUserCount}
                       />
                     </div>
                   </SheetContent>

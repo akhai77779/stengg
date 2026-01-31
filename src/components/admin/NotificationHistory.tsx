@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, X, Clock, DollarSign, IdCard, Trash2 } from 'lucide-react';
+import { Bell, Clock, DollarSign, IdCard, Trash2, TrendingUp, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -15,7 +15,7 @@ import { vi } from 'date-fns/locale';
 
 export interface NotificationItem {
   id: string;
-  type: 'transaction' | 'verification';
+  type: 'transaction' | 'verification' | 'option_trade' | 'new_user';
   title: string;
   description: string;
   timestamp: Date;
@@ -28,6 +28,32 @@ interface NotificationHistoryProps {
   onMarkAsRead: (id: string) => void;
   unreadCount: number;
 }
+
+const getNotificationIcon = (type: NotificationItem['type']) => {
+  switch (type) {
+    case 'transaction':
+      return <DollarSign className="h-4 w-4" />;
+    case 'verification':
+      return <IdCard className="h-4 w-4" />;
+    case 'option_trade':
+      return <TrendingUp className="h-4 w-4" />;
+    case 'new_user':
+      return <UserPlus className="h-4 w-4" />;
+  }
+};
+
+const getNotificationColors = (type: NotificationItem['type']) => {
+  switch (type) {
+    case 'transaction':
+      return 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400';
+    case 'verification':
+      return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
+    case 'option_trade':
+      return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400';
+    case 'new_user':
+      return 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400';
+  }
+};
 
 export function NotificationHistory({ 
   notifications, 
@@ -101,16 +127,8 @@ export function NotificationHistory({
                     onClick={() => onMarkAsRead(notification.id)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${
-                        notification.type === 'transaction' 
-                          ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
-                          : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                      }`}>
-                        {notification.type === 'transaction' ? (
-                          <DollarSign className="h-4 w-4" />
-                        ) : (
-                          <IdCard className="h-4 w-4" />
-                        )}
+                      <div className={`p-2 rounded-full ${getNotificationColors(notification.type)}`}>
+                        {getNotificationIcon(notification.type)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
