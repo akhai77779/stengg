@@ -13,6 +13,9 @@ import {
   Bot,
   BarChart3,
   Timer,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +38,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -46,6 +55,8 @@ import { useLiveChatNotes, LiveChatNote } from "@/hooks/useLiveChatNotes";
 import { useRoomChatStats, useGlobalChatStats } from "@/hooks/useLiveChatStats";
 import { useLiveChatBot } from "@/hooks/useLiveChatBot";
 import { MessageList, MessageInput } from "@/components/live-chat/MessageComponents";
+import { exportChatToCSV, exportChatToPDF } from "@/lib/exportLiveChatHistory";
+import { useToast } from "@/hooks/use-toast";
 
 // Quick reply templates
 const QUICK_REPLIES = [
@@ -72,6 +83,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const [showStats, setShowStats] = useState(false);
 
   const { user } = useAuth();
+  const { toast } = useToast();
   const { rooms, isLoading: roomsLoading, refetch: refetchRooms, updateRoom, totalUnread } = useLiveChatRooms();
 
   const {
@@ -281,6 +293,55 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     if (!selectedRoom) return;
     updateRoom({ id: selectedRoom.id, status });
     setSelectedRoom({ ...selectedRoom, status });
+  };
+
+  // Export handlers
+  const handleExportCSV = () => {
+    if (!selectedRoom || messages.length === 0) {
+      toast({
+        title: "Không có dữ liệu",
+        description: "Không có tin nhắn để xuất",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    exportChatToCSV(messages, {
+      id: selectedRoom.id,
+      customer_name: selectedRoom.customer_name,
+      customer_email: selectedRoom.customer_email,
+      status: selectedRoom.status,
+      created_at: selectedRoom.created_at,
+    });
+
+    toast({
+      title: "Xuất CSV thành công",
+      description: `Đã xuất ${messages.length} tin nhắn`,
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedRoom || messages.length === 0) {
+      toast({
+        title: "Không có dữ liệu",
+        description: "Không có tin nhắn để xuất",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    exportChatToPDF(messages, {
+      id: selectedRoom.id,
+      customer_name: selectedRoom.customer_name,
+      customer_email: selectedRoom.customer_email,
+      status: selectedRoom.status,
+      created_at: selectedRoom.created_at,
+    });
+
+    toast({
+      title: "Xuất PDF thành công",
+      description: `Đã xuất ${messages.length} tin nhắn`,
+    });
   };
 
   const containerHeight = isEmbedded ? "h-full" : "h-[calc(100vh-4rem)]";
@@ -517,6 +578,26 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                   >
                     Đóng
                   </Button>
+
+                  {/* Export dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
+                        <Download className="h-3 w-3" />
+                        <span className="text-xs">Xuất</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Xuất CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                        <FileText className="h-4 w-4" />
+                        Xuất PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {/* Notes button */}
                   <Sheet open={showNotes} onOpenChange={setShowNotes}>
