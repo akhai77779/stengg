@@ -10,6 +10,9 @@ import {
   Trash2,
   Clock,
   CheckCircle2,
+  Bot,
+  BarChart3,
+  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +21,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +29,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -33,6 +43,8 @@ import { useLiveChatRooms, LiveChatRoom } from "@/hooks/useLiveChatRooms";
 import { useLiveChatMessages, LiveChatMessage } from "@/hooks/useLiveChatMessages";
 import { useLiveChatTyping } from "@/hooks/useLiveChatTyping";
 import { useLiveChatNotes, LiveChatNote } from "@/hooks/useLiveChatNotes";
+import { useRoomChatStats, useGlobalChatStats } from "@/hooks/useLiveChatStats";
+import { useLiveChatBot } from "@/hooks/useLiveChatBot";
 import { MessageList, MessageInput } from "@/components/live-chat/MessageComponents";
 
 // Quick reply templates
@@ -56,6 +68,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const [showNotes, setShowNotes] = useState(false);
   const [noteContent, setNoteContent] = useState("");
   const [editingNote, setEditingNote] = useState<LiveChatNote | null>(null);
+  const [botEnabled, setBotEnabled] = useState(true);
+  const [showStats, setShowStats] = useState(false);
 
   const { user } = useAuth();
   const { rooms, isLoading: roomsLoading, refetch: refetchRooms, updateRoom, totalUnread } = useLiveChatRooms();
@@ -89,6 +103,17 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     deleteNote,
     isCreating: noteSaving,
   } = useLiveChatNotes(selectedRoom?.id || null);
+
+  // Stats hooks
+  const roomStats = useRoomChatStats(messages);
+  const globalStats = useGlobalChatStats(rooms);
+
+  // Bot hook
+  useLiveChatBot({
+    roomId: selectedRoom?.id || null,
+    messages,
+    enabled: botEnabled,
+  });
 
   // Filter rooms by search
   const filteredRooms = rooms.filter(
@@ -262,6 +287,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const sidebarWidth = isEmbedded ? "w-64" : "w-80";
 
   return (
+    <TooltipProvider>
     <div className={cn("flex bg-background", containerHeight)}>
       {/* Sidebar - Room List */}
       <div className={cn("border-r flex flex-col", sidebarWidth)}>
@@ -278,6 +304,40 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               )}
             </div>
             <div className="flex items-center gap-1">
+              {/* Bot Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={botEnabled ? "default" : "ghost"}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setBotEnabled(!botEnabled)}
+                  >
+                    <Bot className={cn("h-3.5 w-3.5", botEnabled ? "" : "text-muted-foreground")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{botEnabled ? "Bot tự động: BẬT" : "Bot tự động: TẮT"}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              {/* Stats Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showStats ? "default" : "ghost"}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setShowStats(!showStats)}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Thống kê</p>
+                </TooltipContent>
+              </Tooltip>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -305,6 +365,34 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               </Button>
             </div>
           </div>
+
+          {/* Stats Panel */}
+          {showStats && (
+            <Card className="p-2 bg-muted/50">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-muted-foreground">Hoạt động:</span>
+                  <span className="font-medium">{globalStats.activeRooms}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-yellow-500" />
+                  <span className="text-muted-foreground">Chờ:</span>
+                  <span className="font-medium">{globalStats.waitingRooms}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-gray-500" />
+                  <span className="text-muted-foreground">Đóng:</span>
+                  <span className="font-medium">{globalStats.closedRooms}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Timer className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Tổng:</span>
+                  <span className="font-medium">{globalStats.totalRooms}</span>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -391,58 +479,59 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
         {selectedRoom ? (
           <>
             {/* Chat Header */}
-            <div className="p-3 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs">
-                    {selectedRoom.customer_name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-sm">{selectedRoom.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedRoom.customer_email || "Khách"}
-                  </p>
+            <div className="p-3 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {selectedRoom.customer_name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-sm">{selectedRoom.customer_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedRoom.customer_email || "Khách"}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="ml-1 text-xs">
+                    {getStatusText(selectedRoom.status)}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="ml-1 text-xs">
-                  {getStatusText(selectedRoom.status)}
-                </Badge>
-              </div>
 
-              <div className="flex items-center gap-1">
-                {/* Status buttons */}
-                <Button
-                  variant={selectedRoom.status === "active" ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => handleStatusChange("active")}
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Active
-                </Button>
-                <Button
-                  variant={selectedRoom.status === "closed" ? "destructive" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => handleStatusChange("closed")}
-                >
-                  Đóng
-                </Button>
+                <div className="flex items-center gap-1">
+                  {/* Status buttons */}
+                  <Button
+                    variant={selectedRoom.status === "active" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => handleStatusChange("active")}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Active
+                  </Button>
+                  <Button
+                    variant={selectedRoom.status === "closed" ? "destructive" : "outline"}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => handleStatusChange("closed")}
+                  >
+                    Đóng
+                  </Button>
 
-                {/* Notes button */}
-                <Sheet open={showNotes} onOpenChange={setShowNotes}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
-                      <StickyNote className="h-3 w-3" />
-                      <span className="text-xs">Ghi chú</span>
-                      {notes.length > 0 && (
-                        <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                          {notes.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="w-80">
+                  {/* Notes button */}
+                  <Sheet open={showNotes} onOpenChange={setShowNotes}>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
+                        <StickyNote className="h-3 w-3" />
+                        <span className="text-xs">Ghi chú</span>
+                        {notes.length > 0 && (
+                          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                            {notes.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-80">
                     <SheetHeader>
                       <SheetTitle className="flex items-center gap-2 text-sm">
                         <StickyNote className="h-4 w-4" />
@@ -531,6 +620,36 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                 </Sheet>
               </div>
             </div>
+          </div>
+            
+            {/* Room Stats Bar */}
+            {showStats && messages.length > 0 && (
+              <div className="px-3 py-1.5 border-b bg-muted/30">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Timer className="h-3 w-3 text-primary" />
+                      <span className="text-muted-foreground">TB phản hồi:</span>
+                      <span className="font-medium text-primary">{roomStats.avgResponseTimeText}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Tin nhắn:</span>
+                      <span className="font-medium">{roomStats.totalMessages}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Tỷ lệ:</span>
+                      <span className="font-medium">{roomStats.responseRate}%</span>
+                    </div>
+                  </div>
+                  {botEnabled && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Bot className="h-3 w-3" />
+                      <span>Bot: BẬT</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-hidden">
@@ -582,5 +701,6 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 }
