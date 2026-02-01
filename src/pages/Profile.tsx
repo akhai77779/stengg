@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { useProfile } from '@/hooks/useProfile';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, CreditCard, Headphones, ShieldCheck, BadgeCheck, Settings, Globe, UserPlus, ArrowLeftRight, LogOut, Loader2, Copy, ChevronRight, UserCheck, Clock, XCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications';
 import { useLiveChat } from '@/contexts/LiveChatContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -322,6 +323,10 @@ export default function Profile() {
                     <Copy className="w-3 h-3" />
                     <span className="text-destructive">{t('common.copy')}</span>
                   </button>
+                </div>
+                {/* Mobile Notification Bell */}
+                <div className="md:hidden">
+                  <NotificationBell />
                 </div>
               </div>
             </CardContent>
