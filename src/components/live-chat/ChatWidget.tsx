@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageCircle, X, Minimize2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useLiveChatMessages } from "@/hooks/useLiveChatMessages";
 import { useLiveChatTyping } from "@/hooks/useLiveChatTyping";
 import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
+import { useLiveChatSession } from "@/hooks/useLiveChatSession";
+import { useLiveChatBot, isWithinWorkingHours, BOT_CONFIG } from "@/hooks/useLiveChatBot";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageList, MessageInput } from "./MessageComponents";
 
@@ -22,6 +24,7 @@ export function ChatWidget({
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isMinimized, setIsMinimized] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [isNewRoom, setIsNewRoom] = useState(false);
   const [guestInfo, setGuestInfo] = useState<{
     id: string;
     name: string;
@@ -31,6 +34,7 @@ export function ChatWidget({
   const { user } = useAuth();
   const isAuthenticated = !!user;
   const { findOrCreateRoom } = useLiveChatRooms();
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Get or create customer info
   const customerId = user?.id || guestInfo?.id || "";
@@ -49,7 +53,36 @@ export function ChatWidget({
       if (msg.sender_type === "support" || msg.sender_type === "bot") {
         playNotificationSound();
       }
+      // Record activity on new message
+      lastActivityRef.current = Date.now();
     },
+  });
+
+  // Session management
+  const {
+    isSessionActive,
+    handleUserActivity,
+    resetSessionTimeout,
+  } = useLiveChatSession({
+    roomId,
+    customerId,
+    customerName,
+    onSessionClosed: () => {
+      console.log("Session closed due to inactivity");
+    },
+    onSessionResumed: () => {
+      console.log("Session resumed");
+    },
+  });
+
+  // Bot automation
+  const {
+    isWithinWorkingHours: isWorkingHours,
+  } = useLiveChatBot({
+    roomId,
+    messages,
+    enabled: true,
+    isNewRoom,
   });
 
   const { startTyping, typingText } = useLiveChatTyping(roomId, {
@@ -81,6 +114,9 @@ export function ChatWidget({
         name: customerName,
         email: user?.email || guestInfo?.email,
       });
+      
+      // Check if this is a new room (no messages yet)
+      setIsNewRoom(room.last_message === null);
       setRoomId(room.id);
     } catch (error) {
       console.error("Error initializing room:", error);
@@ -109,6 +145,7 @@ export function ChatWidget({
     }
     setIsOpen(true);
     setIsMinimized(false);
+    handleUserActivity();
   };
 
   // Handle send message
@@ -117,6 +154,9 @@ export function ChatWidget({
     attachment?: { url: string; type: "image" | "file"; name: string }
   ) => {
     if (!roomId) return;
+
+    // Reset session timeout on send
+    handleUserActivity();
 
     sendMessage({
       room_id: roomId,
@@ -129,6 +169,12 @@ export function ChatWidget({
       attachment_name: attachment?.name,
     });
   };
+
+  // Handle typing - also reset session timeout
+  const handleTyping = useCallback((text?: string) => {
+    startTyping(text);
+    handleUserActivity();
+  }, [startTyping, handleUserActivity]);
 
   // Notification sound
   const playNotificationSound = useCallback(() => {
@@ -166,6 +212,11 @@ export function ChatWidget({
 
   const positionClasses =
     position === "bottom-right" ? "right-4" : "left-4";
+
+  // Working hours indicator
+  const workingHoursText = isWorkingHours
+    ? "Đang trực tuyến"
+    : `Ngoài giờ làm việc (${BOT_CONFIG.WORKING_HOURS_START}:00-${BOT_CONFIG.WORKING_HOURS_END}:00)`;
 
   return (
     <>
@@ -205,10 +256,25 @@ export function ChatWidget({
           {/* Header */}
           <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground">
             <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              <span className="font-medium">
-                {isMinimized ? "Hỗ trợ trực tuyến" : "Chat với chúng tôi"}
-              </span>
+              <div className="relative">
+                <MessageCircle className="h-5 w-5" />
+                <span 
+                  className={cn(
+                    "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-primary-foreground",
+                    isWorkingHours ? "bg-green-400" : "bg-yellow-400"
+                  )}
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-medium text-sm">
+                  {isMinimized ? "Hỗ trợ trực tuyến" : "Chat với chúng tôi"}
+                </span>
+                {!isMinimized && (
+                  <span className="text-xs opacity-80">
+                    {workingHoursText}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -246,7 +312,7 @@ export function ChatWidget({
 
               <MessageInput
                 onSend={handleSend}
-                onTyping={startTyping}
+                onTyping={handleTyping}
                 onUpload={uploadAttachment}
                 disabled={isSending || !roomId}
                 placeholder="Nhập tin nhắn..."

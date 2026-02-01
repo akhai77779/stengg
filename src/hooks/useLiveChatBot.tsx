@@ -2,21 +2,48 @@ import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
 
-// Bot configuration
-const BOT_CONFIG = {
-  // Time to wait before bot responds (in milliseconds)
-  AUTO_REPLY_DELAY: 30000, // 30 seconds
+// Bot configuration - Updated timing
+export const BOT_CONFIG = {
+  // Working hours (24h format)
+  WORKING_HOURS_START: 9, // 9:00 AM
+  WORKING_HOURS_END: 23, // 11:00 PM
+  
+  // Timing settings (in milliseconds)
+  ADMIN_BUSY_DELAY: 5 * 60 * 1000, // 5 minutes - admin không phản hồi
+  SESSION_TIMEOUT: 10 * 60 * 1000, // 10 minutes - user không hoạt động
+  
   // Bot messages
-  WELCOME_MESSAGE: "Xin chào! Cảm ơn bạn đã liên hệ với chúng tôi. Hiện tại các nhân viên hỗ trợ đang bận, vui lòng chờ trong giây lát hoặc để lại tin nhắn, chúng tôi sẽ phản hồi sớm nhất có thể.",
-  OFFLINE_MESSAGE: "Cảm ơn bạn đã liên hệ! Hiện tại đang ngoài giờ làm việc. Chúng tôi sẽ phản hồi bạn vào ngày làm việc tiếp theo.",
-  BUSY_MESSAGE: "Cảm ơn bạn đã chờ đợi! Nhân viên hỗ trợ của chúng tôi đang xử lý nhiều yêu cầu. Chúng tôi sẽ phản hồi bạn sớm nhất có thể.",
-  BOT_NAME: "Trợ lý ảo",
+  WELCOME_MESSAGE: "Xin chào! Chào mừng bạn đến với hệ thống hỗ trợ trực tuyến. Đang kết nối bạn với nhân viên CSKH...",
+  CONNECTING_MESSAGE: "Nhân viên hỗ trợ sẽ phản hồi bạn trong giây lát.",
+  BUSY_MESSAGE: "Hiện tại nhân viên CSKH đang bận xử lý các yêu cầu khác. Xin vui lòng chờ trong giây lát, chúng tôi sẽ hỗ trợ bạn sớm nhất có thể.",
+  OFFLINE_MESSAGE: "Chào bạn! Hiện tại đã hết giờ làm việc. Thời gian hỗ trợ: 9:00 - 23:00 hàng ngày. Vui lòng để lại tin nhắn, chúng tôi sẽ phản hồi bạn vào ngày làm việc tiếp theo.",
+  SESSION_TIMEOUT_MESSAGE: "Phiên chat đã kết thúc do không có hoạt động trong 10 phút. Bạn có thể bắt đầu cuộc trò chuyện mới bất cứ lúc nào.",
+  SESSION_RESUMED_MESSAGE: "Chào mừng bạn quay lại! Nhân viên CSKH sẵn sàng hỗ trợ bạn.",
+  
+  BOT_NAME: "Hệ thống",
 };
 
 interface UseLiveChatBotOptions {
   roomId: string | null;
   messages: LiveChatMessage[];
   enabled?: boolean;
+  isNewRoom?: boolean;
+}
+
+/**
+ * Check if current time is within working hours
+ */
+export function isWithinWorkingHours(): boolean {
+  const now = new Date();
+  const hour = now.getHours();
+  return hour >= BOT_CONFIG.WORKING_HOURS_START && hour < BOT_CONFIG.WORKING_HOURS_END;
+}
+
+/**
+ * Get working hours display string
+ */
+export function getWorkingHoursString(): string {
+  return `${BOT_CONFIG.WORKING_HOURS_START}:00 - ${BOT_CONFIG.WORKING_HOURS_END}:00`;
 }
 
 /**
@@ -26,13 +53,17 @@ export function useLiveChatBot({
   roomId,
   messages,
   enabled = true,
+  isNewRoom = false,
 }: UseLiveChatBotOptions) {
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const adminBusyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedMessageRef = useRef<string | null>(null);
+  const welcomeSentRef = useRef<boolean>(false);
+  const sessionClosedRef = useRef<boolean>(false);
 
   // Send bot message
   const sendBotMessage = useCallback(
-    async (message: string) => {
+    async (message: string, isSystem: boolean = false) => {
       if (!roomId) return;
 
       try {
@@ -40,7 +71,7 @@ export function useLiveChatBot({
           room_id: roomId,
           sender_type: "bot",
           sender_id: null,
-          sender_name: BOT_CONFIG.BOT_NAME,
+          sender_name: isSystem ? "Hệ thống" : BOT_CONFIG.BOT_NAME,
           message,
           is_read: false,
         });
@@ -64,77 +95,181 @@ export function useLiveChatBot({
     [roomId]
   );
 
-  // Check if bot should respond
-  const shouldBotRespond = useCallback(() => {
-    if (!enabled || messages.length === 0) return false;
+  // Close session (set room status to closed)
+  const closeSession = useCallback(async () => {
+    if (!roomId || sessionClosedRef.current) return;
+    
+    sessionClosedRef.current = true;
+    
+    try {
+      await sendBotMessage(BOT_CONFIG.SESSION_TIMEOUT_MESSAGE, true);
+      
+      await supabase
+        .from("live_chat_rooms")
+        .update({
+          status: "closed",
+          last_updated_at: new Date().toISOString(),
+        })
+        .eq("id", roomId);
+    } catch (error) {
+      console.error("Close session error:", error);
+    }
+  }, [roomId, sendBotMessage]);
 
-    // Get last message
-    const lastMessage = messages[messages.length - 1];
+  // Send welcome message when room opens
+  const sendWelcomeMessage = useCallback(async () => {
+    if (welcomeSentRef.current) return;
+    welcomeSentRef.current = true;
+    
+    // Check working hours first
+    if (!isWithinWorkingHours()) {
+      await sendBotMessage(BOT_CONFIG.OFFLINE_MESSAGE, true);
+    } else {
+      await sendBotMessage(BOT_CONFIG.WELCOME_MESSAGE, false);
+      // Send connecting message after a short delay
+      setTimeout(async () => {
+        await sendBotMessage(BOT_CONFIG.CONNECTING_MESSAGE, false);
+      }, 1500);
+    }
+  }, [sendBotMessage]);
 
-    // Don't respond if last message is from support or bot
-    if (lastMessage.sender_type !== "customer") return false;
+  // Send resumed message when user returns
+  const sendResumedMessage = useCallback(async () => {
+    sessionClosedRef.current = false;
+    
+    if (!isWithinWorkingHours()) {
+      await sendBotMessage(BOT_CONFIG.OFFLINE_MESSAGE, true);
+    } else {
+      await sendBotMessage(BOT_CONFIG.SESSION_RESUMED_MESSAGE, false);
+    }
+  }, [sendBotMessage]);
 
-    // Don't respond if we already processed this message
-    if (lastProcessedMessageRef.current === lastMessage.id) return false;
+  // Check if admin has responded to customer message
+  const hasAdminRespondedToLastCustomerMessage = useCallback(() => {
+    if (messages.length === 0) return true;
 
-    // Check if there's already a support/bot response after this customer message
-    const lastCustomerMsgTime = new Date(lastMessage.created_at).getTime();
-    const hasResponse = messages.some((m) => {
-      if (m.sender_type === "customer") return false;
-      const msgTime = new Date(m.created_at).getTime();
-      return msgTime > lastCustomerMsgTime;
-    });
-
-    return !hasResponse;
-  }, [enabled, messages]);
-
-  // Schedule bot response
-  useEffect(() => {
-    if (!enabled || !roomId) return;
-
-    // Clear existing timer
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    // Find last customer message
+    let lastCustomerMsgIndex = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender_type === "customer") {
+        lastCustomerMsgIndex = i;
+        break;
+      }
     }
 
-    if (shouldBotRespond()) {
-      const lastMessage = messages[messages.length - 1];
-      const timeSinceMessage =
-        Date.now() - new Date(lastMessage.created_at).getTime();
+    if (lastCustomerMsgIndex === -1) return true;
 
-      // If enough time has passed, respond immediately
-      if (timeSinceMessage >= BOT_CONFIG.AUTO_REPLY_DELAY) {
-        lastProcessedMessageRef.current = lastMessage.id;
-        sendBotMessage(BOT_CONFIG.BUSY_MESSAGE);
-      } else {
-        // Schedule response for later
-        const delay = BOT_CONFIG.AUTO_REPLY_DELAY - timeSinceMessage;
-        timerRef.current = setTimeout(() => {
-          // Re-check if we should still respond
-          if (shouldBotRespond()) {
-            lastProcessedMessageRef.current = lastMessage.id;
-            sendBotMessage(BOT_CONFIG.BUSY_MESSAGE);
+    // Check if there's a support response after
+    for (let i = lastCustomerMsgIndex + 1; i < messages.length; i++) {
+      if (messages[i].sender_type === "support") {
+        return true;
+      }
+    }
+
+    return false;
+  }, [messages]);
+
+  // Reset session timeout when there's activity
+  const resetSessionTimeout = useCallback(() => {
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+    }
+
+    sessionTimeoutRef.current = setTimeout(() => {
+      closeSession();
+    }, BOT_CONFIG.SESSION_TIMEOUT);
+  }, [closeSession]);
+
+  // Handle admin busy timer
+  useEffect(() => {
+    if (!enabled || !roomId || !isWithinWorkingHours()) return;
+
+    // Clear existing timer
+    if (adminBusyTimerRef.current) {
+      clearTimeout(adminBusyTimerRef.current);
+      adminBusyTimerRef.current = null;
+    }
+
+    // Check if we should start admin busy timer
+    if (!hasAdminRespondedToLastCustomerMessage()) {
+      const lastCustomerMsg = [...messages].reverse().find(m => m.sender_type === "customer");
+      
+      if (lastCustomerMsg && lastProcessedMessageRef.current !== lastCustomerMsg.id) {
+        const timeSinceMessage = Date.now() - new Date(lastCustomerMsg.created_at).getTime();
+        
+        // Check if 5 minutes have already passed
+        if (timeSinceMessage >= BOT_CONFIG.ADMIN_BUSY_DELAY) {
+          // Check if we haven't already sent busy message for this
+          const hasBusyResponse = messages.some((m, idx) => {
+            if (m.sender_type !== "bot") return false;
+            const customerIdx = messages.findIndex(msg => msg.id === lastCustomerMsg.id);
+            return idx > customerIdx && m.message === BOT_CONFIG.BUSY_MESSAGE;
+          });
+          
+          if (!hasBusyResponse) {
+            lastProcessedMessageRef.current = lastCustomerMsg.id;
+            sendBotMessage(BOT_CONFIG.BUSY_MESSAGE, false);
           }
-        }, delay);
+        } else {
+          // Schedule busy message
+          const delay = BOT_CONFIG.ADMIN_BUSY_DELAY - timeSinceMessage;
+          adminBusyTimerRef.current = setTimeout(() => {
+            if (!hasAdminRespondedToLastCustomerMessage()) {
+              lastProcessedMessageRef.current = lastCustomerMsg.id;
+              sendBotMessage(BOT_CONFIG.BUSY_MESSAGE, false);
+            }
+          }, delay);
+        }
       }
     }
 
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      if (adminBusyTimerRef.current) {
+        clearTimeout(adminBusyTimerRef.current);
       }
     };
-  }, [enabled, roomId, messages, shouldBotRespond, sendBotMessage]);
+  }, [enabled, roomId, messages, hasAdminRespondedToLastCustomerMessage, sendBotMessage]);
 
-  // Send welcome message when room is first created
-  const sendWelcomeMessage = useCallback(async () => {
-    await sendBotMessage(BOT_CONFIG.WELCOME_MESSAGE);
-  }, [sendBotMessage]);
+  // Handle session timeout - reset on any new message
+  useEffect(() => {
+    if (!enabled || !roomId) return;
+
+    // Reset timeout when messages change (new activity)
+    resetSessionTimeout();
+
+    return () => {
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+    };
+  }, [enabled, roomId, messages.length, resetSessionTimeout]);
+
+  // Send welcome message on new room
+  useEffect(() => {
+    if (enabled && roomId && isNewRoom && messages.length === 0) {
+      sendWelcomeMessage();
+    }
+  }, [enabled, roomId, isNewRoom, messages.length, sendWelcomeMessage]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (adminBusyTimerRef.current) {
+        clearTimeout(adminBusyTimerRef.current);
+      }
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     sendWelcomeMessage,
+    sendResumedMessage,
     sendBotMessage,
+    closeSession,
+    resetSessionTimeout,
+    isWithinWorkingHours: isWithinWorkingHours(),
     config: BOT_CONFIG,
   };
 }
@@ -143,10 +278,7 @@ export function useLiveChatBot({
  * Get appropriate bot message based on time of day
  */
 export function getBotMessageForTime(): string {
-  const hour = new Date().getHours();
-  
-  // Office hours: 8 AM - 6 PM
-  if (hour >= 8 && hour < 18) {
+  if (isWithinWorkingHours()) {
     return BOT_CONFIG.BUSY_MESSAGE;
   } else {
     return BOT_CONFIG.OFFLINE_MESSAGE;

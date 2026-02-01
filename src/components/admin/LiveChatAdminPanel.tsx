@@ -106,7 +106,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     },
   });
 
-  const { startTyping, typingText } = useLiveChatTyping(selectedRoom?.id || null, {
+  const { startTyping, typingText, typingPreview } = useLiveChatTyping(selectedRoom?.id || null, {
     userId: user?.id || "",
     userName: user?.email?.split("@")[0] || "Support",
     userType: "support",
@@ -796,6 +796,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
             room={selectedRoom}
             messages={messages}
             className="w-64 hidden lg:block"
+            typingPreview={typingPreview}
+            botEnabled={botEnabled}
           />
         )}
       </div>
