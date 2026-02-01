@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X, MonitorSmartphone } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,9 +26,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
     hasUnread,
     isLoading,
     soundEnabled,
-    desktopNotificationEnabled,
     toggleSound,
-    toggleDesktopNotification,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -104,18 +102,6 @@ export function NotificationBell({ className }: NotificationBellProps) {
               ) : (
                 <VolumeX className="h-4 w-4 text-muted-foreground" />
               )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={toggleDesktopNotification}
-              title={desktopNotificationEnabled ? "Tắt thông báo desktop" : "Bật thông báo desktop"}
-            >
-              <MonitorSmartphone className={cn(
-                "h-4 w-4",
-                !desktopNotificationEnabled && "text-muted-foreground"
-              )} />
             </Button>
             {hasUnread && (
               <Button
