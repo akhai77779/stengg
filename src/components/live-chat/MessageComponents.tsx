@@ -123,8 +123,9 @@ export function MessageList({
             const isBot = message.sender_type === "bot";
             const isEditing = editingMessageId === message.id;
             
-            // Allow edit/delete for own messages or admin can modify all
-            const canModify = canModifyMessages && (isOwn || isSupport);
+            // Admin can modify all messages, users can only modify their own
+            const canModify = canModifyMessages;
+            const canEdit = canModifyMessages && (isOwn || isSupport); // Only edit support messages
 
             return (
               <div
@@ -164,10 +165,12 @@ export function MessageList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-32">
-                        <DropdownMenuItem onClick={() => handleStartEdit(message)}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" />
-                          Sửa
-                        </DropdownMenuItem>
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => handleStartEdit(message)}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            Sửa
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => handleDeleteClick(message.id)}
                           className="text-destructive focus:text-destructive"
@@ -286,10 +289,12 @@ export function MessageList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-32">
-                        <DropdownMenuItem onClick={() => handleStartEdit(message)}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" />
-                          Sửa
-                        </DropdownMenuItem>
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => handleStartEdit(message)}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            Sửa
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => handleDeleteClick(message.id)}
                           className="text-destructive focus:text-destructive"
