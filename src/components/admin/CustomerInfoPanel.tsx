@@ -14,18 +14,24 @@ import {
   Wifi,
   WifiOff,
   Eye,
+  Globe,
+  RefreshCw,
+  Building2,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { LiveChatRoom } from "@/hooks/useLiveChatRooms";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
 import { BOT_CONFIG, isWithinWorkingHours } from "@/hooks/useLiveChatBot";
+import { useIPGeolocation, getCountryFlag } from "@/hooks/useIPGeolocation";
 
 interface CustomerInfoPanelProps {
   room: LiveChatRoom;
@@ -44,7 +50,14 @@ export function CustomerInfoPanel({
 }: CustomerInfoPanelProps) {
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(true);
   const [showBotInfo, setShowBotInfo] = useState(true);
+  const [showLocationInfo, setShowLocationInfo] = useState(true);
   const isWorking = isWithinWorkingHours();
+
+  // Fetch real IP geolocation
+  const { location, isLoading: locationLoading, refetch: refetchLocation } = useIPGeolocation({
+    enabled: true,
+    cacheKey: room.customer_id,
+  });
 
   // Calculate stats
   const customerMessages = messages.filter(m => m.sender_type === "customer");
@@ -69,16 +82,6 @@ export function CustomerInfoPanel({
   const timeSinceLastCustomer = lastCustomerMsg
     ? formatDistanceToNow(new Date(lastCustomerMsg.created_at), { addSuffix: true, locale: vi })
     : null;
-  
-  // Get current local time
-  const [localTime, setLocalTime] = useState(format(new Date(), "HH:mm", { locale: vi }));
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLocalTime(format(new Date(), "HH:mm", { locale: vi }));
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Session timeout countdown
   const sessionTimeoutMinutes = BOT_CONFIG.SESSION_TIMEOUT / 60000;
@@ -105,16 +108,27 @@ export function CustomerInfoPanel({
             )}
           </div>
 
-          {/* Location (simulated) */}
+          {/* Location from IP */}
           <div className="text-center space-y-0.5">
-            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <MapPin className="h-3 w-3" />
-              Ho Chi Minh City, Vietnam
-            </p>
-            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Clock className="h-3 w-3" />
-              {localTime} giờ địa phương
-            </p>
+            {locationLoading ? (
+              <>
+                <Skeleton className="h-4 w-32 mx-auto" />
+                <Skeleton className="h-4 w-24 mx-auto" />
+              </>
+            ) : location ? (
+              <>
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {getCountryFlag(location.country_code)} {location.city}, {location.country}
+                </p>
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {location.localTime} giờ địa phương
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Không xác định vị trí</p>
+            )}
           </div>
         </div>
 
@@ -155,24 +169,105 @@ export function CustomerInfoPanel({
           </Card>
         )}
 
-        {/* Map placeholder */}
-        <Card className="overflow-hidden">
-          <div className="h-32 bg-muted flex items-center justify-center relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30" />
-            <div className="relative z-10 flex flex-col items-center gap-1">
-              <MapPin className="h-6 w-6 text-red-500" />
-              <span className="text-[10px] text-muted-foreground">Ho Chi Minh City</span>
-            </div>
-          </div>
-          <a 
-            href="https://maps.google.com/?q=Ho+Chi+Minh+City" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block text-center py-1.5 text-xs text-primary hover:underline border-t"
-          >
-            Xem bản đồ lớn hơn
-          </a>
-        </Card>
+        {/* Location Details */}
+        <Collapsible open={showLocationInfo} onOpenChange={setShowLocationInfo}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Vị trí & IP
+            </span>
+            {showLocationInfo ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2">
+            <Card className="p-3 space-y-2">
+              {locationLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : location ? (
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">IP Address:</span>
+                    <span className="font-mono text-[10px]">
+                      {location.ip}
+                      {location.is_default && (
+                        <Badge variant="outline" className="ml-1 text-[8px] px-1 py-0">mặc định</Badge>
+                      )}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Quốc gia:</span>
+                    <span className="font-medium">
+                      {getCountryFlag(location.country_code)} {location.country}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Thành phố:</span>
+                    <span className="font-medium">{location.city}, {location.region}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Timezone:</span>
+                    <span className="font-medium">{location.timezone}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      ISP:
+                    </span>
+                    <span className="font-medium text-right max-w-[120px] truncate" title={location.isp}>
+                      {location.isp}
+                    </span>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-1 text-xs h-7"
+                    onClick={() => refetchLocation()}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Làm mới vị trí
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  Không có dữ liệu vị trí
+                </p>
+              )}
+            </Card>
+
+            {/* Map with real coordinates */}
+            {location && (
+              <Card className="overflow-hidden">
+                <div className="h-32 bg-muted flex items-center justify-center relative">
+                  <iframe
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.lon - 0.05},${location.lat - 0.03},${location.lon + 0.05},${location.lat + 0.03}&layer=mapnik&marker=${location.lat},${location.lon}`}
+                    className="absolute inset-0 w-full h-full border-0"
+                    loading="lazy"
+                  />
+                </div>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lon}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block text-center py-1.5 text-xs text-primary hover:underline border-t"
+                >
+                  Xem trên Google Maps
+                </a>
+              </Card>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Bot/Automation Info */}
         <Collapsible open={showBotInfo} onOpenChange={setShowBotInfo}>
