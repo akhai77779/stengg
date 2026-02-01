@@ -762,7 +762,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               )}
 
               {/* Messages */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col">
                 <MessageList
                   messages={messages}
                   isLoading={messagesLoading}

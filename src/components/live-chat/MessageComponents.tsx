@@ -119,10 +119,10 @@ export function MessageList({
     <>
       <div 
         ref={scrollContainerRef} 
-        className="flex-1 p-4 overflow-y-auto overscroll-contain"
+        className="flex-1 min-h-0 p-4 overflow-y-auto overscroll-contain"
         style={{ scrollBehavior: 'smooth' }}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pb-2">
           {messages.map((message) => {
             const isOwn = message.sender_id === currentUserId || 
               (message.sender_type === "customer" && message.sender_id === currentUserId);
