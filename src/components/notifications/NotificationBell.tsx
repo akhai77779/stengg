@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,9 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useUserNotifications } from "@/hooks/useUserNotifications";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface NotificationBellProps {
   className?: string;
@@ -23,8 +25,9 @@ interface NotificationBellProps {
 
 export function NotificationBell({ className }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
+  const [activeTab, setActiveTab] = useState<"user" | "admin" | "livechat">("user");
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   
   const {
     notifications: userNotifications,
@@ -45,12 +48,27 @@ export function NotificationBell({ className }: NotificationBellProps) {
     clearAllNotifications: clearAdminNotifications,
   } = useAdminNotifications();
 
-  // Total unread count (user notifications + admin notifications if admin)
+  // Live Chat unread count for admin
+  const { rooms: liveChatRooms, totalUnread: liveChatUnread } = useLiveChatRooms({
+    autoRefresh: isAdmin,
+  });
+
+  // Total unread count (user notifications + admin notifications + live chat if admin)
   const totalUnreadCount = useMemo(() => {
-    return userUnreadCount + (isAdmin ? adminUnreadCount : 0);
-  }, [userUnreadCount, adminUnreadCount, isAdmin]);
+    return userUnreadCount + (isAdmin ? adminUnreadCount + liveChatUnread : 0);
+  }, [userUnreadCount, adminUnreadCount, liveChatUnread, isAdmin]);
 
   const hasUnread = totalUnreadCount > 0;
+
+  // Get rooms with unread messages
+  const roomsWithUnread = useMemo(() => {
+    return liveChatRooms.filter(room => (room.unread_count || 0) > 0);
+  }, [liveChatRooms]);
+
+  const handleOpenLiveChat = (roomId?: string) => {
+    setOpen(false);
+    navigate("/admin/live-chat");
+  };
 
   const getTypeStyles = (type: string) => {
     switch (type) {
@@ -136,7 +154,9 @@ export function NotificationBell({ className }: NotificationBellProps) {
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
-            <span className="font-semibold text-sm">Thông báo</span>
+            <span className="font-semibold text-sm">
+              {isAdmin ? "Thông báo Tổng" : "Thông báo"}
+            </span>
             {hasUnread && (
               <Badge variant="secondary" className="text-xs">
                 {totalUnreadCount} mới
@@ -162,9 +182,9 @@ export function NotificationBell({ className }: NotificationBellProps) {
 
         {/* Content - Show tabs for admin, simple list for regular users */}
         {isAdmin ? (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "user" | "admin")} className="w-full">
-            <TabsList className="w-full grid grid-cols-2 h-10 rounded-none border-b">
-              <TabsTrigger value="user" className="text-xs data-[state=active]:bg-accent relative">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "user" | "admin" | "livechat")} className="w-full">
+            <TabsList className="w-full grid grid-cols-3 h-10 rounded-none border-b">
+              <TabsTrigger value="user" className="text-xs data-[state=active]:bg-accent relative px-2">
                 Cá nhân
                 {userUnreadCount > 0 && (
                   <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
@@ -172,11 +192,19 @@ export function NotificationBell({ className }: NotificationBellProps) {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="admin" className="text-xs data-[state=active]:bg-accent relative">
+              <TabsTrigger value="admin" className="text-xs data-[state=active]:bg-accent relative px-2">
                 Hệ thống
                 {adminUnreadCount > 0 && (
                   <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
                     {adminUnreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="livechat" className="text-xs data-[state=active]:bg-accent relative px-2">
+                Chat
+                {liveChatUnread > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px] animate-pulse">
+                    {liveChatUnread}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -349,6 +377,67 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 )}
               </ScrollArea>
             </TabsContent>
+
+            {/* Live Chat Tab */}
+            <TabsContent value="livechat" className="m-0">
+              <div className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/30">
+                <span className="text-xs text-muted-foreground">
+                  {roomsWithUnread.length} phòng có tin nhắn mới
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs touch-manipulation"
+                  onClick={() => handleOpenLiveChat()}
+                >
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  Mở Live Chat
+                </Button>
+              </div>
+              <ScrollArea className="h-[min(300px,50vh)]">
+                {roomsWithUnread.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">Không có tin nhắn chưa đọc</p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {roomsWithUnread.map((room) => (
+                      <div
+                        key={room.id}
+                        className="relative p-3 border-l-4 border-l-blue-500 bg-blue-500/5 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation"
+                        onClick={() => handleOpenLiveChat(room.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-1.5 rounded-full bg-blue-500/20 shrink-0">
+                            <MessageSquare className="h-4 w-4 text-blue-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold truncate">
+                                {room.customer_name}
+                              </p>
+                              <Badge variant="destructive" className="h-4 text-[10px] px-1 animate-pulse">
+                                {room.unread_count} tin nhắn
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                              {room.last_message || "Tin nhắn mới"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {formatDistanceToNow(new Date(room.last_updated_at), {
+                                addSuffix: true,
+                                locale: vi,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
         ) : (
           // Regular user - simple notification list without tabs
@@ -452,7 +541,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
         <Separator />
         <div className="p-2 text-center">
           <p className="text-xs text-muted-foreground">
-            {isAdmin ? "Thông báo hệ thống chỉ hiển thị trong ngày" : "Thông báo được lưu trong 30 ngày"}
+            {isAdmin ? "Thông báo tổng hợp: Cá nhân + Hệ thống + Live Chat" : "Thông báo được lưu trong 30 ngày"}
           </p>
         </div>
       </PopoverContent>
