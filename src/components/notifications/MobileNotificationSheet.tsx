@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X, MonitorSmartphone } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,9 +26,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
     hasUnread,
     isLoading,
     soundEnabled,
-    desktopNotificationEnabled,
     toggleSound,
-    toggleDesktopNotification,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -82,18 +80,6 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                 ) : (
                   <VolumeX className="h-4 w-4 text-muted-foreground" />
                 )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={toggleDesktopNotification}
-                title={desktopNotificationEnabled ? "Tắt thông báo" : "Bật thông báo"}
-              >
-                <MonitorSmartphone className={cn(
-                  "h-4 w-4",
-                  !desktopNotificationEnabled && "text-muted-foreground"
-                )} />
               </Button>
               {hasUnread && (
                 <Button

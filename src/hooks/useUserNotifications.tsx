@@ -15,62 +15,7 @@ interface UserNotification {
 }
 
 const SOUND_ENABLED_KEY = "user_notification_sound_enabled";
-const DESKTOP_NOTIFICATION_KEY = "user_desktop_notification_enabled";
 
-/**
- * Request permission for desktop notifications
- */
-async function requestNotificationPermission(): Promise<boolean> {
-  if (!("Notification" in window)) {
-    console.warn("This browser does not support desktop notifications");
-    return false;
-  }
-  
-  if (Notification.permission === "granted") {
-    return true;
-  }
-  
-  if (Notification.permission !== "denied") {
-    const permission = await Notification.requestPermission();
-    return permission === "granted";
-  }
-  
-  return false;
-}
-
-/**
- * Show desktop notification
- */
-function showDesktopNotification(title: string, message: string, type: string) {
-  if (!("Notification" in window) || Notification.permission !== "granted") {
-    return;
-  }
-
-  const iconMap: Record<string, string> = {
-    success: "✅",
-    error: "❌",
-    warning: "⚠️",
-    admin_message: "📢",
-    info: "ℹ️",
-  };
-
-  const notification = new Notification(title, {
-    body: message,
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
-    tag: `notification-${Date.now()}`,
-    requireInteraction: false,
-  });
-
-  // Auto close after 5 seconds
-  setTimeout(() => notification.close(), 5000);
-
-  // Focus window when clicked
-  notification.onclick = () => {
-    window.focus();
-    notification.close();
-  };
-}
 
 /**
  * Play a pleasant notification sound using Web Audio API
@@ -128,11 +73,6 @@ export function useUserNotifications() {
     return stored !== "false";
   });
   
-  const [desktopNotificationEnabled, setDesktopNotificationEnabled] = useState<boolean>(() => {
-    const stored = localStorage.getItem(DESKTOP_NOTIFICATION_KEY);
-    return stored === "true";
-  });
-  
   const isInitialLoad = useRef(true);
   const processedIds = useRef<Set<string>>(new Set());
 
@@ -141,10 +81,6 @@ export function useUserNotifications() {
     localStorage.setItem(SOUND_ENABLED_KEY, String(soundEnabled));
   }, [soundEnabled]);
 
-  // Persist desktop notification preference
-  useEffect(() => {
-    localStorage.setItem(DESKTOP_NOTIFICATION_KEY, String(desktopNotificationEnabled));
-  }, [desktopNotificationEnabled]);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -209,18 +145,9 @@ export function useUserNotifications() {
           setNotifications(prev => [newNotification, ...prev].slice(0, 50));
           setUnreadCount(prev => prev + 1);
           
-          // Play sound and show desktop notification for new notifications (not on initial load)
-          if (!isInitialLoad.current) {
-            if (soundEnabled) {
-              playNotificationSound();
-            }
-            if (desktopNotificationEnabled) {
-              showDesktopNotification(
-                newNotification.title,
-                newNotification.message,
-                newNotification.type
-              );
-            }
+          // Play sound for new notifications (not on initial load)
+          if (!isInitialLoad.current && soundEnabled) {
+            playNotificationSound();
           }
         }
       )
@@ -263,7 +190,7 @@ export function useUserNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchNotifications, soundEnabled, desktopNotificationEnabled]);
+  }, [user, fetchNotifications, soundEnabled]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
@@ -343,17 +270,6 @@ export function useUserNotifications() {
     setSoundEnabled(prev => !prev);
   }, []);
 
-  // Toggle desktop notification
-  const toggleDesktopNotification = useCallback(async () => {
-    if (!desktopNotificationEnabled) {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        setDesktopNotificationEnabled(true);
-      }
-    } else {
-      setDesktopNotificationEnabled(false);
-    }
-  }, [desktopNotificationEnabled]);
 
   // Send notification (admin only)
   const sendNotification = useCallback(async (
@@ -389,9 +305,7 @@ export function useUserNotifications() {
     isLoading,
     hasUnread: unreadCount > 0,
     soundEnabled,
-    desktopNotificationEnabled,
     toggleSound,
-    toggleDesktopNotification,
     markAsRead,
     markAllAsRead,
     deleteNotification,
