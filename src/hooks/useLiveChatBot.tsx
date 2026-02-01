@@ -13,12 +13,12 @@ export const BOT_CONFIG = {
   SESSION_TIMEOUT: 10 * 60 * 1000, // 10 minutes - user không hoạt động
   
   // Bot messages
-  WELCOME_MESSAGE: "Xin chào! Chào mừng bạn đến với hệ thống hỗ trợ trực tuyến. Đang kết nối bạn với nhân viên CSKH...",
+  WELCOME_MESSAGE: "Xin chào! Chào mừng bạn đến với hệ thống hỗ trợ trực tuyến. Đang kết nối bạn với Support ST Engineering...",
   CONNECTING_MESSAGE: "Nhân viên hỗ trợ sẽ phản hồi bạn trong giây lát.",
-  BUSY_MESSAGE: "Hiện tại nhân viên CSKH đang bận xử lý các yêu cầu khác. Xin vui lòng chờ trong giây lát, chúng tôi sẽ hỗ trợ bạn sớm nhất có thể.",
+  BUSY_MESSAGE: "Hiện tại Support ST Engineering đang bận xử lý các yêu cầu khác. Xin vui lòng chờ trong giây lát, chúng tôi sẽ hỗ trợ bạn sớm nhất có thể.",
   OFFLINE_MESSAGE: "Chào bạn! Hiện tại đã hết giờ làm việc. Thời gian hỗ trợ: 9:00 - 23:00 hàng ngày. Vui lòng để lại tin nhắn, chúng tôi sẽ phản hồi bạn vào ngày làm việc tiếp theo.",
   SESSION_TIMEOUT_MESSAGE: "Phiên chat đã kết thúc do không có hoạt động trong 10 phút. Bạn có thể bắt đầu cuộc trò chuyện mới bất cứ lúc nào.",
-  SESSION_RESUMED_MESSAGE: "Chào mừng bạn quay lại! Nhân viên CSKH sẵn sàng hỗ trợ bạn.",
+  SESSION_RESUMED_MESSAGE: "Chào mừng bạn quay lại! Support ST Engineering sẵn sàng hỗ trợ bạn.",
   
   BOT_NAME: "Hệ thống",
 };

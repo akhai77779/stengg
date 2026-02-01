@@ -43,7 +43,7 @@ const Deposit = () => {
                   </h2>
                   <p className="text-muted-foreground text-xs md:text-sm leading-relaxed">
                     Để thực hiện nạp tiền vào tài khoản, vui lòng liên hệ với đội ngũ 
-                    Chăm sóc khách hàng (CSKH) của chúng tôi. Nhân viên hỗ trợ sẽ 
+                    Support ST Engineering của chúng tôi. Nhân viên hỗ trợ sẽ 
                     hướng dẫn bạn các bước nạp tiền an toàn và nhanh chóng.
                   </p>
                 </div>
@@ -55,12 +55,12 @@ const Deposit = () => {
                   size="lg"
                 >
                   <MessageCircle className="h-5 w-5" />
-                  Liên hệ CSKH ngay
+                  Liên hệ Support ngay
                 </Button>
 
                 {/* Additional info */}
                 <p className="text-[10px] md:text-xs text-muted-foreground">
-                  Đội ngũ CSKH hoạt động 24/7, sẵn sàng hỗ trợ bạn
+                  Đội ngũ Support ST Engineering hoạt động 24/7, sẵn sàng hỗ trợ bạn
                 </p>
               </CardContent>
             </Card>

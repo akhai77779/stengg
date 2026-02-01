@@ -202,9 +202,9 @@ export default function AdminSettings() {
 
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="text-sm font-medium">Bật/tắt CSKH (mobile)</div>
+              <div className="text-sm font-medium">Bật/tắt Support ST Engineering (mobile)</div>
               <div className="text-xs text-muted-foreground">
-                Khi tắt, icon CSKH sẽ bị ẩn trên mobile.
+                Khi tắt, icon Support sẽ bị ẩn trên mobile.
               </div>
             </div>
             <Switch
