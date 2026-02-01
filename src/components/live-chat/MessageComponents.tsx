@@ -44,7 +44,7 @@ export function MessageList({
   onDeleteMessage,
   canModifyMessages = false,
 }: MessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -53,9 +53,12 @@ export function MessageList({
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    });
   }, [messages, typingText]);
 
   // Focus edit input when editing starts
@@ -114,7 +117,11 @@ export function MessageList({
 
   return (
     <>
-      <ScrollArea ref={scrollRef} className="flex-1 p-4">
+      <div 
+        ref={scrollContainerRef} 
+        className="flex-1 p-4 overflow-y-auto overscroll-contain"
+        style={{ scrollBehavior: 'smooth' }}
+      >
         <div className="space-y-4">
           {messages.map((message) => {
             const isOwn = message.sender_id === currentUserId || 
@@ -339,7 +346,7 @@ export function MessageList({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

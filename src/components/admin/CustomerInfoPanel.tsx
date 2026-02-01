@@ -17,6 +17,7 @@ import {
   Globe,
   RefreshCw,
   Building2,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -39,6 +40,7 @@ interface CustomerInfoPanelProps {
   className?: string;
   typingPreview?: string | null;
   botEnabled?: boolean;
+  onClose?: () => void;
 }
 
 export function CustomerInfoPanel({ 
@@ -47,6 +49,7 @@ export function CustomerInfoPanel({
   className,
   typingPreview,
   botEnabled = true,
+  onClose,
 }: CustomerInfoPanelProps) {
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(true);
   const [showBotInfo, setShowBotInfo] = useState(true);
@@ -88,8 +91,22 @@ export function CustomerInfoPanel({
   const adminBusyMinutes = BOT_CONFIG.ADMIN_BUSY_DELAY / 60000;
 
   return (
-    <ScrollArea className={cn("h-full border-l bg-muted/20", className)}>
+    <div className={cn("h-full border-l bg-muted/20 overflow-y-auto overscroll-contain", className)}>
       <div className="p-4 space-y-4">
+        {/* Close button for desktop */}
+        {onClose && (
+          <div className="flex justify-end -mt-2 -mr-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
         {/* Customer Avatar & Name */}
         <div className="flex flex-col items-center text-center space-y-3">
           <Avatar className="h-16 w-16">
@@ -410,6 +427,6 @@ export function CustomerInfoPanel({
           </CollapsibleContent>
         </Collapsible>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
