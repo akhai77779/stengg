@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   MapPin,
@@ -9,6 +9,11 @@ import {
   ChevronUp,
   Mail,
   Hash,
+  Bot,
+  Timer,
+  Wifi,
+  WifiOff,
+  Eye,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -20,19 +25,31 @@ import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { LiveChatRoom } from "@/hooks/useLiveChatRooms";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
+import { BOT_CONFIG, isWithinWorkingHours } from "@/hooks/useLiveChatBot";
 
 interface CustomerInfoPanelProps {
   room: LiveChatRoom;
   messages: LiveChatMessage[];
   className?: string;
+  typingPreview?: string | null;
+  botEnabled?: boolean;
 }
 
-export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPanelProps) {
+export function CustomerInfoPanel({ 
+  room, 
+  messages, 
+  className,
+  typingPreview,
+  botEnabled = true,
+}: CustomerInfoPanelProps) {
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(true);
+  const [showBotInfo, setShowBotInfo] = useState(true);
+  const isWorking = isWithinWorkingHours();
 
   // Calculate stats
   const customerMessages = messages.filter(m => m.sender_type === "customer");
-  const supportMessages = messages.filter(m => m.sender_type === "support" || m.sender_type === "bot");
+  const supportMessages = messages.filter(m => m.sender_type === "support");
+  const botMessages = messages.filter(m => m.sender_type === "bot");
   const chatDuration = messages.length > 0
     ? formatDistanceToNow(new Date(messages[0].created_at), { locale: vi })
     : "0 phút";
@@ -42,13 +59,30 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
     ? new Date(messages[0].created_at)
     : new Date(room.created_at);
   
-  // Get current local time (simulated - in real app this would come from user's browser)
-  const localTime = format(new Date(), "HH:mm", { locale: vi });
+  // Get last activity time
+  const lastActivityTime = messages.length > 0
+    ? new Date(messages[messages.length - 1].created_at)
+    : new Date(room.last_updated_at);
+  
+  // Calculate time since last customer message
+  const lastCustomerMsg = [...customerMessages].pop();
+  const timeSinceLastCustomer = lastCustomerMsg
+    ? formatDistanceToNow(new Date(lastCustomerMsg.created_at), { addSuffix: true, locale: vi })
+    : null;
+  
+  // Get current local time
+  const [localTime, setLocalTime] = useState(format(new Date(), "HH:mm", { locale: vi }));
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLocalTime(format(new Date(), "HH:mm", { locale: vi }));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Check if this is first-time visitor (simplified - would need more data in real app)
-  const isFirstTimeVisitor = true; // Placeholder
-  const totalVisits = 1;
-  const totalChats = 1;
+  // Session timeout countdown
+  const sessionTimeoutMinutes = BOT_CONFIG.SESSION_TIMEOUT / 60000;
+  const adminBusyMinutes = BOT_CONFIG.ADMIN_BUSY_DELAY / 60000;
 
   return (
     <ScrollArea className={cn("h-full border-l bg-muted/20", className)}>
@@ -85,14 +119,41 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
         </div>
 
         {/* Status Badge */}
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2">
           <Badge 
             variant={room.status === "active" ? "default" : room.status === "waiting" ? "secondary" : "outline"}
             className="text-xs"
           >
             {room.status === "active" ? "Đang hoạt động" : room.status === "waiting" ? "Chờ phản hồi" : "Đã đóng"}
           </Badge>
+          <Badge 
+            variant={isWorking ? "default" : "secondary"}
+            className={cn("text-xs", isWorking ? "bg-green-600" : "")}
+          >
+            {isWorking ? (
+              <><Wifi className="h-3 w-3 mr-1" />Online</>
+            ) : (
+              <><WifiOff className="h-3 w-3 mr-1" />Offline</>
+            )}
+          </Badge>
         </div>
+
+        {/* Typing Preview */}
+        {typingPreview && (
+          <Card className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-start gap-2">
+              <Eye className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+                  Đang xem trước:
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 break-words">
+                  "{typingPreview}"
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Map placeholder */}
         <Card className="overflow-hidden">
@@ -113,10 +174,59 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
           </a>
         </Card>
 
+        {/* Bot/Automation Info */}
+        <Collapsible open={showBotInfo} onOpenChange={setShowBotInfo}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              Bot & Tự động
+            </span>
+            {showBotInfo ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2">
+            <Card className="p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Bot tự động:</span>
+                <Badge variant={botEnabled ? "default" : "secondary"} className="text-[10px]">
+                  {botEnabled ? "BẬT" : "TẮT"}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Giờ làm việc:</span>
+                <span className="font-medium">
+                  {BOT_CONFIG.WORKING_HOURS_START}:00 - {BOT_CONFIG.WORKING_HOURS_END}:00
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Admin không phản hồi:</span>
+                <span className="font-medium">{adminBusyMinutes} phút → Bot</span>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Session timeout:</span>
+                <span className="font-medium">{sessionTimeoutMinutes} phút</span>
+              </div>
+
+              {timeSinceLastCustomer && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t">
+                  <span className="text-muted-foreground">Tin nhắn cuối:</span>
+                  <span className="font-medium text-primary">{timeSinceLastCustomer}</span>
+                </div>
+              )}
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Additional Info */}
         <Collapsible open={showAdditionalInfo} onOpenChange={setShowAdditionalInfo}>
           <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium">
-            <span>Thông tin bổ sung</span>
+            <span>Thống kê</span>
             {showAdditionalInfo ? (
               <ChevronUp className="h-4 w-4" />
             ) : (
@@ -128,18 +238,8 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <User className="h-3 w-3" />
-                  Khách mới:
-                </span>
-                <span className="font-medium">
-                  {totalVisits} lượt, {totalChats} chat
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground flex items-center gap-1.5">
                   <Clock className="h-3 w-3" />
-                  Thời lượng chat:
+                  Thời lượng:
                 </span>
                 <span className="font-medium">{chatDuration}</span>
               </div>
@@ -147,11 +247,19 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <MessageSquare className="h-3 w-3" />
-                  Tin nhắn:
+                  Khách / CSKH:
                 </span>
                 <span className="font-medium">
                   {customerMessages.length} / {supportMessages.length}
                 </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Bot className="h-3 w-3" />
+                  Bot messages:
+                </span>
+                <span className="font-medium">{botMessages.length}</span>
               </div>
               
               <div className="flex items-center justify-between text-xs">
@@ -161,6 +269,16 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
                 </span>
                 <span className="font-medium">
                   {format(firstMessageTime, "HH:mm dd/MM", { locale: vi })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Timer className="h-3 w-3" />
+                  Hoạt động cuối:
+                </span>
+                <span className="font-medium">
+                  {format(lastActivityTime, "HH:mm dd/MM", { locale: vi })}
                 </span>
               </div>
 
@@ -185,6 +303,11 @@ export function CustomerInfoPanel({ room, messages, className }: CustomerInfoPan
                 {room.status === "active" && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-500/10 text-green-600 border-green-500/30">
                     Active
+                  </Badge>
+                )}
+                {!isWorking && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-orange-500/10 text-orange-600 border-orange-500/30">
+                    Ngoài giờ
                   </Badge>
                 )}
               </div>

@@ -9,6 +9,7 @@ interface TypingStatus {
   user_type: "customer" | "support";
   is_typing: boolean;
   updated_at: string;
+  typing_preview?: string; // Preview of what user is typing
 }
 
 interface UseLiveChatTypingOptions {
@@ -26,13 +27,19 @@ export function useLiveChatTyping(
   const [othersTyping, setOthersTyping] = useState<TypingStatus[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
+  const currentTextRef = useRef<string>("");
 
-  // Update typing status in database
+  // Update typing status in database (with preview text for admin view)
   const setTyping = useCallback(
-    async (isTyping: boolean) => {
+    async (isTyping: boolean, previewText?: string) => {
       if (!roomId || !userId) return;
 
       try {
+        // Store preview text in localStorage for admin to see (workaround for DB column)
+        if (userType === "customer" && previewText !== undefined) {
+          localStorage.setItem(`typing_preview_${roomId}_${userId}`, previewText);
+        }
+
         // Upsert typing status
         await supabase.from("live_chat_typing").upsert(
           {
@@ -56,21 +63,30 @@ export function useLiveChatTyping(
     [roomId, userId, userName, userType]
   );
 
-  // Start typing (with debounce)
-  const startTyping = useCallback(() => {
+  // Start typing (with debounce and preview text)
+  const startTyping = useCallback((text?: string) => {
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
+    // Update current text ref
+    if (text !== undefined) {
+      currentTextRef.current = text;
+    }
+
     // Set typing if not already
     if (!isTypingRef.current) {
-      setTyping(true);
+      setTyping(true, currentTextRef.current);
+    } else if (text !== undefined) {
+      // Update preview text while already typing
+      setTyping(true, text);
     }
 
     // Set timeout to stop typing
     typingTimeoutRef.current = setTimeout(() => {
-      setTyping(false);
+      setTyping(false, "");
+      currentTextRef.current = "";
     }, debounceMs);
   }, [setTyping, debounceMs]);
 
@@ -79,7 +95,8 @@ export function useLiveChatTyping(
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    setTyping(false);
+    setTyping(false, "");
+    currentTextRef.current = "";
   }, [setTyping]);
 
   // Fetch typing statuses
@@ -100,7 +117,14 @@ export function useLiveChatTyping(
           (status) =>
             status.user_id !== userId &&
             now - new Date(status.updated_at).getTime() < 5000
-        );
+        ).map(status => {
+          // Try to get preview text from localStorage
+          const preview = localStorage.getItem(`typing_preview_${roomId}_${status.user_id}`);
+          return {
+            ...status,
+            typing_preview: preview || undefined,
+          };
+        });
         setOthersTyping(activeTyping);
       }
     } catch (error) {
@@ -147,6 +171,7 @@ export function useLiveChatTyping(
       }
       // Stop typing when component unmounts
       if (roomId && userId) {
+        localStorage.removeItem(`typing_preview_${roomId}_${userId}`);
         supabase
           .from("live_chat_typing")
           .update({ is_typing: false })
@@ -164,11 +189,17 @@ export function useLiveChatTyping(
       : `${othersTyping.length} người đang nhập...`
     : null;
 
+  // Get typing preview (for admin view)
+  const typingPreview = othersTyping.length > 0 && othersTyping[0].typing_preview
+    ? othersTyping[0].typing_preview
+    : null;
+
   return {
     startTyping,
     stopTyping,
     othersTyping,
     isOtherTyping: othersTyping.length > 0,
     typingText,
+    typingPreview,
   };
 }

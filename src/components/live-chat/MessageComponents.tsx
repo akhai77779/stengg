@@ -179,7 +179,7 @@ export function MessageList({
 
 interface MessageInputProps {
   onSend: (message: string, attachment?: { url: string; type: "image" | "file"; name: string }) => void;
-  onTyping?: () => void;
+  onTyping?: (text?: string) => void;
   onUpload?: (file: File) => Promise<{ url: string; type: "image" | "file"; name: string }>;
   disabled?: boolean;
   placeholder?: string;
@@ -259,8 +259,9 @@ export function MessageInput({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMessage(e.target.value);
-    onTyping?.();
+    const newValue = e.target.value;
+    setMessage(newValue);
+    onTyping?.(newValue);
   };
 
   return (
