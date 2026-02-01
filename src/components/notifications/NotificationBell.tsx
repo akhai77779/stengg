@@ -144,7 +144,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className={cn(
-                          "text-sm truncate",
+                          "text-sm",
                           !notification.is_read && "font-semibold"
                         )}>
                           {notification.title}
@@ -153,7 +153,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                           <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap break-words">
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
