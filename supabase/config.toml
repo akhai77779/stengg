@@ -17,3 +17,12 @@ verify_jwt = false
 
 [functions.ip-geolocation]
 verify_jwt = false
+
+[functions.settle-expired-trades]
+verify_jwt = false
+
+[functions.track-login]
+verify_jwt = false
+
+[functions.admin-update-password]
+verify_jwt = false
