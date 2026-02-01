@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageCurrencySelector } from '@/components/settings/LanguageCurrencySelector';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 import { 
   Home, 
@@ -94,9 +95,12 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Language/Currency Selector + User Menu */}
+          {/* Language/Currency Selector + Notifications + User Menu */}
           <div className="flex items-center gap-2">
             <LanguageCurrencySelector showCurrency={false} />
+            
+            {/* Notification Bell - show for logged in users */}
+            {user && <NotificationBell />}
 
             {/* Desktop: user menu/login */}
             <div className="hidden md:block">
