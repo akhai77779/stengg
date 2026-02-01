@@ -803,6 +803,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
             className="w-64 hidden lg:block"
             typingPreview={typingPreview}
             botEnabled={botEnabled}
+            onClose={() => setShowCustomerInfo(false)}
           />
         )}
       </div>
