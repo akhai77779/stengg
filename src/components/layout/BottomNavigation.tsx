@@ -1,6 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Newspaper, Package, Heart, User } from 'lucide-react';
+import { Home, Newspaper, Package, Heart, User, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUserNotifications } from '@/hooks/useUserNotifications';
+import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
+import { MobileNotificationSheet } from '@/components/notifications/MobileNotificationSheet';
 
 const navItems = [
   { label: 'Trang nhất', href: '/', icon: Home },
@@ -12,54 +16,83 @@ const navItems = [
 
 export function BottomNavigation() {
   const location = useLocation();
+  const { user } = useAuth();
+  const { unreadCount, hasUnread } = useUserNotifications();
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
-      {/* Gradient border top */}
-      <div className="h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
-      
-      <div className="bg-card/95 backdrop-blur-xl border-t border-border/50">
-        <div className="flex items-center justify-around h-16">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.href || 
-              (item.href !== '/' && location.pathname.startsWith(item.href));
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
+        {/* Gradient border top */}
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
+        
+        <div className="bg-card/95 backdrop-blur-xl border-t border-border/50">
+          <div className="flex items-center justify-around h-16">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.href || 
+                (item.href !== '/' && location.pathname.startsWith(item.href));
+              
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={cn(
+                    'flex flex-col items-center justify-center flex-1 h-full min-h-[56px] gap-1 transition-all duration-200 touch-target no-select',
+                    isActive 
+                      ? 'text-primary' 
+                      : 'text-muted-foreground active:text-foreground'
+                  )}
+                >
+                  <div className={cn(
+                    'relative p-2 rounded-xl transition-all duration-200',
+                    isActive && 'bg-primary/10'
+                  )}>
+                    <item.icon className={cn(
+                      'w-5 h-5 transition-all duration-200',
+                      isActive && 'drop-shadow-[0_0_8px_hsl(var(--primary))]'
+                    )} />
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-xl animate-pulse bg-primary/5" />
+                    )}
+                  </div>
+                  <span className={cn(
+                    'text-[10px] font-medium transition-all duration-200',
+                    isActive && 'text-primary'
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
             
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  'flex flex-col items-center justify-center flex-1 h-full min-h-[56px] gap-1 transition-all duration-200 touch-target no-select',
-                  isActive 
-                    ? 'text-primary' 
-                    : 'text-muted-foreground active:text-foreground'
-                )}
+            {/* Notification Bell for logged-in users */}
+            {user && (
+              <button
+                onClick={() => setNotificationOpen(true)}
+                className="flex flex-col items-center justify-center flex-1 h-full min-h-[56px] gap-1 transition-all duration-200 touch-target no-select text-muted-foreground active:text-foreground"
               >
-                <div className={cn(
-                  'relative p-2 rounded-xl transition-all duration-200',
-                  isActive && 'bg-primary/10'
-                )}>
-                  <item.icon className={cn(
-                    'w-5 h-5 transition-all duration-200',
-                    isActive && 'drop-shadow-[0_0_8px_hsl(var(--primary))]'
-                  )} />
-                  {isActive && (
-                    <div className="absolute inset-0 rounded-xl animate-pulse bg-primary/5" />
+                <div className="relative p-2 rounded-xl transition-all duration-200">
+                  <Bell className="w-5 h-5 transition-all duration-200" />
+                  {hasUnread && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full animate-pulse">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </div>
-                <span className={cn(
-                  'text-[10px] font-medium transition-all duration-200',
-                  isActive && 'text-primary'
-                )}>
-                  {item.label}
+                <span className="text-[10px] font-medium transition-all duration-200">
+                  Thông báo
                 </span>
-              </Link>
-            );
-          })}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-      
-      {/* Safe area for iOS - now handled by parent class */}
-    </nav>
+      </nav>
+
+      {/* Mobile Notification Sheet */}
+      <MobileNotificationSheet 
+        open={notificationOpen} 
+        onOpenChange={setNotificationOpen} 
+      />
+    </>
   );
 }
