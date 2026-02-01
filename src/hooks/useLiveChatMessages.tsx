@@ -112,6 +112,77 @@ export function useLiveChatMessages(
     },
   });
 
+  // Edit message mutation
+  const editMessage = useMutation({
+    mutationFn: async ({ messageId, newMessage }: { messageId: string; newMessage: string }) => {
+      if (!roomId) throw new Error("No room ID");
+      
+      const { data, error } = await supabase
+        .from("live_chat_messages")
+        .update({ message: newMessage })
+        .eq("id", messageId)
+        .eq("room_id", roomId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as LiveChatMessage;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["live-chat-messages", roomId],
+      });
+      toast({
+        title: "Đã sửa",
+        description: "Tin nhắn đã được cập nhật",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể sửa tin nhắn",
+        variant: "destructive",
+      });
+      console.error("Edit message error:", error);
+    },
+  });
+
+  // Delete message mutation
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!roomId) throw new Error("No room ID");
+      
+      const { error } = await supabase
+        .from("live_chat_messages")
+        .delete()
+        .eq("id", messageId)
+        .eq("room_id", roomId);
+
+      if (error) throw error;
+      return messageId;
+    },
+    onSuccess: (deletedId) => {
+      // Optimistically remove from cache
+      queryClient.setQueryData(
+        ["live-chat-messages", roomId],
+        (old: LiveChatMessage[] = []) => old.filter((m) => m.id !== deletedId)
+      );
+      queryClient.invalidateQueries({ queryKey: ["live-chat-rooms"] });
+      toast({
+        title: "Đã xóa",
+        description: "Tin nhắn đã được xóa",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa tin nhắn",
+        variant: "destructive",
+      });
+      console.error("Delete message error:", error);
+    },
+  });
+
   // Mark messages as read
   const markAsRead = useMutation({
     mutationFn: async (senderType: "customer" | "support") => {
@@ -207,10 +278,30 @@ export function useLiveChatMessages(
           table: "live_chat_messages",
           filter: `room_id=eq.${roomId}`,
         },
-        () => {
-          queryClient.invalidateQueries({
-            queryKey: ["live-chat-messages", roomId],
-          });
+        (payload) => {
+          const updatedMessage = payload.new as LiveChatMessage;
+          queryClient.setQueryData(
+            ["live-chat-messages", roomId],
+            (old: LiveChatMessage[] = []) =>
+              old.map((m) => (m.id === updatedMessage.id ? updatedMessage : m))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "live_chat_messages",
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const deletedMessage = payload.old as { id: string };
+          queryClient.setQueryData(
+            ["live-chat-messages", roomId],
+            (old: LiveChatMessage[] = []) =>
+              old.filter((m) => m.id !== deletedMessage.id)
+          );
         }
       )
       .subscribe();
@@ -230,9 +321,15 @@ export function useLiveChatMessages(
     refetch,
     sendMessage: sendMessage.mutate,
     sendMessageAsync: sendMessage.mutateAsync,
+    editMessage: editMessage.mutate,
+    editMessageAsync: editMessage.mutateAsync,
+    deleteMessage: deleteMessage.mutate,
+    deleteMessageAsync: deleteMessage.mutateAsync,
     markAsRead: markAsRead.mutate,
     uploadAttachment,
     isSending: sendMessage.isPending,
+    isEditing: editMessage.isPending,
+    isDeleting: deleteMessage.isPending,
     unreadCount,
   };
 }

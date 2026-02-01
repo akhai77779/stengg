@@ -1,9 +1,25 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, X, Image as ImageIcon, FileText, Download } from "lucide-react";
+import { Send, Paperclip, X, FileText, Download, MoreVertical, Pencil, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
 import { format } from "date-fns";
@@ -14,6 +30,9 @@ interface MessageListProps {
   currentUserId: string;
   typingText?: string | null;
   isLoading?: boolean;
+  onEditMessage?: (messageId: string, newMessage: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  canModifyMessages?: boolean;
 }
 
 export function MessageList({
@@ -21,8 +40,16 @@ export function MessageList({
   currentUserId,
   typingText,
   isLoading,
+  onEditMessage,
+  onDeleteMessage,
+  canModifyMessages = false,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -30,6 +57,44 @@ export function MessageList({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, typingText]);
+
+  // Focus edit input when editing starts
+  useEffect(() => {
+    if (editingMessageId && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingMessageId]);
+
+  const handleStartEdit = (message: LiveChatMessage) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.message);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText("");
+  };
+
+  const handleSaveEdit = () => {
+    if (editingMessageId && editingText.trim() && onEditMessage) {
+      onEditMessage(editingMessageId, editingText.trim());
+      setEditingMessageId(null);
+      setEditingText("");
+    }
+  };
+
+  const handleDeleteClick = (messageId: string) => {
+    setMessageToDelete(messageId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (messageToDelete && onDeleteMessage) {
+      onDeleteMessage(messageToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setMessageToDelete(null);
+  };
 
   if (isLoading) {
     return (
@@ -48,132 +113,250 @@ export function MessageList({
   }
 
   return (
-    <ScrollArea ref={scrollRef} className="flex-1 p-4">
-      <div className="space-y-4">
-        {messages.map((message) => {
-          const isOwn = message.sender_id === currentUserId || 
-            (message.sender_type === "customer" && message.sender_id === currentUserId);
-          const isSupport = message.sender_type === "support";
-          const isBot = message.sender_type === "bot";
+    <>
+      <ScrollArea ref={scrollRef} className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.map((message) => {
+            const isOwn = message.sender_id === currentUserId || 
+              (message.sender_type === "customer" && message.sender_id === currentUserId);
+            const isSupport = message.sender_type === "support";
+            const isBot = message.sender_type === "bot";
+            const isEditing = editingMessageId === message.id;
+            
+            // Allow edit/delete for own messages or admin can modify all
+            const canModify = canModifyMessages && (isOwn || isSupport);
 
-          return (
-            <div
-              key={message.id}
-              className={cn(
-                "flex gap-3",
-                isOwn ? "justify-end" : "justify-start"
-              )}
-            >
-              {!isOwn && (
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback
-                    className={cn(
-                      isBot
-                        ? "bg-purple-500 text-white"
-                        : isSupport
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    )}
-                  >
-                    {isBot ? "AI" : message.sender_name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              )}
-
+            return (
               <div
+                key={message.id}
                 className={cn(
-                  "max-w-[70%] rounded-lg px-4 py-2",
-                  isOwn
-                    ? "bg-primary text-primary-foreground"
-                    : isBot
-                    ? "bg-purple-100 dark:bg-purple-900/30"
-                    : "bg-muted"
+                  "flex gap-3 group",
+                  isOwn ? "justify-end" : "justify-start"
                 )}
               >
                 {!isOwn && (
-                  <p className="text-xs font-medium mb-1 opacity-70">
-                    {message.sender_name}
-                    {isBot && " 🤖"}
-                  </p>
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback
+                      className={cn(
+                        isBot
+                          ? "bg-purple-500 text-white"
+                          : isSupport
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      )}
+                    >
+                      {isBot ? "AI" : message.sender_name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
 
-                {message.message && (
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.message}
-                  </p>
-                )}
+                <div className="flex items-start gap-1 max-w-[75%]">
+                  {/* Action menu - show on left for own messages */}
+                  {isOwn && canModify && !isEditing && !isBot && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-32">
+                        <DropdownMenuItem onClick={() => handleStartEdit(message)}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" />
+                          Sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(message.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Xóa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
 
-                {/* Attachment */}
-                {message.attachment_url && (
-                  <div className="mt-2">
-                    {message.attachment_type === "image" ? (
-                      <a
-                        href={message.attachment_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <img
-                          src={message.attachment_url}
-                          alt={message.attachment_name || "Image"}
-                          className="max-w-full rounded-lg max-h-48 object-cover"
-                        />
-                      </a>
-                    ) : (
-                      <a
-                        href={message.attachment_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors"
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span className="text-sm truncate">
-                          {message.attachment_name || "File"}
-                        </span>
-                        <Download className="h-4 w-4 ml-auto" />
-                      </a>
+                  <div
+                    className={cn(
+                      "rounded-lg px-4 py-2",
+                      isOwn
+                        ? "bg-primary text-primary-foreground"
+                        : isBot
+                        ? "bg-purple-100 dark:bg-purple-900/30"
+                        : "bg-muted"
                     )}
+                  >
+                    {!isOwn && (
+                      <p className="text-xs font-medium mb-1 opacity-70">
+                        {message.sender_name}
+                        {isBot && " 🤖"}
+                      </p>
+                    )}
+
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          ref={editInputRef}
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveEdit();
+                            if (e.key === "Escape") handleCancelEdit();
+                          }}
+                          className="h-7 text-sm bg-background text-foreground"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={handleSaveEdit}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={handleCancelEdit}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {message.message && (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.message}
+                          </p>
+                        )}
+                      </>
+                    )}
+
+                    {/* Attachment */}
+                    {message.attachment_url && (
+                      <div className="mt-2">
+                        {message.attachment_type === "image" ? (
+                          <a
+                            href={message.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img
+                              src={message.attachment_url}
+                              alt={message.attachment_name || "Image"}
+                              className="max-w-full rounded-lg max-h-48 object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={message.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm truncate">
+                              {message.attachment_name || "File"}
+                            </span>
+                            <Download className="h-4 w-4 ml-auto" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] opacity-50 mt-1 text-right">
+                      {format(new Date(message.created_at), "HH:mm", { locale: vi })}
+                      {message.is_read && isOwn && " ✓✓"}
+                    </p>
                   </div>
+
+                  {/* Action menu - show on right for other's messages (admin view) */}
+                  {!isOwn && canModify && !isEditing && !isBot && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-32">
+                        <DropdownMenuItem onClick={() => handleStartEdit(message)}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" />
+                          Sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(message.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Xóa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
+                {isOwn && (
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {message.sender_name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
-
-                <p className="text-[10px] opacity-50 mt-1 text-right">
-                  {format(new Date(message.created_at), "HH:mm", { locale: vi })}
-                  {message.is_read && isOwn && " ✓✓"}
-                </p>
               </div>
+            );
+          })}
 
-              {isOwn && (
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {message.sender_name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Typing indicator */}
-        {typingText && (
-          <div className="flex gap-3 justify-start">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-muted">...</AvatarFallback>
-            </Avatar>
-            <div className="bg-muted rounded-lg px-4 py-2">
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-muted-foreground italic">
-                  {typingText}
-                </span>
-                <span className="flex gap-1">
-                  <span className="animate-bounce delay-0 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
-                  <span className="animate-bounce delay-150 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
-                  <span className="animate-bounce delay-300 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
-                </span>
+          {/* Typing indicator */}
+          {typingText && (
+            <div className="flex gap-3 justify-start">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-muted">...</AvatarFallback>
+              </Avatar>
+              <div className="bg-muted rounded-lg px-4 py-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground italic">
+                    {typingText}
+                  </span>
+                  <span className="flex gap-1">
+                    <span className="animate-bounce delay-0 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
+                    <span className="animate-bounce delay-150 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
+                    <span className="animate-bounce delay-300 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa tin nhắn</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa tin nhắn này? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
