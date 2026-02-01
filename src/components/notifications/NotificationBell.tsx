@@ -59,7 +59,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
         <Button
           variant="ghost"
           size="icon"
-          className={cn("relative h-10 w-10", className)}
+          className={cn("relative h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation active:scale-95 transition-transform", className)}
           aria-label="Thông báo"
         >
           <Bell className="h-5 w-5" />
@@ -74,9 +74,11 @@ export function NotificationBell({ className }: NotificationBellProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0 glass"
+        className="w-[calc(100vw-1.5rem)] max-w-80 p-0 glass z-[9999]"
         align="end"
+        side="bottom"
         sideOffset={8}
+        collisionPadding={12}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b">
@@ -93,7 +95,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation active:scale-95"
               onClick={toggleSound}
               title={soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"}
             >
@@ -107,7 +109,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation active:scale-95"
                 onClick={markAllAsRead}
                 title="Đánh dấu tất cả đã đọc"
               >
@@ -118,7 +120,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
         </div>
 
         {/* Notifications List */}
-        <ScrollArea className="h-[350px]">
+        <ScrollArea className="h-[min(350px,60vh)]">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
@@ -134,7 +136,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 <div
                   key={notification.id}
                   className={cn(
-                    "relative p-3 border-l-4 cursor-pointer transition-colors hover:bg-accent/50",
+                    "relative p-3 sm:p-4 border-l-4 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation",
                     getTypeStyles(notification.type),
                     !notification.is_read && "bg-accent/30"
                   )}
@@ -168,27 +170,27 @@ export function NotificationBell({ className }: NotificationBellProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-8 w-8 min-h-[32px] min-w-[32px] touch-manipulation active:scale-90"
                           onClick={(e) => {
                             e.stopPropagation();
                             markAsRead(notification.id);
                           }}
                           title="Đánh dấu đã đọc"
                         >
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-destructive touch-manipulation active:scale-90"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteNotification(notification.id);
                         }}
                         title="Xóa thông báo"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
