@@ -16,6 +16,8 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
+  PanelRight,
+  PanelRightClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
@@ -54,7 +55,9 @@ import { useLiveChatTyping } from "@/hooks/useLiveChatTyping";
 import { useLiveChatNotes, LiveChatNote } from "@/hooks/useLiveChatNotes";
 import { useRoomChatStats, useGlobalChatStats } from "@/hooks/useLiveChatStats";
 import { useLiveChatBot } from "@/hooks/useLiveChatBot";
-import { MessageList, MessageInput } from "@/components/live-chat/MessageComponents";
+import { MessageList } from "@/components/live-chat/MessageComponents";
+import { ChatInputWithExtras } from "./ChatInputWithExtras";
+import { CustomerInfoPanel } from "./CustomerInfoPanel";
 import { exportChatToCSV, exportChatToPDF } from "@/lib/exportLiveChatHistory";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,6 +84,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const [editingNote, setEditingNote] = useState<LiveChatNote | null>(null);
   const [botEnabled, setBotEnabled] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [showCustomerInfo, setShowCustomerInfo] = useState(true);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -536,249 +540,263 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {selectedRoom ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-3 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {selectedRoom.customer_name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{selectedRoom.customer_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedRoom.customer_email || "Khách"}
-                    </p>
+      <div className="flex-1 flex min-w-0">
+        {/* Chat Column */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {selectedRoom ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {selectedRoom.customer_name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{selectedRoom.customer_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedRoom.customer_email || "Khách"}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="ml-1 text-xs">
+                      {getStatusText(selectedRoom.status)}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="ml-1 text-xs">
-                    {getStatusText(selectedRoom.status)}
-                  </Badge>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  {/* Status buttons */}
-                  <Button
-                    variant={selectedRoom.status === "active" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => handleStatusChange("active")}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Active
-                  </Button>
-                  <Button
-                    variant={selectedRoom.status === "closed" ? "destructive" : "outline"}
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => handleStatusChange("closed")}
-                  >
-                    Đóng
-                  </Button>
-
-                  {/* Export dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
-                        <Download className="h-3 w-3" />
-                        <span className="text-xs">Xuất</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
-                        <FileSpreadsheet className="h-4 w-4" />
-                        Xuất CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
-                        <FileText className="h-4 w-4" />
-                        Xuất PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Notes button */}
-                  <Sheet open={showNotes} onOpenChange={setShowNotes}>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
-                        <StickyNote className="h-3 w-3" />
-                        <span className="text-xs">Ghi chú</span>
-                        {notes.length > 0 && (
-                          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                            {notes.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent className="w-80">
-                    <SheetHeader>
-                      <SheetTitle className="flex items-center gap-2 text-sm">
-                        <StickyNote className="h-4 w-4" />
-                        Ghi chú nội bộ
-                      </SheetTitle>
-                    </SheetHeader>
-
-                    <div className="mt-4 space-y-3">
-                      {/* Add note form */}
-                      <div className="space-y-2">
-                        <Textarea
-                          value={noteContent}
-                          onChange={(e) => setNoteContent(e.target.value)}
-                          placeholder="Thêm ghi chú..."
-                          rows={2}
-                          className="text-sm"
-                        />
-                        <div className="flex justify-end gap-1">
-                          {editingNote && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setEditingNote(null);
-                                setNoteContent("");
-                              }}
-                            >
-                              Hủy
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={handleSaveNote}
-                            disabled={!noteContent.trim() || noteSaving}
-                          >
-                            {editingNote ? "Cập nhật" : "Lưu"}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Notes list */}
-                      <ScrollArea className="h-[calc(100vh-280px)]">
-                        <div className="space-y-2">
-                          {notes.map((note) => (
-                            <Card key={note.id} className="p-2">
-                              <p className="text-xs whitespace-pre-wrap">
-                                {note.content}
-                              </p>
-                              <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t">
-                                <div className="text-[10px] text-muted-foreground">
-                                  {note.author_name} •{" "}
-                                  {format(new Date(note.created_at), "dd/MM HH:mm", {
-                                    locale: vi,
-                                  })}
-                                </div>
-                                <div className="flex gap-0.5">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={() => {
-                                      setEditingNote(note);
-                                      setNoteContent(note.content);
-                                    }}
-                                  >
-                                    <Edit2 className="h-2.5 w-2.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 text-destructive"
-                                    onClick={() => deleteNote(note.id)}
-                                  >
-                                    <Trash2 className="h-2.5 w-2.5" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
-            </div>
-          </div>
-            
-            {/* Room Stats Bar */}
-            {showStats && messages.length > 0 && (
-              <div className="px-3 py-1.5 border-b bg-muted/30">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <Timer className="h-3 w-3 text-primary" />
-                      <span className="text-muted-foreground">TB phản hồi:</span>
-                      <span className="font-medium text-primary">{roomStats.avgResponseTimeText}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Tin nhắn:</span>
-                      <span className="font-medium">{roomStats.totalMessages}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Tỷ lệ:</span>
-                      <span className="font-medium">{roomStats.responseRate}%</span>
-                    </div>
-                  </div>
-                  {botEnabled && (
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Bot className="h-3 w-3" />
-                      <span>Bot: BẬT</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Messages */}
-            <div className="flex-1 overflow-hidden">
-              <MessageList
-                messages={messages}
-                isLoading={messagesLoading}
-                typingText={typingText}
-                currentUserId={user?.id}
-              />
-            </div>
-
-            {/* Quick Replies */}
-            <div className="px-3 py-1.5 border-t bg-muted/30">
-              <ScrollArea className="w-full">
-                <div className="flex gap-1.5 pb-1">
-                  {QUICK_REPLIES.map((reply, index) => (
+                  <div className="flex items-center gap-1">
+                    {/* Status buttons */}
                     <Button
-                      key={index}
-                      variant="outline"
+                      variant={selectedRoom.status === "active" ? "default" : "outline"}
                       size="sm"
-                      className="h-6 px-2 text-[10px] whitespace-nowrap shrink-0"
-                      onClick={() => handleQuickReply(reply)}
+                      className="h-7 px-2 text-xs"
+                      onClick={() => handleStatusChange("active")}
                     >
-                      {reply.slice(0, 30)}...
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Active
                     </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
+                    <Button
+                      variant={selectedRoom.status === "closed" ? "destructive" : "outline"}
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => handleStatusChange("closed")}
+                    >
+                      Đóng
+                    </Button>
 
-            {/* Message Input */}
-            <div className="p-3 border-t">
-              <MessageInput
-                onSend={handleSend}
-                onTyping={startTyping}
-                onUpload={uploadAttachment}
-                disabled={isSending}
-                placeholder="Nhập tin nhắn..."
-              />
+                    {/* Export dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
+                          <Download className="h-3 w-3" />
+                          <span className="text-xs">Xuất</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Xuất CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                          <FileText className="h-4 w-4" />
+                          Xuất PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Customer Info Toggle */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={showCustomerInfo ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setShowCustomerInfo(!showCustomerInfo)}
+                        >
+                          {showCustomerInfo ? (
+                            <PanelRightClose className="h-3 w-3" />
+                          ) : (
+                            <PanelRight className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{showCustomerInfo ? "Ẩn thông tin khách" : "Hiện thông tin khách"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Notes button */}
+                    <Sheet open={showNotes} onOpenChange={setShowNotes}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
+                          <StickyNote className="h-3 w-3" />
+                          <span className="text-xs">Ghi chú</span>
+                          {notes.length > 0 && (
+                            <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                              {notes.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent className="w-80">
+                        <SheetHeader>
+                          <SheetTitle className="flex items-center gap-2 text-sm">
+                            <StickyNote className="h-4 w-4" />
+                            Ghi chú nội bộ
+                          </SheetTitle>
+                        </SheetHeader>
+
+                        <div className="mt-4 space-y-3">
+                          {/* Add note form */}
+                          <div className="space-y-2">
+                            <Textarea
+                              value={noteContent}
+                              onChange={(e) => setNoteContent(e.target.value)}
+                              placeholder="Thêm ghi chú..."
+                              rows={2}
+                              className="text-sm"
+                            />
+                            <div className="flex justify-end gap-1">
+                              {editingNote && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setEditingNote(null);
+                                    setNoteContent("");
+                                  }}
+                                >
+                                  Hủy
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={handleSaveNote}
+                                disabled={!noteContent.trim() || noteSaving}
+                              >
+                                {editingNote ? "Cập nhật" : "Lưu"}
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Notes list */}
+                          <ScrollArea className="h-[calc(100vh-280px)]">
+                            <div className="space-y-2">
+                              {notes.map((note) => (
+                                <Card key={note.id} className="p-2">
+                                  <p className="text-xs whitespace-pre-wrap">
+                                    {note.content}
+                                  </p>
+                                  <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t">
+                                    <div className="text-[10px] text-muted-foreground">
+                                      {note.author_name} •{" "}
+                                      {format(new Date(note.created_at), "dd/MM HH:mm", {
+                                        locale: vi,
+                                      })}
+                                    </div>
+                                    <div className="flex gap-0.5">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5"
+                                        onClick={() => {
+                                          setEditingNote(note);
+                                          setNoteContent(note.content);
+                                        }}
+                                      >
+                                        <Edit2 className="h-2.5 w-2.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 text-destructive"
+                                        onClick={() => deleteNote(note.id)}
+                                      >
+                                        <Trash2 className="h-2.5 w-2.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Room Stats Bar */}
+              {showStats && messages.length > 0 && (
+                <div className="px-3 py-1.5 border-b bg-muted/30">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <Timer className="h-3 w-3 text-primary" />
+                        <span className="text-muted-foreground">TB phản hồi:</span>
+                        <span className="font-medium text-primary">{roomStats.avgResponseTimeText}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Tin nhắn:</span>
+                        <span className="font-medium">{roomStats.totalMessages}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Tỷ lệ:</span>
+                        <span className="font-medium">{roomStats.responseRate}%</span>
+                      </div>
+                    </div>
+                    {botEnabled && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Bot className="h-3 w-3" />
+                        <span>Bot: BẬT</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Messages */}
+              <div className="flex-1 overflow-hidden">
+                <MessageList
+                  messages={messages}
+                  isLoading={messagesLoading}
+                  typingText={typingText}
+                  currentUserId={user?.id}
+                />
+              </div>
+
+              {/* Message Input with Extras */}
+              <div className="p-3 border-t">
+                <ChatInputWithExtras
+                  onSend={handleSend}
+                  onTyping={startTyping}
+                  onUpload={uploadAttachment}
+                  disabled={isSending}
+                  placeholder="Nhập tin nhắn..."
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Chọn một phòng chat để bắt đầu</p>
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Chọn một phòng chat để bắt đầu</p>
-            </div>
-          </div>
+          )}
+        </div>
+
+        {/* Customer Info Panel */}
+        {selectedRoom && showCustomerInfo && (
+          <CustomerInfoPanel
+            room={selectedRoom}
+            messages={messages}
+            className="w-64 hidden lg:block"
+          />
         )}
       </div>
     </div>
