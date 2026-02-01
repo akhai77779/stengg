@@ -359,7 +359,7 @@ export function CustomerInfoPanel({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <MessageSquare className="h-3 w-3" />
-                  Khách / CSKH:
+                  Khách / Support:
                 </span>
                 <span className="font-medium">
                   {customerMessages.length} / {supportMessages.length}

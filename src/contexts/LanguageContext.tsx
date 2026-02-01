@@ -271,7 +271,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile
     'profile.copy': 'sao chép',
     'profile.copied': 'Đã sao chép',
-    'profile.customerService': 'CSKH',
+    'profile.customerService': 'Support',
     'profile.settings': 'Cài đặt',
     'profile.invite': 'Mời bạn bè',
     'profile.update': 'Cập nhật',
