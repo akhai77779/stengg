@@ -93,6 +93,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const {
     messages,
     sendMessage,
+    editMessage,
+    deleteMessage,
     uploadAttachment,
     markAsRead,
     isLoading: messagesLoading,
@@ -765,7 +767,10 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                   messages={messages}
                   isLoading={messagesLoading}
                   typingText={typingText}
-                  currentUserId={user?.id}
+                  currentUserId={user?.id || ""}
+                  canModifyMessages={true}
+                  onEditMessage={(messageId, newMessage) => editMessage({ messageId, newMessage })}
+                  onDeleteMessage={(messageId) => deleteMessage(messageId)}
                 />
               </div>
 
