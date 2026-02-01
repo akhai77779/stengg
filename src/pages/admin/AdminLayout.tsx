@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
-import { NotificationHistory } from "@/components/admin/NotificationHistory";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LiveChatAdminSheet } from "@/components/admin/LiveChatAdminSheet";
 import { cn } from "@/lib/utils";
 
@@ -125,10 +125,6 @@ export default function AdminLayout() {
     pendingTransactionCount,
     pendingOptionTradeCount,
     newUserCount,
-    notificationHistory,
-    unreadNotificationCount,
-    markAsRead,
-    clearAllNotifications
   } = useAdminNotifications();
   const navigate = useNavigate();
 
@@ -194,13 +190,8 @@ export default function AdminLayout() {
                 }
               />
 
-              {/* Notification History Button */}
-              <NotificationHistory
-                notifications={notificationHistory}
-                onClearAll={clearAllNotifications}
-                onMarkAsRead={markAsRead}
-                unreadCount={unreadNotificationCount}
-              />
+              {/* Notification Bell - Now includes both user and admin notifications */}
+              <NotificationBell />
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4 md:p-6">
