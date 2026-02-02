@@ -10,10 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { UserTransactionHistory } from './UserTransactionHistory';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -118,6 +119,9 @@ export function DashboardUsers() {
   const [verificationUser, setVerificationUser] = useState<Profile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessingVerification, setIsProcessingVerification] = useState(false);
+
+  // Transaction history dialog
+  const [transactionHistoryUser, setTransactionHistoryUser] = useState<Profile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -778,6 +782,15 @@ export function DashboardUsers() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8 text-blue-500 hover:text-blue-600"
+                            onClick={() => setTransactionHistoryUser(profile)}
+                            title="Lịch sử nạp/rút"
+                          >
+                            <History className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8"
                             onClick={() => {
                               setPasswordUser(profile);
@@ -1432,6 +1445,15 @@ export function DashboardUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Transaction History Dialog */}
+      <UserTransactionHistory
+        open={!!transactionHistoryUser}
+        onOpenChange={(open) => !open && setTransactionHistoryUser(null)}
+        userId={transactionHistoryUser?.id || ''}
+        userName={transactionHistoryUser?.full_name || 'Không tên'}
+        userCode={transactionHistoryUser?.user_code?.toString().padStart(5, '0') || '-----'}
+      />
     </>
   );
 }
