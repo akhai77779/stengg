@@ -1130,11 +1130,26 @@ export function DashboardUsers() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Số dư hiện tại</Label>
-              <p className="font-mono text-lg text-green-500">
-                ${(subtractBalanceUser?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Số dư hiện tại</Label>
+                <p className="font-mono text-lg text-green-500">
+                  ${(subtractBalanceUser?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (subtractBalanceUser) {
+                    setTransactionHistoryUser(subtractBalanceUser);
+                  }
+                }}
+                className="text-blue-500 border-blue-500/50 hover:bg-blue-500/10"
+              >
+                <History className="w-4 h-4 mr-1" />
+                Xem lịch sử
+              </Button>
             </div>
             <div className="space-y-2">
               <Label htmlFor="subtractAmount">Số tiền trừ đi ($)</Label>
