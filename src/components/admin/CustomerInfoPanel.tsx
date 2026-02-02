@@ -169,16 +169,26 @@ export function CustomerInfoPanel({
           </Badge>
         </div>
 
-        {/* Typing Preview */}
+        {/* Typing Preview - Real-time customer input preview */}
         {typingPreview && (
-          <Card className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <Card className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 animate-fade-in">
             <div className="flex items-start gap-2">
-              <Eye className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="relative">
+                <Eye className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 mb-1">
-                  Đang xem trước:
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 break-words">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                    Đang xem trước:
+                  </p>
+                  <span className="flex gap-0.5">
+                    <span className="h-1.5 w-1.5 bg-yellow-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 bg-yellow-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                    <span className="h-1.5 w-1.5 bg-yellow-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+                  </span>
+                </div>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 break-words italic bg-yellow-100/50 dark:bg-yellow-900/30 px-2 py-1 rounded">
                   "{typingPreview}"
                 </p>
               </div>

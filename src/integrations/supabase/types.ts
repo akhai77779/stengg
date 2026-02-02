@@ -406,6 +406,7 @@ export type Database = {
           id: string
           is_typing: boolean | null
           room_id: string
+          typing_preview: string | null
           updated_at: string | null
           user_id: string
           user_name: string
@@ -415,6 +416,7 @@ export type Database = {
           id?: string
           is_typing?: boolean | null
           room_id: string
+          typing_preview?: string | null
           updated_at?: string | null
           user_id: string
           user_name: string
@@ -424,6 +426,7 @@ export type Database = {
           id?: string
           is_typing?: boolean | null
           room_id?: string
+          typing_preview?: string | null
           updated_at?: string | null
           user_id?: string
           user_name?: string
