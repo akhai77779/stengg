@@ -367,6 +367,16 @@ export function DashboardUsers() {
         const newBalance = result?.new_balance ?? (addBalanceUser.balance || 0) + amount;
         toast({ title: 'Thành công', description: `Đã cộng $${amount.toFixed(2)} vào tài khoản` });
         setProfiles(profiles.map(p => p.id === addBalanceUser.id ? { ...p, balance: newBalance } : p));
+        
+        // Send notification to user
+        await supabase.from('user_notifications').insert({
+          user_id: addBalanceUser.id,
+          title: 'Nạp tiền thành công',
+          message: `Tài khoản của bạn đã được cộng $${amount.toFixed(2)}. Số dư mới: $${newBalance.toFixed(2)}`,
+          type: 'deposit_success',
+          metadata: { amount, new_balance: newBalance, admin_id: user.id }
+        });
+        
         setAddBalanceUser(null);
         setAddAmount('');
       }
@@ -421,6 +431,16 @@ export function DashboardUsers() {
         const newBalance = result?.new_balance ?? currentBalance - amount;
         toast({ title: 'Thành công', description: `Đã trừ $${amount.toFixed(2)} khỏi tài khoản` });
         setProfiles(profiles.map(p => p.id === subtractBalanceUser.id ? { ...p, balance: newBalance } : p));
+        
+        // Send notification to user
+        await supabase.from('user_notifications').insert({
+          user_id: subtractBalanceUser.id,
+          title: 'Hệ thống khấu trừ',
+          message: `Tài khoản của bạn đã bị trừ $${amount.toFixed(2)}. Số dư mới: $${newBalance.toFixed(2)}`,
+          type: 'system_deduction',
+          metadata: { amount, new_balance: newBalance, admin_id: user.id }
+        });
+        
         setSubtractBalanceUser(null);
         setSubtractAmount('');
       }
