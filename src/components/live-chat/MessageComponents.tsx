@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef } from "react";
 import { Send, Paperclip, X, FileText, Download, MoreVertical, Pencil, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ interface MessageListProps {
   canModifyMessages?: boolean;
 }
 
-export function MessageList({
+export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function MessageList({
   messages,
   currentUserId,
   typingText,
@@ -43,7 +43,7 @@ export function MessageList({
   onEditMessage,
   onDeleteMessage,
   canModifyMessages = false,
-}: MessageListProps) {
+}, ref) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -370,7 +370,7 @@ export function MessageList({
       </AlertDialog>
     </>
   );
-}
+});
 
 interface MessageInputProps {
   onSend: (message: string, attachment?: { url: string; type: "image" | "file"; name: string }) => void;
@@ -380,13 +380,13 @@ interface MessageInputProps {
   placeholder?: string;
 }
 
-export function MessageInput({
+export const MessageInput = forwardRef<HTMLFormElement, MessageInputProps>(function MessageInput({
   onSend,
   onTyping,
   onUpload,
   disabled,
   placeholder = "Nhập tin nhắn...",
-}: MessageInputProps) {
+}, ref) {
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -460,7 +460,7 @@ export function MessageInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t p-4">
+    <form ref={ref} onSubmit={handleSubmit} className="border-t p-4">
       {/* File preview */}
       {selectedFile && (
         <div className="mb-3 p-2 bg-muted rounded-lg flex items-center gap-2">
@@ -533,4 +533,4 @@ export function MessageInput({
       </div>
     </form>
   );
-}
+});
