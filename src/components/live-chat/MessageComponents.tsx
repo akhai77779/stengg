@@ -326,21 +326,36 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
             );
           })}
 
-          {/* Typing indicator */}
+          {/* Typing indicator with pulse animation */}
           {typingText && (
-            <div className="flex gap-3 justify-start">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-muted">...</AvatarFallback>
+            <div className="flex gap-3 justify-start animate-fade-in">
+              <Avatar className="h-8 w-8 animate-pulse">
+                <AvatarFallback className="bg-primary/20 text-primary">
+                  <span className="flex gap-0.5">
+                    <span className="h-1 w-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1 w-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1 w-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                </AvatarFallback>
               </Avatar>
-              <div className="bg-muted rounded-lg px-4 py-2">
-                <div className="flex items-center gap-1">
+              <div className="bg-muted/80 rounded-lg px-4 py-2 shadow-sm border border-border/50">
+                <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground italic">
                     {typingText}
                   </span>
-                  <span className="flex gap-1">
-                    <span className="animate-bounce delay-0 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
-                    <span className="animate-bounce delay-150 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
-                    <span className="animate-bounce delay-300 h-1.5 w-1.5 bg-muted-foreground rounded-full" />
+                  <span className="flex gap-1 ml-1">
+                    <span 
+                      className="h-2 w-2 bg-primary/60 rounded-full animate-pulse" 
+                      style={{ animationDelay: '0ms', animationDuration: '1s' }} 
+                    />
+                    <span 
+                      className="h-2 w-2 bg-primary/60 rounded-full animate-pulse" 
+                      style={{ animationDelay: '200ms', animationDuration: '1s' }} 
+                    />
+                    <span 
+                      className="h-2 w-2 bg-primary/60 rounded-full animate-pulse" 
+                      style={{ animationDelay: '400ms', animationDuration: '1s' }} 
+                    />
                   </span>
                 </div>
               </div>
