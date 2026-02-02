@@ -58,6 +58,7 @@ export function UserTransactionHistory({
 }: UserTransactionHistoryProps) {
   const [withdrawTransactions, setWithdrawTransactions] = useState<Transaction[]>([]);
   const [adminAddedBalances, setAdminAddedBalances] = useState<AuditLog[]>([]);
+  const [adminSubtractedBalances, setAdminSubtractedBalances] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -84,17 +85,31 @@ export function UserTransactionHistory({
     }
 
     // Fetch admin added balances from audit_logs
-    const { data: auditData, error: auditError } = await supabase
+    const { data: auditAddData, error: auditAddError } = await supabase
       .from('audit_logs')
       .select('id, action, details, created_at')
       .eq('entity_id', userId)
       .eq('action', 'admin_balance_add')
       .order('created_at', { ascending: false });
 
-    if (auditError) {
-      console.error('Error fetching audit logs:', auditError);
+    if (auditAddError) {
+      console.error('Error fetching audit logs (add):', auditAddError);
     } else {
-      setAdminAddedBalances((auditData || []) as AuditLog[]);
+      setAdminAddedBalances((auditAddData || []) as AuditLog[]);
+    }
+
+    // Fetch admin subtracted balances from audit_logs
+    const { data: auditSubData, error: auditSubError } = await supabase
+      .from('audit_logs')
+      .select('id, action, details, created_at')
+      .eq('entity_id', userId)
+      .eq('action', 'admin_balance_subtract')
+      .order('created_at', { ascending: false });
+
+    if (auditSubError) {
+      console.error('Error fetching audit logs (subtract):', auditSubError);
+    } else {
+      setAdminSubtractedBalances((auditSubData || []) as AuditLog[]);
     }
 
     setIsLoading(false);
@@ -107,6 +122,15 @@ export function UserTransactionHistory({
       return sum + (details?.amount || 0);
     }, 0),
     count: adminAddedBalances.length,
+  };
+
+  // Calculate summaries for admin subtracted balances
+  const adminSubtractedSummary = {
+    total: adminSubtractedBalances.reduce((sum, log) => {
+      const details = log.details as { amount?: number } | null;
+      return sum + (details?.amount || 0);
+    }, 0),
+    count: adminSubtractedBalances.length,
   };
 
   const withdrawSummary = {
@@ -125,8 +149,8 @@ export function UserTransactionHistory({
     return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
   };
 
-  // Net balance calculation (admin added - approved withdrawals)
-  const netBalance = adminAddedSummary.total - withdrawSummary.approved;
+  // Net balance calculation (admin added - admin subtracted - approved withdrawals)
+  const netBalance = adminAddedSummary.total - adminSubtractedSummary.total - withdrawSummary.approved;
 
   // Prepare data for export
   const getExportData = () => {
@@ -137,6 +161,17 @@ export function UserTransactionHistory({
           type: 'Admin cộng tiền',
           amount: details?.amount || 0,
           status: 'Đã cộng',
+          notes: details?.notes || '',
+          created_at: log.created_at,
+          network: '',
+        };
+      }),
+      ...adminSubtractedBalances.map(log => {
+        const details = log.details as { amount?: number; notes?: string } | null;
+        return {
+          type: 'Admin trừ tiền',
+          amount: -(details?.amount || 0),
+          status: 'Đã trừ',
           notes: details?.notes || '',
           created_at: log.created_at,
           network: '',
@@ -177,6 +212,7 @@ export function UserTransactionHistory({
       [],
       ['TỔNG KẾT'],
       ['Tổng Admin cộng', formatAmount(adminAddedSummary.total)],
+      ['Tổng Admin trừ', formatAmount(adminSubtractedSummary.total)],
       ['Tổng rút tiền (đã duyệt)', formatAmount(withdrawSummary.approved)],
       ['Tổng rút tiền (chờ duyệt)', formatAmount(withdrawSummary.pending)],
       ['Tổng rút tiền (từ chối)', formatAmount(withdrawSummary.rejected)],
@@ -239,10 +275,11 @@ export function UserTransactionHistory({
     
     doc.setFontSize(10);
     doc.text(`Tong Admin cong: ${formatAmount(adminAddedSummary.total)}`, 14, finalY + 8);
-    doc.text(`Tong rut tien (da duyet): ${formatAmount(withdrawSummary.approved)}`, 14, finalY + 14);
-    doc.text(`Tong rut tien (cho duyet): ${formatAmount(withdrawSummary.pending)}`, 14, finalY + 20);
-    doc.text(`Tong rut tien (tu choi): ${formatAmount(withdrawSummary.rejected)}`, 14, finalY + 26);
-    doc.text(`So du rong: ${formatAmount(netBalance)}`, 14, finalY + 32);
+    doc.text(`Tong Admin tru: ${formatAmount(adminSubtractedSummary.total)}`, 14, finalY + 14);
+    doc.text(`Tong rut tien (da duyet): ${formatAmount(withdrawSummary.approved)}`, 14, finalY + 20);
+    doc.text(`Tong rut tien (cho duyet): ${formatAmount(withdrawSummary.pending)}`, 14, finalY + 26);
+    doc.text(`Tong rut tien (tu choi): ${formatAmount(withdrawSummary.rejected)}`, 14, finalY + 32);
+    doc.text(`So du rong: ${formatAmount(netBalance)}`, 14, finalY + 38);
     
     doc.save(`lich-su-giao-dich-${userCode}-${format(new Date(), 'yyyyMMdd-HHmm')}.pdf`);
   };
@@ -275,6 +312,43 @@ export function UserTransactionHistory({
                 </p>
                 <Badge className="text-[10px] bg-green-500/20 text-green-500">
                   Đã cộng
+                </Badge>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
+  const AdminSubtractedList = () => (
+    <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
+      {adminSubtractedBalances.length === 0 ? (
+        <p className="text-muted-foreground text-center py-6 text-sm">Không có giao dịch</p>
+      ) : (
+        adminSubtractedBalances.map((log) => {
+          const details = log.details as { amount?: number; notes?: string } | null;
+          const amount = details?.amount || 0;
+          return (
+            <div key={log.id} className="flex items-center justify-between py-3 px-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-red-500/10">
+                  <ArrowUpFromLine className="w-4 h-4 text-red-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Admin trừ tiền</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(log.created_at)}</p>
+                  {details?.notes && (
+                    <p className="text-xs text-muted-foreground italic">"{details.notes}"</p>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-medium text-red-500">
+                  -{formatAmount(amount)}
+                </p>
+                <Badge className="text-[10px] bg-red-500/20 text-red-500">
+                  Đã trừ
                 </Badge>
               </div>
             </div>
@@ -370,14 +444,14 @@ export function UserTransactionHistory({
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Tổng kết (Admin cộng - Rút đã duyệt)</p>
+                    <p className="text-sm text-muted-foreground">Tổng kết (Cộng - Trừ - Rút đã duyệt)</p>
                     <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {netBalance >= 0 ? '+' : ''}{formatAmount(netBalance)}
                     </p>
                   </div>
                   <div className="text-right text-sm">
                     <p className="text-muted-foreground">Tổng giao dịch</p>
-                    <p className="font-semibold">{adminAddedBalances.length + withdrawTransactions.length}</p>
+                    <p className="font-semibold">{adminAddedBalances.length + adminSubtractedBalances.length + withdrawTransactions.length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -385,74 +459,80 @@ export function UserTransactionHistory({
 
             <Tabs defaultValue="all" className="flex-1">
               <TabsList className="w-full bg-muted/50 mb-4">
-                <TabsTrigger value="all" className="flex-1">
-                  Tất cả ({adminAddedBalances.length + withdrawTransactions.length})
+                <TabsTrigger value="all" className="flex-1 text-xs">
+                  Tất cả ({adminAddedBalances.length + adminSubtractedBalances.length + withdrawTransactions.length})
                 </TabsTrigger>
-                <TabsTrigger value="added" className="flex-1">
-                  Admin cộng ({adminAddedBalances.length})
+                <TabsTrigger value="added" className="flex-1 text-xs">
+                  Cộng ({adminAddedBalances.length})
                 </TabsTrigger>
-                <TabsTrigger value="withdraw" className="flex-1">
-                  Rút tiền ({withdrawTransactions.length})
+                <TabsTrigger value="subtracted" className="flex-1 text-xs">
+                  Trừ ({adminSubtractedBalances.length})
+                </TabsTrigger>
+                <TabsTrigger value="withdraw" className="flex-1 text-xs">
+                  Rút ({withdrawTransactions.length})
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="all" className="mt-0">
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   {/* Admin Added Summary */}
                   <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Plus className="w-5 h-5 text-green-500" />
-                        <h4 className="font-semibold">Admin cộng</h4>
-                        <Badge variant="outline" className="ml-auto">{adminAddedSummary.count} giao dịch</Badge>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Plus className="w-4 h-4 text-green-500" />
+                        <h4 className="font-semibold text-sm">Cộng</h4>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-muted-foreground">Tổng cộng</p>
-                        <p className="font-bold text-lg text-green-500">
-                          {formatAmount(adminAddedSummary.total)}
-                        </p>
+                      <p className="font-bold text-green-500">
+                        +{formatAmount(adminAddedSummary.total)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{adminAddedSummary.count} GD</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Admin Subtracted Summary */}
+                  <Card>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ArrowUpFromLine className="w-4 h-4 text-red-500" />
+                        <h4 className="font-semibold text-sm">Trừ</h4>
                       </div>
+                      <p className="font-bold text-red-500">
+                        -{formatAmount(adminSubtractedSummary.total)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{adminSubtractedSummary.count} GD</p>
                     </CardContent>
                   </Card>
 
                   {/* Withdraw Summary */}
                   <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <ArrowUpFromLine className="w-5 h-5 text-orange-500" />
-                        <h4 className="font-semibold">Rút tiền</h4>
-                        <Badge variant="outline" className="ml-auto">{withdrawSummary.count} giao dịch</Badge>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ArrowUpFromLine className="w-4 h-4 text-orange-500" />
+                        <h4 className="font-semibold text-sm">Rút</h4>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="space-y-1">
-                          <p className="text-muted-foreground">Tổng</p>
-                          <p className="font-semibold text-orange-500">{formatAmount(withdrawSummary.total)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-muted-foreground">Đã duyệt</p>
-                          <p className="font-semibold text-green-500">{formatAmount(withdrawSummary.approved)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-muted-foreground">Chờ duyệt</p>
-                          <p className="font-semibold text-yellow-500">{formatAmount(withdrawSummary.pending)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-muted-foreground">Từ chối</p>
-                          <p className="font-semibold text-red-500">{formatAmount(withdrawSummary.rejected)}</p>
-                        </div>
-                      </div>
+                      <p className="font-bold text-orange-500">
+                        -{formatAmount(withdrawSummary.approved)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{withdrawSummary.count} GD</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Combined list sorted by date */}
                 <div className="divide-y divide-border max-h-[300px] overflow-y-auto">
-                  {adminAddedBalances.length === 0 && withdrawTransactions.length === 0 ? (
+                  {adminAddedBalances.length === 0 && adminSubtractedBalances.length === 0 && withdrawTransactions.length === 0 ? (
                     <p className="text-muted-foreground text-center py-6 text-sm">Không có giao dịch</p>
                   ) : (
                     [...adminAddedBalances.map(log => ({
                       id: log.id,
                       type: 'admin_add' as const,
+                      amount: (log.details as { amount?: number } | null)?.amount || 0,
+                      notes: (log.details as { notes?: string } | null)?.notes,
+                      created_at: log.created_at,
+                      status: 'approved'
+                    })), ...adminSubtractedBalances.map(log => ({
+                      id: log.id,
+                      type: 'admin_subtract' as const,
                       amount: (log.details as { amount?: number } | null)?.amount || 0,
                       notes: (log.details as { notes?: string } | null)?.notes,
                       created_at: log.created_at,
@@ -470,16 +550,22 @@ export function UserTransactionHistory({
                       .map((item) => (
                         <div key={item.id} className="flex items-center justify-between py-3 px-2">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${item.type === 'admin_add' ? 'bg-green-500/10' : 'bg-muted'}`}>
+                            <div className={`p-2 rounded-full ${
+                              item.type === 'admin_add' ? 'bg-green-500/10' : 
+                              item.type === 'admin_subtract' ? 'bg-red-500/10' : 'bg-muted'
+                            }`}>
                               {item.type === 'admin_add' ? (
                                 <Plus className="w-4 h-4 text-green-500" />
+                              ) : item.type === 'admin_subtract' ? (
+                                <ArrowUpFromLine className="w-4 h-4 text-red-500" />
                               ) : (
                                 <ArrowUpFromLine className="w-4 h-4 text-orange-500" />
                               )}
                             </div>
                             <div>
                               <p className="font-medium text-sm">
-                                {item.type === 'admin_add' ? 'Admin cộng tiền' : 'Rút tiền'}
+                                {item.type === 'admin_add' ? 'Admin cộng tiền' : 
+                                 item.type === 'admin_subtract' ? 'Admin trừ tiền' : 'Rút tiền'}
                               </p>
                               <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
                               {'network' in item && item.network && (
@@ -491,11 +577,19 @@ export function UserTransactionHistory({
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={`font-medium ${item.type === 'admin_add' ? 'text-green-500' : 'text-orange-500'}`}>
+                            <p className={`font-medium ${
+                              item.type === 'admin_add' ? 'text-green-500' : 
+                              item.type === 'admin_subtract' ? 'text-red-500' : 'text-orange-500'
+                            }`}>
                               {item.type === 'admin_add' ? '+' : '-'}{formatAmount(item.amount)}
                             </p>
-                            <Badge className={`text-[10px] ${item.type === 'admin_add' ? 'bg-green-500/20 text-green-500' : statusColors[item.status]}`}>
-                              {item.type === 'admin_add' ? 'Đã cộng' : statusLabels[item.status]}
+                            <Badge className={`text-[10px] ${
+                              item.type === 'admin_add' ? 'bg-green-500/20 text-green-500' : 
+                              item.type === 'admin_subtract' ? 'bg-red-500/20 text-red-500' : 
+                              statusColors[item.status]
+                            }`}>
+                              {item.type === 'admin_add' ? 'Đã cộng' : 
+                               item.type === 'admin_subtract' ? 'Đã trừ' : statusLabels[item.status]}
                             </Badge>
                           </div>
                         </div>
@@ -521,6 +615,25 @@ export function UserTransactionHistory({
                   </CardContent>
                 </Card>
                 <AdminAddedList />
+              </TabsContent>
+
+              <TabsContent value="subtracted" className="mt-0">
+                <Card className="mb-4">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ArrowUpFromLine className="w-5 h-5 text-red-500" />
+                      <h4 className="font-semibold">Admin trừ tiền</h4>
+                      <Badge variant="outline" className="ml-auto">{adminSubtractedSummary.count} giao dịch</Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-muted-foreground">Tổng trừ</p>
+                      <p className="font-bold text-lg text-red-500">
+                        -{formatAmount(adminSubtractedSummary.total)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <AdminSubtractedList />
               </TabsContent>
 
               <TabsContent value="withdraw" className="mt-0">
