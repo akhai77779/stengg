@@ -3,9 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ArrowDownToLine, ArrowUpFromLine, DollarSign, Plus } from 'lucide-react';
+import { Loader2, ArrowDownToLine, ArrowUpFromLine, DollarSign, Plus, FileSpreadsheet, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Transaction {
   id: string;
@@ -124,6 +128,125 @@ export function UserTransactionHistory({
   // Net balance calculation (admin added - approved withdrawals)
   const netBalance = adminAddedSummary.total - withdrawSummary.approved;
 
+  // Prepare data for export
+  const getExportData = () => {
+    const allTransactions = [
+      ...adminAddedBalances.map(log => {
+        const details = log.details as { amount?: number; notes?: string } | null;
+        return {
+          type: 'Admin cộng tiền',
+          amount: details?.amount || 0,
+          status: 'Đã cộng',
+          notes: details?.notes || '',
+          created_at: log.created_at,
+          network: '',
+        };
+      }),
+      ...withdrawTransactions.map(tx => ({
+        type: 'Rút tiền',
+        amount: -tx.amount,
+        status: statusLabels[tx.status] || tx.status,
+        notes: tx.notes || '',
+        created_at: tx.created_at,
+        network: tx.network || '',
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return allTransactions;
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    const data = getExportData();
+    
+    // Create worksheet data
+    const wsData = [
+      ['BÁO CÁO LỊCH SỬ GIAO DỊCH'],
+      [`Người dùng: ${userName} (ID: ${userCode})`],
+      [`Ngày xuất: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`],
+      [],
+      ['Loại giao dịch', 'Số tiền ($)', 'Trạng thái', 'Mạng', 'Ghi chú', 'Thời gian'],
+      ...data.map(tx => [
+        tx.type,
+        tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        tx.status,
+        tx.network,
+        tx.notes,
+        format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm'),
+      ]),
+      [],
+      ['TỔNG KẾT'],
+      ['Tổng Admin cộng', formatAmount(adminAddedSummary.total)],
+      ['Tổng rút tiền (đã duyệt)', formatAmount(withdrawSummary.approved)],
+      ['Tổng rút tiền (chờ duyệt)', formatAmount(withdrawSummary.pending)],
+      ['Tổng rút tiền (từ chối)', formatAmount(withdrawSummary.rejected)],
+      ['Số dư ròng', formatAmount(netBalance)],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 18 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 30 },
+      { wch: 18 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử giao dịch');
+    
+    XLSX.writeFile(wb, `lich-su-giao-dich-${userCode}-${format(new Date(), 'yyyyMMdd-HHmm')}.xlsx`);
+  };
+
+  // Export to PDF
+  const handleExportPDF = () => {
+    const data = getExportData();
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(16);
+    doc.text('BAO CAO LICH SU GIAO DICH', 14, 20);
+    
+    doc.setFontSize(10);
+    doc.text(`Nguoi dung: ${userName} (ID: ${userCode})`, 14, 30);
+    doc.text(`Ngay xuat: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 36);
+    
+    // Transaction table
+    const tableData = data.map(tx => [
+      tx.type,
+      tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      tx.status,
+      tx.network,
+      format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm'),
+    ]);
+
+    autoTable(doc, {
+      head: [['Loai GD', 'So tien ($)', 'Trang thai', 'Mang', 'Thoi gian']],
+      body: tableData,
+      startY: 42,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    // Summary
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    
+    doc.setFontSize(12);
+    doc.text('TONG KET', 14, finalY);
+    
+    doc.setFontSize(10);
+    doc.text(`Tong Admin cong: ${formatAmount(adminAddedSummary.total)}`, 14, finalY + 8);
+    doc.text(`Tong rut tien (da duyet): ${formatAmount(withdrawSummary.approved)}`, 14, finalY + 14);
+    doc.text(`Tong rut tien (cho duyet): ${formatAmount(withdrawSummary.pending)}`, 14, finalY + 20);
+    doc.text(`Tong rut tien (tu choi): ${formatAmount(withdrawSummary.rejected)}`, 14, finalY + 26);
+    doc.text(`So du rong: ${formatAmount(netBalance)}`, 14, finalY + 32);
+    
+    doc.save(`lich-su-giao-dich-${userCode}-${format(new Date(), 'yyyyMMdd-HHmm')}.pdf`);
+  };
+
   const AdminAddedList = () => (
     <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
       {adminAddedBalances.length === 0 ? (
@@ -201,13 +324,39 @@ export function UserTransactionHistory({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
-            Lịch sử giao dịch
-          </DialogTitle>
-          <DialogDescription>
-            {userName} (ID: {userCode})
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" />
+                Lịch sử giao dịch
+              </DialogTitle>
+              <DialogDescription>
+                {userName} (ID: {userCode})
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                className="text-green-600 border-green-600/50 hover:bg-green-600/10"
+                disabled={adminAddedBalances.length === 0 && withdrawTransactions.length === 0}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-1" />
+                Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                className="text-red-500 border-red-500/50 hover:bg-red-500/10"
+                disabled={adminAddedBalances.length === 0 && withdrawTransactions.length === 0}
+              >
+                <FileText className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         {isLoading ? (
