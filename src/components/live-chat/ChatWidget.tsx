@@ -303,12 +303,14 @@ export function ChatWidget({
           {/* Content */}
           {!isMinimized && (
             <>
-              <MessageList
-                messages={messages}
-                currentUserId={customerId}
-                typingText={typingText}
-                isLoading={isLoading}
-              />
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <MessageList
+                  messages={messages}
+                  currentUserId={customerId}
+                  typingText={typingText}
+                  isLoading={isLoading}
+                />
+              </div>
 
               <MessageInput
                 onSend={handleSend}

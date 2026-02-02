@@ -224,7 +224,7 @@ export function MobileSupportButton() {
         {/* Message list with fade animation */}
         <div
           className={cn(
-            "flex-1 overflow-hidden transition-opacity duration-200 delay-100",
+            "flex-1 min-h-0 flex flex-col transition-opacity duration-200 delay-100",
             isOpen ? "opacity-100" : "opacity-0"
           )}
         >
@@ -273,7 +273,7 @@ export function MobileSupportButton() {
           </div>
 
           {/* Message list */}
-          <div className="h-[calc(100%-110px)]">
+          <div className="h-[calc(100%-110px)] flex flex-col">
             <MessageList
               messages={messages}
               currentUserId={customerId}
