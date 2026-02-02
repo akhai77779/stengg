@@ -139,8 +139,8 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
               <div
                 key={message.id}
                 className={cn(
-                  "flex gap-3 group animate-fade-in",
-                  isOwn ? "justify-end" : "justify-start"
+                  "flex gap-3 group",
+                  isOwn ? "justify-end animate-slide-in-right" : "justify-start animate-slide-in-left"
                 )}
               >
                 {!isOwn && (

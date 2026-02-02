@@ -84,6 +84,10 @@ export default {
           from: { opacity: "0", transform: "translateX(20px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
+        "slide-in-left": {
+          from: { opacity: "0", transform: "translateX(-20px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
         "pulse-glow": {
           "0%, 100%": { boxShadow: "0 0 20px hsl(187 100% 42% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(187 100% 42% / 0.5)" },
@@ -117,7 +121,8 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out",
-        "slide-in-right": "slide-in-right 0.5s ease-out",
+        "slide-in-right": "slide-in-right 0.3s ease-out",
+        "slide-in-left": "slide-in-left 0.3s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         "price-flash": "price-flash 0.6s ease-in-out",
