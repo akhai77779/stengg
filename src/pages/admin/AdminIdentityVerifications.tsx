@@ -94,6 +94,8 @@ export default function AdminIdentityVerifications() {
   };
 
   const handleApprove = async (id: string) => {
+    if (!selectedVerification) return;
+    
     setIsProcessing(true);
     const { error } = await supabase
       .from('identity_verifications')
@@ -110,6 +112,15 @@ export default function AdminIdentityVerifications() {
         description: 'Không thể duyệt yêu cầu.',
       });
     } else {
+      // Send notification to user
+      await supabase.from('user_notifications').insert({
+        user_id: selectedVerification.user_id,
+        title: 'Xác minh danh tính thành công',
+        message: `Yêu cầu xác minh danh tính của bạn đã được duyệt. Tài khoản của bạn đã được xác thực.`,
+        type: 'kyc_approved',
+        metadata: { verification_id: id, full_name: selectedVerification.full_name }
+      });
+      
       toast({
         title: 'Thành công',
         description: 'Đã duyệt xác minh danh tính.',
@@ -121,6 +132,8 @@ export default function AdminIdentityVerifications() {
   };
 
   const handleReject = async (id: string) => {
+    if (!selectedVerification) return;
+    
     if (!rejectionReason.trim()) {
       toast({
         variant: 'destructive',
@@ -146,6 +159,15 @@ export default function AdminIdentityVerifications() {
         description: 'Không thể từ chối yêu cầu.',
       });
     } else {
+      // Send notification to user
+      await supabase.from('user_notifications').insert({
+        user_id: selectedVerification.user_id,
+        title: 'Xác minh danh tính bị từ chối',
+        message: `Yêu cầu xác minh danh tính của bạn đã bị từ chối.\n\nLý do: ${rejectionReason}\n\nVui lòng kiểm tra lại thông tin và gửi lại yêu cầu.`,
+        type: 'kyc_rejected',
+        metadata: { verification_id: id, rejection_reason: rejectionReason }
+      });
+      
       toast({
         title: 'Thành công',
         description: 'Đã từ chối yêu cầu xác minh.',
