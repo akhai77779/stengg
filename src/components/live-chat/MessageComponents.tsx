@@ -116,13 +116,11 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
   }
 
   return (
-    <>
-      <div 
-        ref={scrollContainerRef} 
-        className="flex-1 min-h-0 p-4 overflow-y-auto overscroll-contain"
-        style={{ scrollBehavior: 'smooth' }}
-      >
-        <div className="space-y-4 pb-2">
+    <div 
+      ref={scrollContainerRef} 
+      className="flex-1 min-h-0 h-full overflow-y-auto overscroll-contain"
+    >
+        <div className="p-4 space-y-4 pb-2">
           {messages.map((message) => {
             const isOwn = message.sender_id === currentUserId || 
               (message.sender_type === "customer" && message.sender_id === currentUserId);
@@ -346,29 +344,28 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
             </div>
           )}
         </div>
-      </div>
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xóa tin nhắn</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa tin nhắn này? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa tin nhắn</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa tin nhắn này? Hành động này không thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Xóa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
   );
 });
 
