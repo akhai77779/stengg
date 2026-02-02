@@ -170,10 +170,10 @@ export function useLiveChatTyping(
     };
   }, [roomId, userId]);
 
-  // Get typing indicator text
+  // Get typing indicator text - show "Support ST Engineering" for support staff
   const typingText = othersTyping.length > 0
     ? othersTyping.length === 1
-      ? `${othersTyping[0].user_name} đang nhập...`
+      ? `${othersTyping[0].user_type === "support" ? "Support ST Engineering" : othersTyping[0].user_name} đang nhập...`
       : `${othersTyping.length} người đang nhập...`
     : null;
 
