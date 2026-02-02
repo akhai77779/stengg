@@ -1,8 +1,11 @@
+import { forwardRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Linkedin, Youtube } from 'lucide-react';
 import stLogo from '@/assets/st-logo.png';
-export function Footer() {
-  return <footer className="bg-card border-t border-border">
+
+export const Footer = forwardRef<HTMLElement, object>(function Footer(_, ref) {
+  return (
+    <footer ref={ref} className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -56,8 +59,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Mail className="w-4 h-4 text-primary" />
-                <span>stengg.com@stengg.it.com
-              </span>
+                <span>stengg.com@stengg.it.com</span>
               </li>
             </ul>
           </div>
@@ -85,5 +87,6 @@ export function Footer() {
           </p>
         </div>
       </div>
-    </footer>;
-}
+    </footer>
+  );
+});
