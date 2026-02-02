@@ -202,7 +202,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
                   >
                     {!isOwn && (
                       <p className="text-xs font-medium mb-1 opacity-70">
-                        {message.sender_name}
+                        {isSupport ? "Support ST Engineering" : isBot ? "Support ST Engineering" : message.sender_name}
                         {isBot && " 🤖"}
                       </p>
                     )}
