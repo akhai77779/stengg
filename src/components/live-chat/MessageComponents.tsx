@@ -51,12 +51,15 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto scroll to bottom on new messages
+  // Auto scroll to bottom on new messages with smooth animation
   useEffect(() => {
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
       if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
       }
     });
   }, [messages, typingText]);
@@ -136,7 +139,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
               <div
                 key={message.id}
                 className={cn(
-                  "flex gap-3 group",
+                  "flex gap-3 group animate-fade-in",
                   isOwn ? "justify-end" : "justify-start"
                 )}
               >
