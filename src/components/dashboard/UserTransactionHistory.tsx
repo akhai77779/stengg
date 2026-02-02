@@ -88,7 +88,7 @@ export function UserTransactionHistory({
       .from('audit_logs')
       .select('id, action, details, created_at')
       .eq('entity_id', userId)
-      .eq('action', 'admin_add_balance')
+      .eq('action', 'admin_balance_add')
       .order('created_at', { ascending: false });
 
     if (auditError) {
