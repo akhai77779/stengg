@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea removed - using native scrolling for better flexbox compatibility
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -473,7 +473,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
         </div>
 
         {/* Room list */}
-        <ScrollArea className="flex-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {roomsLoading ? (
             <div className="p-4 text-center text-muted-foreground text-sm">
               Đang tải...
@@ -538,7 +538,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Main Chat Area */}
@@ -685,7 +685,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                           </div>
 
                           {/* Notes list */}
-                          <ScrollArea className="h-[calc(100vh-280px)]">
+                          <div className="h-[calc(100vh-280px)] overflow-y-auto overscroll-contain">
                             <div className="space-y-2">
                               {notes.map((note) => (
                                 <Card key={note.id} className="p-2">
@@ -724,7 +724,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                                 </Card>
                               ))}
                             </div>
-                          </ScrollArea>
+                          </div>
                         </div>
                       </SheetContent>
                     </Sheet>

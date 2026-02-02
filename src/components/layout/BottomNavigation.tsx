@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Newspaper, Package, Heart, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,11 +11,11 @@ const navItems = [
   { label: 'Của tôi', href: '/profile', icon: User },
 ];
 
-export function BottomNavigation() {
+export const BottomNavigation = forwardRef<HTMLElement, object>(function BottomNavigation(_, ref) {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
+    <nav ref={ref} className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
       {/* Gradient border top */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent" />
       
@@ -60,4 +61,4 @@ export function BottomNavigation() {
       </div>
     </nav>
   );
-}
+});
