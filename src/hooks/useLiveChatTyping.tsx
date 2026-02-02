@@ -9,7 +9,7 @@ interface TypingStatus {
   user_type: "customer" | "support";
   is_typing: boolean;
   updated_at: string;
-  typing_preview?: string; // Preview of what user is typing
+  typing_preview?: string;
 }
 
 interface UseLiveChatTypingOptions {
@@ -29,18 +29,13 @@ export function useLiveChatTyping(
   const isTypingRef = useRef(false);
   const currentTextRef = useRef<string>("");
 
-  // Update typing status in database (with preview text for admin view)
+  // Update typing status in database with preview text
   const setTyping = useCallback(
     async (isTyping: boolean, previewText?: string) => {
       if (!roomId || !userId) return;
 
       try {
-        // Store preview text in localStorage for admin to see (workaround for DB column)
-        if (userType === "customer" && previewText !== undefined) {
-          localStorage.setItem(`typing_preview_${roomId}_${userId}`, previewText);
-        }
-
-        // Upsert typing status
+        // Upsert typing status with preview text
         await supabase.from("live_chat_typing").upsert(
           {
             room_id: roomId,
@@ -48,6 +43,7 @@ export function useLiveChatTyping(
             user_name: userName,
             user_type: userType,
             is_typing: isTyping,
+            typing_preview: previewText || "",
             updated_at: new Date().toISOString(),
           },
           {
@@ -117,14 +113,7 @@ export function useLiveChatTyping(
           (status) =>
             status.user_id !== userId &&
             now - new Date(status.updated_at).getTime() < 5000
-        ).map(status => {
-          // Try to get preview text from localStorage
-          const preview = localStorage.getItem(`typing_preview_${roomId}_${status.user_id}`);
-          return {
-            ...status,
-            typing_preview: preview || undefined,
-          };
-        });
+        );
         setOthersTyping(activeTyping);
       }
     } catch (error) {
@@ -171,10 +160,9 @@ export function useLiveChatTyping(
       }
       // Stop typing when component unmounts
       if (roomId && userId) {
-        localStorage.removeItem(`typing_preview_${roomId}_${userId}`);
         supabase
           .from("live_chat_typing")
-          .update({ is_typing: false })
+          .update({ is_typing: false, typing_preview: "" })
           .eq("room_id", roomId)
           .eq("user_id", userId)
           .then(() => {});
@@ -189,7 +177,7 @@ export function useLiveChatTyping(
       : `${othersTyping.length} người đang nhập...`
     : null;
 
-  // Get typing preview (for admin view)
+  // Get typing preview (for admin view) - show first user's preview
   const typingPreview = othersTyping.length > 0 && othersTyping[0].typing_preview
     ? othersTyping[0].typing_preview
     : null;
