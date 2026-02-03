@@ -24,7 +24,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { z } from 'zod';
-import { useRipple } from '@/hooks/useRipple';
+
 
 interface SavedAccount {
   email: string;
@@ -46,7 +46,6 @@ export default function SwitchAccount() {
   const [loginPassword, setLoginPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [lastLoginAt, setLastLoginAt] = useState<string | null>(null);
-  const ripple = useRipple();
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
@@ -229,8 +228,7 @@ export default function SwitchAccount() {
         <div className="mb-6">
           <h2 className="text-sm font-medium text-gray-400 mb-3">{t('switchAccount.currentAccount')}</h2>
           <div 
-            onClick={ripple.createRipple}
-            className="relative bg-[#1a1f2e] rounded-xl p-4 flex items-center gap-3 transition-all duration-200 active:scale-[0.99] overflow-hidden cursor-pointer"
+            className="relative bg-[#1a1f2e] rounded-xl p-4 flex items-center gap-3 transition-all duration-200 active:scale-[0.99] overflow-hidden"
           >
             <Avatar className="h-12 w-12 bg-green-500">
               <AvatarFallback className="bg-green-500 text-white text-lg font-bold">
@@ -243,7 +241,6 @@ export default function SwitchAccount() {
                 {t('switchAccount.lastLogin')}: {formatLastLogin(lastLoginAt)}
               </p>
             </div>
-            <ripple.RippleContainer />
           </div>
         </div>
 
@@ -256,7 +253,6 @@ export default function SwitchAccount() {
               {otherAccounts.map((account, index) => (
                 <div
                   key={account.email}
-                  onClick={ripple.createRipple}
                   className="relative bg-[#1a1f2e] rounded-xl p-4 flex items-center gap-3 transition-all duration-200 active:scale-[0.99] overflow-hidden animate-fade-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -294,7 +290,6 @@ export default function SwitchAccount() {
                       {t('switchAccount.switch')}
                     </Button>
                   )}
-                  <ripple.RippleContainer />
                 </div>
               ))}
             </div>
@@ -302,15 +297,11 @@ export default function SwitchAccount() {
 
           {/* Add New Account Button */}
           <Button
-            onClick={(e) => {
-              ripple.createRipple(e as any);
-              setShowAddSheet(true);
-            }}
+            onClick={() => setShowAddSheet(true)}
             className="relative w-full bg-red-500 hover:bg-red-600 text-white py-6 active:scale-[0.98] transition-all duration-200 overflow-hidden"
           >
             <Plus className="h-5 w-5 mr-2" />
             {t('switchAccount.addNewAccount')}
-            <ripple.RippleContainer />
           </Button>
         </div>
       </div>
