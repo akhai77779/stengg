@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
-import { NetworkStatus } from './NetworkStatus';
 import { MobileSupportButton } from './MobileSupportButton';
 
 interface LayoutProps {
@@ -20,9 +19,6 @@ export function Layout({ children, hideFooter = false, hideChatWidget = false }:
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Network status banner */}
-      <NetworkStatus />
-      
       <Header />
       <main className={isHome ? 'flex-1 pt-16 pb-16 md:pb-0' : isProductDetail ? 'flex-1 pt-2 pb-16 md:pb-0' : 'flex-1 pt-0 md:pt-16 pb-16 md:pb-0'}>
         {children}
