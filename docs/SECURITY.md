@@ -1,7 +1,7 @@
 # 🔐 Tài liệu Bảo mật Dự án ST Engineering Trading Platform
 
-> **Phiên bản:** 2.3  
-> **Cập nhật:** 02/02/2026  
+> **Phiên bản:** 2.4  
+> **Cập nhật:** 03/02/2026  
 > **Loại dự án:** Demo/Training Application  
 > **Trạng thái bảo mật:** ✅ Đã xác minh - Không có lỗ hổng nghiêm trọng
 
@@ -378,13 +378,23 @@ const ALLOWED_ORIGINS = [
 
 ### Bucket `uploads` (Public)
 - **Loại:** Public bucket
-- **Nội dung:** Ảnh sản phẩm, tin tức, banners, charity
+- **Nội dung:** Ảnh sản phẩm, tin tức, banners, charity, live-chat attachments
 - **Lý do public:** Content hiển thị công khai trên website
 - **Policies:**
   - SELECT: Public access
   - INSERT: Authenticated users only
   - UPDATE: Authenticated users only
   - DELETE: Admins only
+
+#### Live Chat Guest Attachments
+- **Folder:** `live-chat/*`
+- **Guest Upload Policy:** `Allow anonymous uploads for live-chat`
+  - Cho phép guest users upload files vào folder `live-chat/`
+  - WITH CHECK: `bucket_id = 'uploads' AND (storage.foldername(name))[1] = 'live-chat'`
+- **Guest Update Policy:** `Allow anonymous updates for live-chat`
+  - Cho phép guest users update files trong folder `live-chat/`
+
+> **🔐 Bảo mật:** Guest chỉ có thể upload vào thư mục `live-chat/`, không ảnh hưởng đến các thư mục khác như `images/`, `banners/`, v.v.
 
 ### Bucket `identity-documents` (Private)
 - **Loại:** Private bucket
