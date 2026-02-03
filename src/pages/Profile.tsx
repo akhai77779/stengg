@@ -18,7 +18,7 @@ import { useLiveChat } from '@/contexts/LiveChatContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TransactionHistory } from '@/components/profile/TransactionHistory';
-import { useRipple } from '@/hooks/useRipple';
+
 
 interface IdentityVerification {
   status: 'pending' | 'approved' | 'rejected';
@@ -31,10 +31,6 @@ export default function Profile() {
   const [todayProductEarnings, setTodayProductEarnings] = useState<number>(0);
   const [todayCharityEarnings, setTodayCharityEarnings] = useState<number>(0);
   const [totalCharityBalance, setTotalCharityBalance] = useState<number>(0);
-  
-  // Ripple effects for menu sections
-  const accountRipple = useRipple();
-  const systemRipple = useRipple();
   const {
     user,
     signOut,
@@ -431,10 +427,7 @@ export default function Profile() {
                   <Link 
                     key={item.label} 
                     to={item.href} 
-                    onClick={(e) => {
-                      accountRipple.createRipple(e);
-                      handleAccountItemClick(item, e);
-                    }} 
+                    onClick={(e) => handleAccountItemClick(item, e)} 
                     className="relative flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-all duration-200 min-h-[52px] active:scale-[0.99] touch-action-manipulation overflow-hidden"
                   >
                     <div className="flex items-center gap-3">
@@ -449,7 +442,6 @@ export default function Profile() {
                     <div className="flex items-center gap-1">
                       <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
                     </div>
-                    <accountRipple.RippleContainer />
                   </Link>
                 ))}
               </CardContent>
@@ -474,7 +466,6 @@ export default function Profile() {
                   <Link 
                     key={item.label} 
                     to={item.href} 
-                    onClick={systemRipple.createRipple}
                     className="relative flex items-center justify-between p-3 md:p-4 hover:bg-muted/30 transition-all duration-200 min-h-[52px] active:scale-[0.99] touch-action-manipulation overflow-hidden"
                   >
                     <div className="flex items-center gap-3">
@@ -485,7 +476,6 @@ export default function Profile() {
                       {item.value && <span className="text-xs text-muted-foreground">{item.value}</span>}
                       <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
                     </div>
-                    <systemRipple.RippleContainer />
                   </Link>
                 ))}
                 
