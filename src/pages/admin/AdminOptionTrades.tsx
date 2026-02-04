@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -176,13 +176,30 @@ export default function AdminOptionTrades() {
     }
   }, [fetchTrades, toast]);
 
-  // Initial fetch, auto-settle, and realtime subscription
+  // Ref to hold latest callbacks for stable interval/subscription
+  const fetchTradesRef = useRef(fetchTrades);
+  const autoSettleRef = useRef(autoSettleExpiredTrades);
+  
+  // Keep refs updated
+  useEffect(() => {
+    fetchTradesRef.current = fetchTrades;
+    autoSettleRef.current = autoSettleExpiredTrades;
+  }, [fetchTrades, autoSettleExpiredTrades]);
+
+  // Initial fetch when filter changes
   useEffect(() => {
     fetchTrades();
-    autoSettleExpiredTrades();
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Check for expired trades every 5 seconds
-    const intervalId = setInterval(autoSettleExpiredTrades, 5000);
+  // Auto-settle and realtime subscription (runs once on mount)
+  useEffect(() => {
+    // Initial auto-settle
+    autoSettleRef.current();
+
+    // Check for expired trades every 5 seconds using ref
+    const intervalId = setInterval(() => {
+      autoSettleRef.current();
+    }, 5000);
 
     const channel = supabase
       .channel('admin_option_trades')
@@ -194,7 +211,7 @@ export default function AdminOptionTrades() {
           table: 'option_trades',
         },
         () => {
-          fetchTrades();
+          fetchTradesRef.current();
         }
       )
       .subscribe();
@@ -203,7 +220,7 @@ export default function AdminOptionTrades() {
       clearInterval(intervalId);
       supabase.removeChannel(channel);
     };
-  }, [fetchTrades, autoSettleExpiredTrades]);
+  }, []); // Empty deps - runs once on mount
 
   const handleSetResult = async (tradeId: string, result: 'win' | 'lose' | null) => {
     const { error } = await supabase
