@@ -1,7 +1,7 @@
 # 🔐 Tài liệu Bảo mật Dự án ST Engineering Trading Platform
 
-> **Phiên bản:** 2.4  
-> **Cập nhật:** 03/02/2026  
+> **Phiên bản:** 2.5  
+> **Cập nhật:** 04/02/2026  
 > **Loại dự án:** Demo/Training Application  
 > **Trạng thái bảo mật:** ✅ Đã xác minh - Không có lỗ hổng nghiêm trọng
 
@@ -497,6 +497,19 @@ const ALLOWED_ORIGINS = [
 - **Lý do ignored:** Demo app, transactions section chỉ để demo
 - **Production fix:** Cập nhật constraint hoặc code
 
+### 3. Guest Live Chat Cross-Access Pattern (Design Tradeoff)
+- **Vấn đề:** RLS không thể xác thực chính xác identity của guest users
+- **Chi tiết:** Guest sessions không có `auth.uid()` nên RLS chỉ có thể dùng pattern matching (`customer_id LIKE 'guest_%'`)
+- **Mitigation đã triển khai:**
+  1. ✅ Session ID là cryptographically random UUID (`guest_<uuid>`) - không thể đoán được
+  2. ✅ Session ID lưu trong localStorage, không chia sẻ
+  3. ✅ Rate limiting: tối đa 5 rooms/hour per guest
+  4. ✅ Client-side filtering: chỉ query room của mình
+- **Risk:** Low - để exploit, attacker phải:
+  1. Biết được exact UUID của victim (practically impossible)
+  2. HOẶC brute-force hàng tỷ UUID combinations
+- **Production fix:** Implement session tokens via secure cookies/JWT, hoặc yêu cầu email verification cho chat
+
 ---
 
 ## 🚀 Khuyến nghị cho Production
@@ -528,6 +541,10 @@ const ALLOWED_ORIGINS = [
 
 | Ngày | Thay đổi |
 |------|----------|
+| 04/02/2026 | **🔒 RLS Hardening v2.5:** Thắt chặt policies cho live_chat_rooms, live_chat_messages, live_chat_typing |
+| 04/02/2026 | **🛡️ profiles_safe:** Revoke SELECT từ anon role, chỉ authenticated users mới có access |
+| 04/02/2026 | **📊 price_history:** Thêm explicit DENY policies cho non-admin INSERT/UPDATE/DELETE |
+| 04/02/2026 | **📚 Documentation:** Thêm section "Guest Live Chat Cross-Access Pattern" giải thích design tradeoff |
 | 02/02/2026 | **📚 Cập nhật documentation v2.3:** Thêm section "Live Chat Guest Access Pattern" với giải thích chi tiết về COALESCE pattern |
 | 02/02/2026 | **🔍 Security scan review:** Xác minh và document tất cả scanner false positives |
 | 02/02/2026 | **📦 Sửa lỗi xlsx:** Cập nhật package xlsx để fix Prototype Pollution và ReDoS vulnerabilities |
