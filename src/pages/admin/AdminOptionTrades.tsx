@@ -126,81 +126,23 @@ export default function AdminOptionTrades() {
     setIsLoading(false);
   }, [filter, toast]);
 
-  // Auto-settle expired trades
-  const autoSettleExpiredTrades = useCallback(async () => {
-    // Fetch all active trades that have expired
-    const { data: expiredTrades, error } = await supabase
-      .from('option_trades')
-      .select('id, product_id, entry_price')
-      .eq('status', 'active')
-      .lt('expires_at', new Date().toISOString());
-
-    if (error || !expiredTrades || expiredTrades.length === 0) return;
-
-    console.log(`[AdminOptionTrades] Auto-settling ${expiredTrades.length} expired trades`);
-
-    // Get current prices for products
-    const productIds = [...new Set(expiredTrades.map(t => t.product_id))];
-    const { data: productsData } = await supabase
-      .from('products')
-      .select('id, price')
-      .in('id', productIds);
-
-    const priceMap: Record<string, number> = {};
-    productsData?.forEach(p => { priceMap[p.id] = p.price ?? 0; });
-
-    // Settle each expired trade
-    for (const trade of expiredTrades) {
-      const exitPrice = priceMap[trade.product_id] || trade.entry_price;
-      
-      const { error: settleError } = await supabase.rpc('settle_option_trade', {
-        _trade_id: trade.id,
-        _exit_price: exitPrice,
-      });
-
-      if (settleError) {
-        console.error(`[AdminOptionTrades] Failed to settle trade ${trade.id}:`, settleError);
-      } else {
-        console.log(`[AdminOptionTrades] Settled trade ${trade.id}`);
-      }
-    }
-
-    // Refresh the list
-    fetchTrades();
-    
-    if (expiredTrades.length > 0) {
-      toast({ 
-        title: 'Đã xử lý tự động', 
-        description: `${expiredTrades.length} giao dịch hết hạn đã được kết thúc` 
-      });
-    }
-  }, [fetchTrades, toast]);
-
-  // Ref to hold latest callbacks for stable interval/subscription
+  // Ref to hold latest fetchTrades for stable subscription
   const fetchTradesRef = useRef(fetchTrades);
-  const autoSettleRef = useRef(autoSettleExpiredTrades);
   
-  // Keep refs updated
+  // Keep ref updated
   useEffect(() => {
     fetchTradesRef.current = fetchTrades;
-    autoSettleRef.current = autoSettleExpiredTrades;
-  }, [fetchTrades, autoSettleExpiredTrades]);
+  }, [fetchTrades]);
 
   // Initial fetch when filter changes
   useEffect(() => {
     fetchTrades();
   }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-settle and realtime subscription (runs once on mount)
+  // Realtime subscription only - no polling needed since pg_cron handles auto-settle
   useEffect(() => {
-    // Initial auto-settle
-    autoSettleRef.current();
-
-    // Check for expired trades every 5 seconds using ref
-    const intervalId = setInterval(() => {
-      autoSettleRef.current();
-    }, 5000);
-
+    console.log('[AdminOptionTrades] Setting up realtime subscription');
+    
     const channel = supabase
       .channel('admin_option_trades')
       .on(
@@ -210,14 +152,17 @@ export default function AdminOptionTrades() {
           schema: 'public',
           table: 'option_trades',
         },
-        () => {
+        (payload) => {
+          console.log('[AdminOptionTrades] Realtime update received:', payload.eventType);
           fetchTradesRef.current();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[AdminOptionTrades] Subscription status:', status);
+      });
 
     return () => {
-      clearInterval(intervalId);
+      console.log('[AdminOptionTrades] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   }, []); // Empty deps - runs once on mount
