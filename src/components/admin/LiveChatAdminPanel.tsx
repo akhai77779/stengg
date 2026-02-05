@@ -912,6 +912,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                   onUpload={uploadAttachment}
                   disabled={isSending}
                   placeholder="Nhập tin nhắn..."
+                   isAdmin={true}
                 />
               </div>
             </>

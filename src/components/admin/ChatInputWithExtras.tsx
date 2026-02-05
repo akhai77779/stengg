@@ -1,22 +1,13 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, Hash, Smile, X, FileText } from "lucide-react";
+ import { useState, useRef, useEffect } from "react";
+ import { Send, Paperclip, Hash, Smile, X, FileText, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-// Quick reply templates
-const QUICK_REPLIES = [
-  { tag: "greeting", text: "Xin chào! Tôi có thể giúp gì cho bạn?" },
-  { tag: "wait", text: "Cảm ơn bạn đã liên hệ. Vui lòng chờ trong giây lát." },
-  { tag: "noted", text: "Vấn đề của bạn đã được ghi nhận. Chúng tôi sẽ phản hồi sớm nhất có thể." },
-  { tag: "info", text: "Bạn có thể cung cấp thêm thông tin chi tiết được không?" },
-  { tag: "thanks", text: "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!" },
-  { tag: "confirm", text: "Quý khách vui lòng xác nhận lại giúp chúng tôi thêm 1 lần nữa." },
-  { tag: "promo", text: "Hiện tại chúng tôi đang có chương trình khuyến mãi đặc biệt dành cho quý khách!" },
-  { tag: "support", text: "Đội ngũ hỗ trợ của chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất." },
-];
+ import { useQuickReplyTemplates } from "@/hooks/useQuickReplyTemplates";
+ import { QuickReplyManager } from "./QuickReplyManager";
 
 // Common emojis
 const EMOJI_LIST = [
@@ -32,6 +23,7 @@ interface ChatInputWithExtrasProps {
   onUpload?: (file: File) => Promise<{ url: string; type: "image" | "file"; name: string }>;
   disabled?: boolean;
   placeholder?: string;
+   isAdmin?: boolean;
 }
 
 export function ChatInputWithExtras({
@@ -40,6 +32,7 @@ export function ChatInputWithExtras({
   onUpload,
   disabled,
   placeholder = "Nhập tin nhắn...",
+   isAdmin = false,
 }: ChatInputWithExtrasProps) {
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -47,8 +40,13 @@ export function ChatInputWithExtras({
   const [uploading, setUploading] = useState(false);
   const [showHashtag, setShowHashtag] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+   const [showManager, setShowManager] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+   const { templates, loading: templatesLoading } = useQuickReplyTemplates();
+ 
+   // Filter only active templates
+   const activeTemplates = templates.filter(t => t.is_active);
 
   // Cleanup preview URL
   useEffect(() => {
@@ -183,9 +181,13 @@ export function ChatInputWithExtras({
             </p>
             <ScrollArea className="h-48">
               <div className="space-y-1">
-                {QUICK_REPLIES.map((reply, index) => (
-                  <button
-                    key={index}
+                 {templatesLoading ? (
+                   <p className="text-xs text-muted-foreground px-2">Đang tải...</p>
+                 ) : activeTemplates.length === 0 ? (
+                   <p className="text-xs text-muted-foreground px-2">Chưa có mẫu trả lời</p>
+                 ) : activeTemplates.map((reply) => (
+                   <button
+                     key={reply.id}
                     type="button"
                     className="w-full text-left p-2 text-xs rounded-md hover:bg-muted transition-colors"
                     onClick={() => handleQuickReply(reply.text)}
@@ -197,6 +199,21 @@ export function ChatInputWithExtras({
                   </button>
                 ))}
               </div>
+               {isAdmin && (
+                 <div className="mt-2 pt-2 border-t">
+                   <button
+                     type="button"
+                     className="w-full text-left p-2 text-xs rounded-md hover:bg-muted transition-colors flex items-center gap-2 text-primary"
+                     onClick={() => {
+                       setShowHashtag(false);
+                       setShowManager(true);
+                     }}
+                   >
+                     <Settings className="h-3 w-3" />
+                     Quản lý mẫu trả lời
+                   </button>
+                 </div>
+               )}
             </ScrollArea>
           </PopoverContent>
         </Popover>
@@ -272,6 +289,11 @@ export function ChatInputWithExtras({
           )}
         </Button>
       </form>
+       
+       {/* Quick Reply Manager Dialog */}
+       {isAdmin && (
+         <QuickReplyManager open={showManager} onOpenChange={setShowManager} />
+       )}
     </div>
   );
 }
