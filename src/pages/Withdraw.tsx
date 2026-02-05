@@ -68,7 +68,7 @@ export default function WithdrawPage() {
   useEffect(() => {
     const fetchWithdrawSettings = async () => {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('app_settings')
           .select('value')
           .eq('key', 'withdraw_settings')
@@ -81,20 +81,6 @@ export default function WithdrawPage() {
           }
           if (settings.min_amount !== undefined) {
             setMinWithdraw(settings.min_amount);
-          }
-        } else {
-          // Fallback: try to read from withdrawal_fee key (used by Admin Settings)
-          const { data: legacyData } = await supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'withdrawal_fee')
-            .maybeSingle();
-
-          if (legacyData?.value && typeof legacyData.value === 'object') {
-            const settings = legacyData.value as { percent?: number };
-            if (settings.percent !== undefined) {
-              setWithdrawFeeRate(settings.percent / 100); // Convert percent to rate
-            }
           }
         }
       } catch (error) {

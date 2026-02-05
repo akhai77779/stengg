@@ -12,13 +12,14 @@ import { RefreshCw, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 type SettingsState = {
   usdToVnd: string;
   withdrawalFeePercent: string;
+  minWithdrawAmount: string;
   bannersEnabled: boolean;
   supportEnabled: boolean;
 };
 
 const KEYS = [
   "exchange_rates",
-  "withdrawal_fee",
+  "withdraw_settings",
   "banners_enabled",
   "support_enabled",
 ] as const;
@@ -38,6 +39,7 @@ export default function AdminSettings() {
   const [state, setState] = useState<SettingsState>({
     usdToVnd: "25000",
     withdrawalFeePercent: "1",
+    minWithdrawAmount: "10",
     bannersEnabled: true,
     supportEnabled: true,
   });
@@ -45,13 +47,16 @@ export default function AdminSettings() {
   const parsed = useMemo(() => {
     const usdToVndNum = Number(state.usdToVnd);
     const feeNum = Number(state.withdrawalFeePercent);
+    const minWithdrawNum = Number(state.minWithdrawAmount);
     return {
       usdToVndNum,
       feeNum,
+      minWithdrawNum,
       usdToVndValid: Number.isFinite(usdToVndNum) && usdToVndNum > 0,
       feeValid: Number.isFinite(feeNum) && feeNum >= 0,
+      minWithdrawValid: Number.isFinite(minWithdrawNum) && minWithdrawNum >= 0,
     };
-  }, [state.usdToVnd, state.withdrawalFeePercent]);
+  }, [state.usdToVnd, state.withdrawalFeePercent, state.minWithdrawAmount]);
 
   useEffect(() => {
     let mounted = true;
@@ -72,8 +77,8 @@ export default function AdminSettings() {
         const exchangeRates = map.get("exchange_rates") as
           | { usd_to_vnd?: number }
           | undefined;
-        const withdrawalFee = map.get("withdrawal_fee") as
-          | { percent?: number }
+        const withdrawSettings = map.get("withdraw_settings") as
+          | { fee_rate?: number; min_amount?: number }
           | undefined;
         const bannersEnabled = map.get("banners_enabled") as
           | { enabled?: boolean }
@@ -86,7 +91,8 @@ export default function AdminSettings() {
         setState((s) => ({
           ...s,
           usdToVnd: String(exchangeRates?.usd_to_vnd ?? 25000),
-          withdrawalFeePercent: String(withdrawalFee?.percent ?? 1),
+          withdrawalFeePercent: String((withdrawSettings?.fee_rate ?? 0.01) * 100),
+          minWithdrawAmount: String(withdrawSettings?.min_amount ?? 10),
           bannersEnabled: Boolean(bannersEnabled?.enabled ?? true),
           supportEnabled: Boolean(supportEnabled?.enabled ?? true),
         }));
@@ -113,12 +119,16 @@ export default function AdminSettings() {
       toast.error("Phí rút không hợp lệ");
       return;
     }
+    if (!parsed.minWithdrawValid) {
+      toast.error("Số tiền rút tối thiểu không hợp lệ");
+      return;
+    }
 
     setSaving(true);
     try {
       const payload = [
         { key: "exchange_rates", value: { usd_to_vnd: parsed.usdToVndNum } },
-        { key: "withdrawal_fee", value: { percent: parsed.feeNum } },
+        { key: "withdraw_settings", value: { fee_rate: parsed.feeNum / 100, min_amount: parsed.minWithdrawNum } },
         { key: "banners_enabled", value: { enabled: state.bannersEnabled } },
         { key: "support_enabled", value: { enabled: state.supportEnabled } },
       ];
@@ -218,20 +228,38 @@ export default function AdminSettings() {
 
           <Separator />
 
-          <div className="grid gap-3">
-            <Label htmlFor="withdrawFee">Phí rút (%)</Label>
-            <Input
-              id="withdrawFee"
-              inputMode="decimal"
-              value={state.withdrawalFeePercent}
-              disabled={loading}
-              onChange={(e) =>
-                setState((s) => ({ ...s, withdrawalFeePercent: e.target.value }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Hiện tại chỉ lưu cấu hình (chưa áp dụng vào logic rút tiền).
-            </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-3">
+              <Label htmlFor="withdrawFee">Phí rút tiền (%)</Label>
+              <Input
+                id="withdrawFee"
+                inputMode="decimal"
+                value={state.withdrawalFeePercent}
+                disabled={loading}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, withdrawalFeePercent: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Phí tính trên tổng số tiền rút (VD: 3% = 3 USD phí cho 100 USD).
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              <Label htmlFor="minWithdraw">Số tiền rút tối thiểu (USD)</Label>
+              <Input
+                id="minWithdraw"
+                inputMode="decimal"
+                value={state.minWithdrawAmount}
+                disabled={loading}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, minWithdrawAmount: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Người dùng phải rút ít nhất số tiền này.
+              </p>
+            </div>
           </div>
 
           <Separator />
