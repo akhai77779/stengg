@@ -410,12 +410,13 @@ export default function WithdrawPage() {
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
 
-            {/* Amount Section */}
+            {/* Amount & Fee Section - Combined */}
             <Card className="bg-card border-border">
-              <CardContent className="p-3 md:p-4">
-                <Label className="text-xs md:text-sm text-foreground mb-2 block">Số lượng</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+              <CardContent className="p-3 md:p-4 space-y-4">
+                {/* Amount Input */}
+                <div>
+                  <Label className="text-xs md:text-sm text-primary mb-2 block">Số lượng</Label>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
                     <Input
                       type="number"
                       placeholder="Vui lòng nhập số lượng"
@@ -433,23 +434,38 @@ export default function WithdrawPage() {
                       </button>
                     </div>
                   </div>
+                  {/* Converted amount in selected currency */}
+                  {currency && amountNum > 0 && (
+                    <div className="text-right text-xs md:text-sm text-muted-foreground mt-1">
+                      ≈ {convertCurrency(amountNum, 'USD', 'VND').toLocaleString('vi-VN')} {currency.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Min/Max Amounts */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs md:text-sm">
                     <span className="text-muted-foreground">Số tiền rút tiền tối thiểu</span>
                     <span className="text-foreground">{minWithdraw} USD</span>
                   </div>
                   <div className="flex items-center justify-between text-xs md:text-sm">
                     <span className="text-muted-foreground">Số tiền rút tiền tối đa</span>
-                    <span className="text-foreground">{maxWithdraw.toFixed(2)} USD</span>
+                    <span className="text-foreground">{maxWithdraw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Fee Section */}
-            <Card className="bg-card border-border">
-              <CardContent className="p-3 md:p-4">
-                <Label className="text-xs md:text-sm text-foreground mb-2 block">Phí xử lý</Label>
-                <div className="text-sm md:text-base text-foreground">{processingFee.toFixed(2)}</div>
+                {/* Processing Fee */}
+                <div>
+                  <Label className="text-xs md:text-sm text-primary mb-2 block">Phí xử lý</Label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm md:text-base text-foreground">{processingFee.toFixed(2)}</span>
+                    {currency && processingFee > 0 && (
+                      <span className="text-xs md:text-sm text-muted-foreground">
+                        USD ≈ {convertCurrency(processingFee, 'USD', 'VND').toLocaleString('vi-VN')} {currency.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
