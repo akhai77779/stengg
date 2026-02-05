@@ -61,7 +61,35 @@ export default function WithdrawPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
 
-  const minWithdraw = 10;
+  const [withdrawFeeRate, setWithdrawFeeRate] = useState(0.01); // Default 1%
+  const [minWithdraw, setMinWithdraw] = useState(10);
+
+  // Fetch withdraw settings from admin
+  useEffect(() => {
+    const fetchWithdrawSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'withdraw_settings')
+          .single();
+
+        if (!error && data?.value && typeof data.value === 'object') {
+          const settings = data.value as { fee_rate?: number; min_amount?: number };
+          if (settings.fee_rate !== undefined) {
+            setWithdrawFeeRate(settings.fee_rate);
+          }
+          if (settings.min_amount !== undefined) {
+            setMinWithdraw(settings.min_amount);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching withdraw settings:', error);
+      }
+    };
+
+    fetchWithdrawSettings();
+  }, []);
   
   // Use external balance, fallback to 0
   const availableBalance = externalBalance ?? 0;
@@ -69,8 +97,8 @@ export default function WithdrawPage() {
 
   // Calculate amounts
   const amountNum = parseFloat(amount) || 0;
-  const totalDeduction = amountNum + (amountNum * 0.01); // 1% fee from RPC
-  const processingFee = amountNum * 0.01;
+  const totalDeduction = amountNum + (amountNum * withdrawFeeRate);
+  const processingFee = amountNum * withdrawFeeRate;
 
   // Convert to VND for display
   const balanceInVnd = convertCurrency(availableBalance, 'USD', 'VND');
