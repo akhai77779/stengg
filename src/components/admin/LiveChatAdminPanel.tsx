@@ -19,7 +19,9 @@ import {
   PanelRight,
   PanelRightClose,
 } from "lucide-react";
+import { Inbox, XCircle, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 // ScrollArea removed - using native scrolling for better flexbox compatibility
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -85,6 +87,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const [botEnabled, setBotEnabled] = useState(true);
   const [showStats, setShowStats] = useState(false);
   const [showCustomerInfo, setShowCustomerInfo] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "closed">("all");
+  const [newMessageRoomId, setNewMessageRoomId] = useState<string | null>(null);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -104,6 +108,9 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
       if (msg.sender_type === "customer") {
         playNotificationSound();
         showNotification(msg);
+        // Flash the room in sidebar even if filtered
+        setNewMessageRoomId(msg.room_id);
+        setTimeout(() => setNewMessageRoomId(null), 3000);
       }
     },
   });
@@ -134,12 +141,24 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   });
 
   // Filter rooms by search
-  const filteredRooms = rooms.filter(
+  const searchFilteredRooms = rooms.filter(
     (room) =>
       room.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       room.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       room.last_message?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Apply status filter
+  const filteredRooms = searchFilteredRooms.filter((room) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "active") return room.status !== "closed";
+    if (statusFilter === "closed") return room.status === "closed";
+    return true;
+  });
+
+  // Count rooms with new messages that are filtered out
+  const hasNewMessageOutsideFilter = newMessageRoomId && !filteredRooms.some(r => r.id === newMessageRoomId);
+  const newMessageRoom = hasNewMessageOutsideFilter ? rooms.find(r => r.id === newMessageRoomId) : null;
 
   // Request notification permission
   useEffect(() => {
@@ -214,6 +233,57 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     },
     [notificationEnabled, rooms]
   );
+
+  // Global realtime subscription for ALL new customer messages (not just selected room)
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-global-messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "live_chat_messages",
+        },
+        (payload) => {
+          const newMsg = payload.new as { room_id: string; sender_type: string; sender_name: string; message: string };
+          
+          // Only notify for customer messages
+          if (newMsg.sender_type === "customer") {
+            // If this room is NOT currently selected, show notification
+            if (newMsg.room_id !== selectedRoom?.id) {
+              playNotificationSound();
+              
+              // Find room info for notification
+              const msgRoom = rooms.find(r => r.id === newMsg.room_id);
+              if (msgRoom && notificationEnabled && Notification.permission === "granted") {
+                const notification = new Notification("Tin nhắn mới từ khách hàng", {
+                  body: `${newMsg.sender_name}: ${newMsg.message || "Tệp đính kèm"}`,
+                  icon: "/favicon.ico",
+                  tag: `chat-${newMsg.room_id}`,
+                });
+                notification.onclick = () => {
+                  window.focus();
+                  setSelectedRoom(msgRoom);
+                  setStatusFilter("all");
+                  notification.close();
+                };
+                setTimeout(() => notification.close(), 5000);
+              }
+              
+              // Flash new message indicator
+              setNewMessageRoomId(newMsg.room_id);
+              setTimeout(() => setNewMessageRoomId(null), 3000);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedRoom?.id, rooms, notificationEnabled, playNotificationSound]);
 
   // Send message handler
   const handleSend = async (
@@ -470,10 +540,70 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               className="pl-8 h-8 text-sm"
             />
           </div>
+
+          {/* Status Filter Tabs */}
+          <div className="flex gap-1">
+            <Button
+              variant={statusFilter === "all" ? "default" : "ghost"}
+              size="sm"
+              className="flex-1 h-7 text-xs gap-1"
+              onClick={() => setStatusFilter("all")}
+            >
+              <Inbox className="h-3 w-3" />
+              Tất cả
+              {totalUnread > 0 && (
+                <Badge variant="destructive" className="h-4 px-1 text-[10px] ml-0.5">
+                  {totalUnread}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={statusFilter === "active" ? "default" : "ghost"}
+              size="sm"
+              className="flex-1 h-7 text-xs gap-1"
+              onClick={() => setStatusFilter("active")}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              Active
+            </Button>
+            <Button
+              variant={statusFilter === "closed" ? "default" : "ghost"}
+              size="sm"
+              className="flex-1 h-7 text-xs gap-1"
+              onClick={() => setStatusFilter("closed")}
+            >
+              <XCircle className="h-3 w-3" />
+              Đóng
+            </Button>
+          </div>
         </div>
 
         {/* Room list */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          {/* New message notification banner - shows when new message is in filtered-out room */}
+          {newMessageRoom && (
+            <div 
+              className="mx-1.5 mt-1.5 p-2 bg-destructive/20 border border-destructive/50 rounded-lg cursor-pointer animate-pulse"
+              onClick={() => {
+                setStatusFilter("all");
+                setSelectedRoom(newMessageRoom);
+                setNewMessageRoomId(null);
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquarePlus className="h-4 w-4 text-destructive shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-destructive truncate">
+                    Tin nhắn mới từ {newMessageRoom.customer_name}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Nhấn để xem
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {roomsLoading ? (
             <div className="p-4 text-center text-muted-foreground text-sm">
               Đang tải...
