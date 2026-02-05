@@ -12,9 +12,12 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History } from 'lucide-react';
 import { format } from 'date-fns';
+ import { StickyNote } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { UserTransactionHistory } from './UserTransactionHistory';
+ import { useAdminUserNotes } from '@/hooks/useAdminUserNotes';
+ import { AdminUserNoteDialog } from '@/components/admin/AdminUserNoteDialog';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -122,6 +125,10 @@ export function DashboardUsers() {
 
   // Transaction history dialog
   const [transactionHistoryUser, setTransactionHistoryUser] = useState<Profile | null>(null);
+ 
+   // Admin notes
+   const { notes: adminNotes, saveNote, deleteNote } = useAdminUserNotes();
+   const [noteUser, setNoteUser] = useState<Profile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -808,6 +815,15 @@ export function DashboardUsers() {
                           >
                             <History className="w-4 h-4" />
                           </Button>
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className={`h-8 w-8 ${adminNotes[profile.id] ? 'text-yellow-500' : ''}`}
+                             onClick={() => setNoteUser(profile)}
+                             title={adminNotes[profile.id] ? 'Xem/Sửa ghi chú' : 'Thêm ghi chú'}
+                           >
+                             <StickyNote className="w-4 h-4" />
+                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1504,6 +1520,16 @@ export function DashboardUsers() {
         userName={transactionHistoryUser?.full_name || 'Không tên'}
         userCode={transactionHistoryUser?.user_code?.toString().padStart(5, '0') || '-----'}
       />
+       
+       {/* Admin User Note Dialog */}
+       <AdminUserNoteDialog
+         user={noteUser}
+         note={noteUser ? adminNotes[noteUser.id] || null : null}
+         open={!!noteUser}
+         onOpenChange={(open) => !open && setNoteUser(null)}
+         onSave={saveNote}
+         onDelete={deleteNote}
+       />
     </>
   );
 }
