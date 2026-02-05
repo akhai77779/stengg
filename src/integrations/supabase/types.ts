@@ -781,6 +781,39 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_reply_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          tag: string
+          text: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          tag: string
+          text: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          tag?: string
+          text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           action_type: string
