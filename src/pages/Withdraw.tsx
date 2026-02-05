@@ -72,15 +72,29 @@ export default function WithdrawPage() {
           .from('app_settings')
           .select('value')
           .eq('key', 'withdraw_settings')
-          .single();
+          .maybeSingle();
 
-        if (!error && data?.value && typeof data.value === 'object') {
+        if (data?.value && typeof data.value === 'object') {
           const settings = data.value as { fee_rate?: number; min_amount?: number };
           if (settings.fee_rate !== undefined) {
             setWithdrawFeeRate(settings.fee_rate);
           }
           if (settings.min_amount !== undefined) {
             setMinWithdraw(settings.min_amount);
+          }
+        } else {
+          // Fallback: try to read from withdrawal_fee key (used by Admin Settings)
+          const { data: legacyData } = await supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'withdrawal_fee')
+            .maybeSingle();
+
+          if (legacyData?.value && typeof legacyData.value === 'object') {
+            const settings = legacyData.value as { percent?: number };
+            if (settings.percent !== undefined) {
+              setWithdrawFeeRate(settings.percent / 100); // Convert percent to rate
+            }
           }
         }
       } catch (error) {
@@ -179,7 +193,7 @@ export default function WithdrawPage() {
     }
 
     if (totalDeduction > availableBalance) {
-      toast.error("Số dư không đủ (bao gồm phí 1%)");
+      toast.error(`Số dư không đủ (bao gồm phí ${(withdrawFeeRate * 100).toFixed(0)}%)`);
       return;
     }
 
