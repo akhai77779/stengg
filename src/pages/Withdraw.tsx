@@ -105,9 +105,16 @@ export default function WithdrawPage() {
 
   // Handle selected bank account from BankAccounts page
   useEffect(() => {
-    const state = location.state as { selectedAccount?: BankAccount } | null;
+    const state = location.state as { 
+      selectedAccount?: BankAccount;
+      savedCountry?: string;
+      savedCurrency?: string;
+    } | null;
     if (state?.selectedAccount) {
       setSelectedBankAccount(state.selectedAccount);
+      // Restore country and currency if they were saved
+      if (state.savedCountry) setCountry(state.savedCountry);
+      if (state.savedCurrency) setCurrency(state.savedCurrency);
       // Clear the state to prevent re-applying on future navigations
       window.history.replaceState({}, document.title);
     }
@@ -375,7 +382,7 @@ export default function WithdrawPage() {
             {/* Bank Account Selection */}
             <button
               type="button"
-              onClick={() => navigate('/bank-accounts', { state: { selectMode: true } })}
+              onClick={() => navigate('/bank-accounts', { state: { selectMode: true, savedCountry: country, savedCurrency: currency } })}
               className="w-full bg-card rounded-lg p-3 md:p-4 border border-border flex items-center justify-between hover:bg-muted/50 transition-colors min-h-[56px] touch-action-manipulation"
             >
               {selectedBankAccount ? (
