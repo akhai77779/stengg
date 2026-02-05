@@ -44,6 +44,8 @@ export default function BankAccountsPage() {
   
   // Check if we came from withdraw page and should return with selected account
   const isSelectMode = location.state?.selectMode === true;
+  const savedCountry = location.state?.savedCountry;
+  const savedCurrency = location.state?.savedCurrency;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -138,7 +140,9 @@ export default function BankAccountsPage() {
     if (isSelectMode) {
       navigate('/withdraw', { 
         state: { 
-          selectedAccount: account 
+          selectedAccount: account,
+          savedCountry: savedCountry,
+          savedCurrency: savedCurrency,
         } 
       });
     }
