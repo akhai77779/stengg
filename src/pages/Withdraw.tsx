@@ -110,13 +110,23 @@ export default function WithdrawPage() {
       savedCountry?: string;
       savedCurrency?: string;
     } | null;
-    if (state?.selectedAccount) {
-      setSelectedBankAccount(state.selectedAccount);
-      // Restore country and currency if they were saved
-      if (state.savedCountry) setCountry(state.savedCountry);
-      if (state.savedCurrency) setCurrency(state.savedCurrency);
-      // Clear the state to prevent re-applying on future navigations
-      window.history.replaceState({}, document.title);
+    
+    if (state) {
+      // Restore country and currency first (they're always passed back)
+      if (state.savedCountry) {
+        setCountry(state.savedCountry);
+      }
+      if (state.savedCurrency) {
+        setCurrency(state.savedCurrency);
+      }
+      // Then restore selected bank account if present
+      if (state.selectedAccount) {
+        setSelectedBankAccount(state.selectedAccount);
+      }
+      // Clear the state after a short delay to ensure React has processed the state updates
+      setTimeout(() => {
+        window.history.replaceState({}, document.title);
+      }, 100);
     }
   }, [location.state]);
 
