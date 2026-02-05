@@ -127,6 +127,10 @@ export default function AdminLayout() {
     newUserCount,
   } = useAdminNotifications();
   const navigate = useNavigate();
+   const location = useLocation();
+   
+   // Hide footer on live-chat page for full-height layout
+   const isLiveChatPage = location.pathname === '/admin/live-chat';
 
   useEffect(() => {
     if (authLoading || isAdminLoading) return;
@@ -138,7 +142,7 @@ export default function AdminLayout() {
   if (!user || !isAdmin) return null;
 
   return (
-    <Layout>
+     <Layout hideFooter={isLiveChatPage}>
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
           <div className="hidden md:block">
