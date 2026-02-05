@@ -1,5 +1,5 @@
  import { useState, useRef, useEffect } from "react";
- import { Send, Paperclip, Hash, Smile, X, FileText, Settings } from "lucide-react";
+import { Send, Paperclip, Hash, Smile, X, FileText, Settings, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,12 +41,23 @@ export function ChatInputWithExtras({
   const [showHashtag, setShowHashtag] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
    const [showManager, setShowManager] = useState(false);
+  
+  // Inline hashtag autocomplete state
+  const [showInlineHashtag, setShowInlineHashtag] = useState(false);
+  const [hashtagQuery, setHashtagQuery] = useState("");
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
    const { templates, loading: templatesLoading } = useQuickReplyTemplates();
  
    // Filter only active templates
    const activeTemplates = templates.filter(t => t.is_active);
+  
+  // Filter templates based on hashtag query for inline autocomplete
+  const filteredTemplates = activeTemplates.filter(t => 
+    hashtagQuery === "" || t.tag.toLowerCase().includes(hashtagQuery.toLowerCase())
+  );
 
   // Cleanup preview URL
   useEffect(() => {
@@ -56,6 +67,89 @@ export function ChatInputWithExtras({
       }
     };
   }, [previewUrl]);
+
+  // Reset selected index when filtered results change
+  useEffect(() => {
+    setSelectedSuggestionIndex(0);
+  }, [filteredTemplates.length, hashtagQuery]);
+
+  // Detect hashtag typing in message
+  const detectHashtag = (value: string) => {
+    // Find the last # in the text
+    const lastHashIndex = value.lastIndexOf("#");
+    
+    if (lastHashIndex === -1) {
+      setShowInlineHashtag(false);
+      setHashtagQuery("");
+      return;
+    }
+    
+    // Get text after the #
+    const afterHash = value.substring(lastHashIndex + 1);
+    
+    // Check if there's a space after the #, meaning the hashtag is complete
+    if (afterHash.includes(" ")) {
+      setShowInlineHashtag(false);
+      setHashtagQuery("");
+      return;
+    }
+    
+    // Show suggestions
+    setHashtagQuery(afterHash);
+    setShowInlineHashtag(true);
+  };
+
+  // Handle selecting an inline template suggestion
+  const handleInlineTemplateSelect = (templateText: string, templateTag: string) => {
+    // Replace #query with the template text
+    const lastHashIndex = message.lastIndexOf("#");
+    if (lastHashIndex !== -1) {
+      const newMessage = message.substring(0, lastHashIndex) + templateText;
+      setMessage(newMessage);
+    }
+    setShowInlineHashtag(false);
+    setHashtagQuery("");
+    inputRef.current?.focus();
+  };
+
+  // Handle keyboard navigation for inline suggestions
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showInlineHashtag || filteredTemplates.length === 0) return;
+    
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < filteredTemplates.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : filteredTemplates.length - 1
+        );
+        break;
+      case "Enter":
+        if (showInlineHashtag && filteredTemplates.length > 0) {
+          e.preventDefault();
+          const selected = filteredTemplates[selectedSuggestionIndex];
+          handleInlineTemplateSelect(selected.text, selected.tag);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setShowInlineHashtag(false);
+        setHashtagQuery("");
+        break;
+      case "Tab":
+        if (showInlineHashtag && filteredTemplates.length > 0) {
+          e.preventDefault();
+          const selected = filteredTemplates[selectedSuggestionIndex];
+          handleInlineTemplateSelect(selected.text, selected.tag);
+        }
+        break;
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -103,7 +197,9 @@ export function ChatInputWithExtras({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMessage(e.target.value);
+    const value = e.target.value;
+    setMessage(value);
+    detectHashtag(value);
     onTyping?.();
   };
 
@@ -153,7 +249,44 @@ export function ChatInputWithExtras({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
+      {/* Inline hashtag suggestions popover */}
+      {showInlineHashtag && filteredTemplates.length > 0 && (
+        <div className="relative">
+          <div className="absolute bottom-full left-0 mb-1 w-80 max-h-48 overflow-y-auto bg-popover border rounded-lg shadow-lg z-50">
+            <div className="p-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground px-2 py-1">
+                Trả lời nhanh {hashtagQuery && `• "${hashtagQuery}"`}
+              </p>
+              <div className="space-y-0.5">
+                {filteredTemplates.map((template, index) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className={cn(
+                      "w-full text-left p-2 text-xs rounded-md transition-colors",
+                      index === selectedSuggestionIndex 
+                        ? "bg-primary/10 text-primary" 
+                        : "hover:bg-muted"
+                    )}
+                    onClick={() => handleInlineTemplateSelect(template.text, template.tag)}
+                    onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-primary font-medium">#{template.tag}</span>
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 line-clamp-1 pl-5">
+                      {template.text}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 relative">
         <input
           ref={fileInputRef}
           type="file"
@@ -267,6 +400,7 @@ export function ChatInputWithExtras({
           ref={inputRef}
           value={message}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || uploading}
           className="flex-1 h-8 text-sm"
