@@ -296,7 +296,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
       room_id: selectedRoom.id,
       sender_type: "support",
       sender_id: user.id,
-      sender_name: user.email?.split("@")[0] || "Support",
+      sender_name: "Support ST Engineering",
       message,
       attachment_url: attachment?.url,
       attachment_type: attachment?.type,
@@ -312,7 +312,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
       room_id: selectedRoom.id,
       sender_type: "support",
       sender_id: user.id,
-      sender_name: user.email?.split("@")[0] || "Support",
+      sender_name: "Support ST Engineering",
       message: text,
     });
   };
