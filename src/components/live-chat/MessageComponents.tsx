@@ -3,7 +3,8 @@ import { Send, Paperclip, X, FileText, Download, MoreVertical, Pencil, Trash2, C
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import stLogo from "@/assets/st-logo.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,16 +146,23 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
               >
                 {!isOwn && (
                   <Avatar className="h-8 w-8 flex-shrink-0">
+                    {(isSupport || isBot) ? (
+                      <AvatarImage 
+                        src={stLogo} 
+                        alt="Support ST Engineering" 
+                        className="object-contain p-1 bg-primary"
+                      />
+                    ) : null}
                     <AvatarFallback
                       className={cn(
                         isBot
-                          ? "bg-purple-500 text-white"
+                          ? "bg-primary text-primary-foreground"
                           : isSupport
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
                       )}
                     >
-                      {isBot ? "AI" : message.sender_name.charAt(0).toUpperCase()}
+                      {(isBot || isSupport) ? "ST" : message.sender_name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 )}
