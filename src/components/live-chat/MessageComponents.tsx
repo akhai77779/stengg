@@ -145,20 +145,21 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
                 )}
               >
                 {!isOwn && (
-                  <Avatar className="h-8 w-8 flex-shrink-0">
+                  <Avatar className="h-9 w-9 flex-shrink-0 ring-2 ring-primary/20 shadow-sm">
                     {(isSupport || isBot) ? (
                       <AvatarImage 
                         src={stLogo} 
                         alt="Support ST Engineering" 
-                        className="object-contain p-1 bg-primary"
+                        className="object-contain p-1.5 bg-gradient-to-br from-primary to-primary/90"
                       />
                     ) : null}
                     <AvatarFallback
                       className={cn(
+                        "font-semibold text-xs",
                         isBot
-                          ? "bg-primary text-primary-foreground"
+                          ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
                           : isSupport
-                          ? "bg-primary text-primary-foreground"
+                          ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
                           : "bg-muted"
                       )}
                     >
