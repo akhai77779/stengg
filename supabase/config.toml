@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.admin-update-password]
 verify_jwt = false
+
+[functions.bankquay-qr]
+verify_jwt = false
+
+[functions.bankquay-webhook]
+verify_jwt = false
