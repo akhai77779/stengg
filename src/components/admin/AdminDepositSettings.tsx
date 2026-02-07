@@ -184,8 +184,23 @@ export function AdminDepositSettings() {
                     ...((prev ?? currentBankConfig) as BankConfig),
                     bank_name: e.target.value,
                   }))}
-                  placeholder="VD: Vietcombank"
+                  placeholder="VD: ACB, Vietcombank, Techcombank..."
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="bank_bin">Mã BIN ngân hàng (VietQR)</Label>
+                <Input
+                  id="bank_bin"
+                  value={currentBankConfig?.bank_bin ?? ''}
+                  onChange={(e) => setBankForm(prev => ({
+                    ...((prev ?? currentBankConfig) as BankConfig),
+                    bank_bin: e.target.value,
+                  }))}
+                  placeholder="VD: 970416 (ACB), 970436 (VCB), 970407 (TCB)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tra cứu mã BIN tại <a href="https://www.vietqr.io/danh-sach-ngan-hang" target="_blank" rel="noopener noreferrer" className="text-primary underline">vietqr.io</a>
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="account_number">Số tài khoản</Label>
@@ -208,7 +223,7 @@ export function AdminDepositSettings() {
                     ...((prev ?? currentBankConfig) as BankConfig),
                     account_holder: e.target.value,
                   }))}
-                  placeholder="VD: NGUYEN VAN A"
+                  placeholder="VD: NGUYEN VAN A (viết HOA, không dấu)"
                 />
               </div>
               <div className="grid gap-2">

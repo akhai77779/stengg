@@ -8,22 +8,20 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-// VietQR API configuration - UPDATE these values in Admin Settings
-const VIETQR_CONFIG = {
-  bankId: "970422", // Vietcombank BIN code (can be changed in admin)
-  accountNo: "1234567890", // Default account number (should be configured)
-  accountName: "NGUYEN VAN A", // Account holder name
-  template: "compact2", // QR template style
-};
+import { useDepositSettings, BankConfig } from "@/hooks/useDepositSettings";
 
 const Deposit = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { settings, isLoading: settingsLoading } = useDepositSettings();
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Get bank config from settings
+  const bankSetting = settings.find(s => s.method_type === 'bank' && s.is_active);
+  const bankConfig = bankSetting?.config as BankConfig | undefined;
 
   const formatAmount = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, "");
@@ -48,15 +46,19 @@ const Deposit = () => {
       return;
     }
 
+    if (!bankConfig?.bank_bin || !bankConfig?.account_number) {
+      toast.error("Chưa cấu hình thông tin ngân hàng. Vui lòng liên hệ Admin.");
+      return;
+    }
+
     setLoading(true);
     try {
       // VietQR API - Free QR code generation
-      // Format: https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={note}&accountName={name}
-      const addInfo = `NAP${Date.now()}`; // Transaction reference
-      const encodedName = encodeURIComponent(VIETQR_CONFIG.accountName);
+      const addInfo = `NAP${Date.now()}`; 
+      const encodedName = encodeURIComponent(bankConfig.account_holder || "");
       const encodedInfo = encodeURIComponent(addInfo);
       
-      const qrApiUrl = `https://img.vietqr.io/image/${VIETQR_CONFIG.bankId}-${VIETQR_CONFIG.accountNo}-${VIETQR_CONFIG.template}.png?amount=${numericAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
+      const qrApiUrl = `https://img.vietqr.io/image/${bankConfig.bank_bin}-${bankConfig.account_number}-compact2.png?amount=${numericAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
       
       setQrUrl(qrApiUrl);
       toast.success("Mã QR đã được tạo!");
@@ -76,6 +78,45 @@ const Deposit = () => {
   };
 
   const presetAmounts = [100000, 200000, 500000, 1000000, 2000000, 5000000];
+
+  if (settingsLoading) {
+    return (
+      <Layout hideFooter>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!bankConfig || !bankConfig.bank_bin || !bankConfig.account_number) {
+    return (
+      <Layout hideFooter>
+        <div className="min-h-screen pb-20 md:pb-8">
+          <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
+            <div className="flex items-center gap-3 mb-4 md:mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg md:text-xl font-bold text-foreground">{t("deposit")}</h1>
+            </div>
+            <Card className="bg-card border-border">
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">
+                  Chưa cấu hình thông tin ngân hàng. Vui lòng liên hệ hỗ trợ.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout hideFooter>
@@ -106,6 +147,13 @@ const Deposit = () => {
             </CardHeader>
             
             <CardContent className="space-y-6">
+              {/* Bank Info Display */}
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Ngân hàng nhận</p>
+                <p className="font-medium">{bankConfig.bank_name}</p>
+                <p className="text-sm text-muted-foreground">{bankConfig.account_number} - {bankConfig.account_holder}</p>
+              </div>
+
               {/* Amount Input */}
               <div className="space-y-3">
                 <Label htmlFor="amount" className="text-base font-medium">

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 export interface BankConfig {
   bank_name: string;
+  bank_bin?: string; // VietQR bank BIN code
   account_number: string;
   account_holder: string;
   branch?: string;
