@@ -211,6 +211,36 @@ export type Database = {
           },
         ]
       }
+      deposit_settings: {
+        Row: {
+          config: Json
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          method_type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          method_type: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          method_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hero_banners: {
         Row: {
           created_at: string
