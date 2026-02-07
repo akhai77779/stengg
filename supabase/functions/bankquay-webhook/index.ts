@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bankquay-signature",
 };
 
 interface BankQuayCallback {
@@ -21,6 +22,46 @@ interface BankQuayCallback {
   signature?: string;
 }
 
+// Verify HMAC-SHA256 signature from BankQuay
+async function verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signatureBytes = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(payload)
+    );
+    
+    // Convert to hex string
+    const expectedSignature = Array.from(new Uint8Array(signatureBytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Constant-time comparison to prevent timing attacks
+    if (expectedSignature.length !== signature.toLowerCase().length) {
+      return false;
+    }
+    
+    let result = 0;
+    for (let i = 0; i < expectedSignature.length; i++) {
+      result |= expectedSignature.charCodeAt(i) ^ signature.toLowerCase().charCodeAt(i);
+    }
+    
+    return result === 0;
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -30,12 +71,54 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const bankQuayApiKey = Deno.env.get("BANKQUAY_API_KEY");
+    const webhookSecret = Deno.env.get("BANKQUAY_WEBHOOK_SECRET");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse webhook payload
-    const payload: BankQuayCallback = await req.json();
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Verify signature from header
+    const signatureHeader = req.headers.get("x-bankquay-signature") || req.headers.get("X-BankQuay-Signature");
+    
+    if (webhookSecret && webhookSecret.length > 0) {
+      if (!signatureHeader) {
+        console.error("Missing signature header");
+        return new Response(
+          JSON.stringify({ success: false, error: "Missing signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const isValid = await verifySignature(rawBody, signatureHeader, webhookSecret);
+      
+      if (!isValid) {
+        console.error("Invalid signature");
+        // Log failed signature attempt for security monitoring
+        await supabase.from("audit_logs").insert({
+          user_id: "00000000-0000-0000-0000-000000000000",
+          action: "bankquay_invalid_signature",
+          entity_type: "webhook",
+          details: {
+            signature_provided: signatureHeader.substring(0, 20) + "...",
+            ip: req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for"),
+            user_agent: req.headers.get("user-agent"),
+          },
+        });
+        
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("Signature verified successfully");
+    } else {
+      console.warn("BANKQUAY_WEBHOOK_SECRET not configured - signature verification skipped");
+    }
+
+    // Parse webhook payload from raw body
+    const payload: BankQuayCallback = JSON.parse(rawBody);
     console.log("BankQuay webhook received:", JSON.stringify(payload));
 
     // Validate required fields
