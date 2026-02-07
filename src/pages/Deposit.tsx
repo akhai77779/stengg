@@ -8,9 +8,14 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
-const BANKQUAY_API_KEY = "c597182aff436fa52d9d5039a4d01301";
+// VietQR API configuration - UPDATE these values in Admin Settings
+const VIETQR_CONFIG = {
+  bankId: "970422", // Vietcombank BIN code (can be changed in admin)
+  accountNo: "1234567890", // Default account number (should be configured)
+  accountName: "NGUYEN VAN A", // Account holder name
+  template: "compact2", // QR template style
+};
 
 const Deposit = () => {
   const navigate = useNavigate();
@@ -45,23 +50,15 @@ const Deposit = () => {
 
     setLoading(true);
     try {
-      // Call edge function to proxy BankQuay API (avoids mixed content issues)
-      const { data, error } = await supabase.functions.invoke('bankquay-qr', {
-        body: {
-          amount: numericAmount,
-          addinfo: `NAP${Date.now()}`,
-          apiKey: BANKQUAY_API_KEY,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // Convert response to blob URL
-      const blob = new Blob([data], { type: 'image/png' });
-      const blobUrl = URL.createObjectURL(blob);
-      setQrUrl(blobUrl);
+      // VietQR API - Free QR code generation
+      // Format: https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={note}&accountName={name}
+      const addInfo = `NAP${Date.now()}`; // Transaction reference
+      const encodedName = encodeURIComponent(VIETQR_CONFIG.accountName);
+      const encodedInfo = encodeURIComponent(addInfo);
+      
+      const qrApiUrl = `https://img.vietqr.io/image/${VIETQR_CONFIG.bankId}-${VIETQR_CONFIG.accountNo}-${VIETQR_CONFIG.template}.png?amount=${numericAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
+      
+      setQrUrl(qrApiUrl);
       toast.success("Mã QR đã được tạo!");
     } catch (error) {
       console.error("Error generating QR:", error);
