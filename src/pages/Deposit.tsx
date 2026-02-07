@@ -8,6 +8,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const BANKQUAY_API_KEY = "c597182aff436fa52d9d5039a4d01301";
 
@@ -44,9 +45,23 @@ const Deposit = () => {
 
     setLoading(true);
     try {
-      // BankQuay API format
-      const qrApiUrl = `https://api.bankquay.com/${BANKQUAY_API_KEY}?amount=${numericAmount}&addinfo=NAP${Date.now()}`;
-      setQrUrl(qrApiUrl);
+      // Call edge function to proxy BankQuay API (avoids mixed content issues)
+      const { data, error } = await supabase.functions.invoke('bankquay-qr', {
+        body: {
+          amount: numericAmount,
+          addinfo: `NAP${Date.now()}`,
+          apiKey: BANKQUAY_API_KEY,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Convert response to blob URL
+      const blob = new Blob([data], { type: 'image/png' });
+      const blobUrl = URL.createObjectURL(blob);
+      setQrUrl(blobUrl);
       toast.success("Mã QR đã được tạo!");
     } catch (error) {
       console.error("Error generating QR:", error);
