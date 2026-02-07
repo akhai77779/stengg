@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { RefreshCw, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-
+import { AdminDepositSettings } from "@/components/admin/AdminDepositSettings";
 type SettingsState = {
   usdToVnd: string;
   withdrawalFeePercent: string;
@@ -378,6 +378,9 @@ export default function AdminSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Deposit Settings Card */}
+      <AdminDepositSettings />
     </div>
   );
 }
