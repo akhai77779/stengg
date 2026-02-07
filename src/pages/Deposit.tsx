@@ -1,86 +1,69 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Banknote, Wallet, QrCode, Copy, Check, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Layout } from "@/components/layout/Layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useDepositSettings, BankConfig, CryptoConfig, QRConfig, CryptoWallet } from "@/hooks/useDepositSettings";
+
+const BANKQUAY_API_KEY = "c597182aff436fa52d9d5039a4d01301";
 
 const Deposit = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { settings, isLoading } = useDepositSettings();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const copyToClipboard = async (text: string, field: string) => {
+  const formatAmount = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatAmount(e.target.value);
+    setAmount(formatted);
+    if (qrUrl) setQrUrl(null);
+  };
+
+  const getNumericAmount = () => {
+    return parseInt(amount.replace(/,/g, ""), 10) || 0;
+  };
+
+  const generateQR = async () => {
+    const numericAmount = getNumericAmount();
+    
+    if (numericAmount < 10000) {
+      toast.error("Số tiền tối thiểu là 10,000 VND");
+      return;
+    }
+
+    setLoading(true);
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      toast.success("Đã sao chép!");
-      setTimeout(() => setCopiedField(null), 2000);
-    } catch {
-      toast.error("Không thể sao chép");
+      // BankQuay API format
+      const qrApiUrl = `https://api.bankquay.com/${BANKQUAY_API_KEY}?amount=${numericAmount}&addinfo=NAP${Date.now()}`;
+      setQrUrl(qrApiUrl);
+      toast.success("Mã QR đã được tạo!");
+    } catch (error) {
+      console.error("Error generating QR:", error);
+      toast.error("Không thể tạo mã QR. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const bankSetting = settings.find(s => s.method_type === 'bank' && s.is_active);
-  const cryptoSetting = settings.find(s => s.method_type === 'crypto' && s.is_active);
-  const qrSetting = settings.find(s => s.method_type === 'qr' && s.is_active);
+  const handleCopyAmount = () => {
+    navigator.clipboard.writeText(getNumericAmount().toString());
+    setCopied(true);
+    toast.success("Đã sao chép số tiền");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const bankConfig = bankSetting?.config as BankConfig | undefined;
-  const cryptoConfig = cryptoSetting?.config as CryptoConfig | undefined;
-  const qrConfig = qrSetting?.config as QRConfig | undefined;
-
-  const activeTabs = [
-    bankSetting && 'bank',
-    cryptoSetting && 'crypto',
-    qrSetting && 'qr',
-  ].filter(Boolean) as string[];
-
-  const defaultTab = activeTabs[0] || 'bank';
-
-  if (isLoading) {
-    return (
-      <Layout hideFooter>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (activeTabs.length === 0) {
-    return (
-      <Layout hideFooter>
-        <div className="min-h-screen pb-20 md:pb-8">
-          <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
-            <div className="flex items-center gap-3 mb-4 md:mb-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-                className="text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-lg md:text-xl font-bold text-foreground">Nạp tiền</h1>
-            </div>
-            <Card className="bg-card border-border">
-              <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">
-                  Chưa có phương thức nạp tiền nào được kích hoạt. Vui lòng liên hệ hỗ trợ.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const presetAmounts = [100000, 200000, 500000, 1000000, 2000000, 5000000];
 
   return (
     <Layout hideFooter>
@@ -96,241 +79,129 @@ const Deposit = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg md:text-xl font-bold text-foreground">Nạp tiền</h1>
+            <h1 className="text-lg md:text-xl font-bold text-foreground">{t("deposit")}</h1>
           </div>
 
-          <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${activeTabs.length}, 1fr)` }}>
-              {bankSetting && (
-                <TabsTrigger value="bank" className="gap-2">
-                  <Banknote className="h-4 w-4" />
-                  <span className="hidden sm:inline">Ngân hàng</span>
-                </TabsTrigger>
-              )}
-              {cryptoSetting && (
-                <TabsTrigger value="crypto" className="gap-2">
-                  <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">Crypto</span>
-                </TabsTrigger>
-              )}
-              {qrSetting && (
-                <TabsTrigger value="qr" className="gap-2">
-                  <QrCode className="h-4 w-4" />
-                  <span className="hidden sm:inline">QR Code</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
+          <Card className="border-border shadow-lg">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                <Banknote className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-xl">{t("deposit")}</CardTitle>
+              <CardDescription>
+                Nhập số tiền và quét mã QR để nạp tiền
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {/* Amount Input */}
+              <div className="space-y-3">
+                <Label htmlFor="amount" className="text-base font-medium">
+                  Số tiền nạp (VND)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Nhập số tiền..."
+                    value={amount}
+                    onChange={handleAmountChange}
+                    className="text-lg font-semibold h-14 pr-16"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                    VND
+                  </span>
+                </div>
+                
+                {/* Preset Amounts */}
+                <div className="grid grid-cols-3 gap-2">
+                  {presetAmounts.map((preset) => (
+                    <Button
+                      key={preset}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAmount(formatAmount(preset.toString()))}
+                      className="text-xs"
+                    >
+                      {preset.toLocaleString()}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Bank Transfer Tab */}
-            {bankSetting && bankConfig && (
-              <TabsContent value="bank" className="mt-4">
-                <Card className="bg-card border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Banknote className="h-5 w-5 text-primary" />
-                      Chuyển khoản ngân hàng
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+              {/* Generate QR Button */}
+              <Button 
+                onClick={generateQR} 
+                disabled={loading || getNumericAmount() < 10000}
+                className="w-full h-12 text-base font-medium"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Đang tạo mã QR...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="h-5 w-5 mr-2" />
+                    Tạo mã QR
+                  </>
+                )}
+              </Button>
+
+              {/* QR Code Display */}
+              {qrUrl && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Chuyển khoản đến tài khoản bên dưới và liên hệ Support để xác nhận nạp tiền.
+                      Quét mã QR bên dưới để thanh toán
                     </p>
-
-                    <div className="space-y-3">
-                      <InfoRow
-                        label="Ngân hàng"
-                        value={bankConfig.bank_name}
-                        onCopy={() => copyToClipboard(bankConfig.bank_name, 'bank_name')}
-                        copied={copiedField === 'bank_name'}
-                      />
-                      <InfoRow
-                        label="Số tài khoản"
-                        value={bankConfig.account_number}
-                        onCopy={() => copyToClipboard(bankConfig.account_number, 'account_number')}
-                        copied={copiedField === 'account_number'}
-                        highlight
-                      />
-                      <InfoRow
-                        label="Chủ tài khoản"
-                        value={bankConfig.account_holder}
-                        onCopy={() => copyToClipboard(bankConfig.account_holder, 'account_holder')}
-                        copied={copiedField === 'account_holder'}
-                      />
-                      {bankConfig.branch && (
-                        <InfoRow
-                          label="Chi nhánh"
-                          value={bankConfig.branch}
-                          onCopy={() => copyToClipboard(bankConfig.branch!, 'branch')}
-                          copied={copiedField === 'branch'}
-                        />
-                      )}
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl font-bold text-primary">
+                        {amount} VND
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleCopyAmount}
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-
-                    <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                      <p>⚠️ Nội dung chuyển khoản ghi: <strong>Mã user + Số điện thoại</strong></p>
-                      <p>⚠️ Sau khi chuyển khoản, vui lòng liên hệ Support để xác nhận</p>
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <div className="bg-white p-4 rounded-xl shadow-inner border">
+                      <img
+                        src={qrUrl}
+                        alt="QR Code thanh toán"
+                        className="w-64 h-64 object-contain"
+                        onError={() => {
+                          toast.error("Không thể tải mã QR");
+                          setQrUrl(null);
+                        }}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+                  </div>
 
-            {/* Crypto Tab */}
-            {cryptoSetting && cryptoConfig && (
-              <TabsContent value="crypto" className="mt-4">
-                <Card className="bg-card border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Wallet className="h-5 w-5 text-primary" />
-                      Nạp qua Crypto
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Chuyển USDT đến một trong các địa chỉ ví bên dưới.
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="text-sm text-amber-800 dark:text-amber-200 text-center">
+                      ⚠️ Vui lòng chuyển <strong>đúng số tiền</strong> để giao dịch được xử lý tự động
                     </p>
-
-                    {cryptoConfig.wallets && cryptoConfig.wallets.length > 0 ? (
-                      <div className="space-y-4">
-                        {cryptoConfig.wallets.map((wallet: CryptoWallet, index: number) => (
-                          wallet.address && (
-                            <div key={index} className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary">{wallet.network}</Badge>
-                                <span className="text-sm text-muted-foreground">{wallet.currency}</span>
-                              </div>
-                              <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-3">
-                                <code className="text-xs flex-1 break-all font-mono">{wallet.address}</code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 flex-shrink-0"
-                                  onClick={() => copyToClipboard(wallet.address, `wallet_${index}`)}
-                                >
-                                  {copiedField === `wallet_${index}` ? (
-                                    <Check className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <Copy className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Chưa có địa chỉ ví nào được cấu hình
-                      </p>
-                    )}
-
-                    <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                      <p>⚠️ Chỉ gửi USDT đến đúng mạng lưới tương ứng</p>
-                      <p>⚠️ Gửi nhầm mạng có thể mất tiền vĩnh viễn</p>
-                      <p>⚠️ Sau khi gửi, liên hệ Support với TxHash để xác nhận</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {/* QR Code Tab */}
-            {qrSetting && qrConfig && (
-              <TabsContent value="qr" className="mt-4">
-                <Card className="bg-card border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <QrCode className="h-5 w-5 text-primary" />
-                      Quét mã QR
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Quét mã QR bên dưới để chuyển khoản nhanh.
-                    </p>
-
-                    {qrConfig.qr_image_url ? (
-                      <div className="flex justify-center">
-                        <div className="bg-white p-4 rounded-lg">
-                          <img
-                            src={qrConfig.qr_image_url}
-                            alt="QR Code thanh toán"
-                            className="w-48 h-48 object-contain"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex justify-center py-8">
-                        <p className="text-sm text-muted-foreground">Chưa có mã QR</p>
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      <InfoRow
-                        label="Ngân hàng"
-                        value={qrConfig.bank_name}
-                        onCopy={() => copyToClipboard(qrConfig.bank_name, 'qr_bank_name')}
-                        copied={copiedField === 'qr_bank_name'}
-                      />
-                      <InfoRow
-                        label="Số tài khoản"
-                        value={qrConfig.account_number}
-                        onCopy={() => copyToClipboard(qrConfig.account_number, 'qr_account_number')}
-                        copied={copiedField === 'qr_account_number'}
-                        highlight
-                      />
-                      <InfoRow
-                        label="Chủ tài khoản"
-                        value={qrConfig.account_holder}
-                        onCopy={() => copyToClipboard(qrConfig.account_holder, 'qr_account_holder')}
-                        copied={copiedField === 'qr_account_holder'}
-                      />
-                    </div>
-
-                    <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                      <p>⚠️ Nội dung chuyển khoản ghi: <strong>Mã user + Số điện thoại</strong></p>
-                      <p>⚠️ Sau khi chuyển khoản, vui lòng liên hệ Support để xác nhận</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </Tabs>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </Layout>
   );
 };
-
-interface InfoRowProps {
-  label: string;
-  value: string;
-  onCopy: () => void;
-  copied: boolean;
-  highlight?: boolean;
-}
-
-const InfoRow = ({ label, value, onCopy, copied, highlight }: InfoRowProps) => (
-  <div className="flex items-center justify-between gap-2 py-2 border-b border-border last:border-0">
-    <div className="flex-1 min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-sm font-medium truncate ${highlight ? 'text-primary' : 'text-foreground'}`}>
-        {value}
-      </p>
-    </div>
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-8 w-8 flex-shrink-0"
-      onClick={onCopy}
-    >
-      {copied ? (
-        <Check className="h-4 w-4 text-green-500" />
-      ) : (
-        <Copy className="h-4 w-4" />
-      )}
-    </Button>
-  </div>
-);
 
 export default Deposit;
