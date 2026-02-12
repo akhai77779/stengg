@@ -69,13 +69,26 @@ serve(async (req) => {
     }
 
     const details = logEntry.details as Record<string, unknown>;
-    const amount = Number(details?.amount || 0);
+    const amountVND = Number(details?.amount || 0);
 
-    if (amount <= 0) {
+    if (amountVND <= 0) {
       return new Response(JSON.stringify({ success: false, error: "Invalid amount" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Fetch exchange rate for VND -> USD conversion
+    let usdToVnd = 25000;
+    const { data: rateData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "exchange_rates")
+      .single();
+    if (rateData?.value && typeof rateData.value === "object" && "usd_to_vnd" in (rateData.value as Record<string, unknown>)) {
+      usdToVnd = Number((rateData.value as Record<string, unknown>).usd_to_vnd) || 25000;
+    }
+
+    const amountUSD = amountVND / usdToVnd;
 
     // Get current user balance
     const { data: profile, error: profileError } = await supabase
@@ -91,7 +104,7 @@ serve(async (req) => {
     }
 
     const currentBalance = profile.balance || 0;
-    const newBalance = currentBalance + amount;
+    const newBalance = currentBalance + amountUSD;
 
     // Update balance
     const { error: updateError } = await supabase
@@ -109,9 +122,9 @@ serve(async (req) => {
     await supabase.from("transactions").insert({
       user_id,
       type: "deposit",
-      amount,
+      amount: amountUSD,
       status: "approved",
-      notes: `Manual match by admin. Sender: ${details?.sender_name || "N/A"}. Content: ${details?.content || "N/A"}`,
+      notes: `Manual match. ${amountVND.toLocaleString()} VND → $${amountUSD.toFixed(2)} (rate: ${usdToVnd}). Sender: ${details?.sender_name || "N/A"}`,
       tx_hash: (details?.transaction_id as string) || null,
     });
 
@@ -123,7 +136,9 @@ serve(async (req) => {
       entity_id: audit_log_id,
       details: {
         matched_user_id: user_id,
-        amount,
+        amount_vnd: amountVND,
+        amount_usd: amountUSD,
+        exchange_rate: usdToVnd,
         original_content: details?.content,
         sender_name: details?.sender_name,
         balance_before: currentBalance,
@@ -135,13 +150,13 @@ serve(async (req) => {
     await supabase.from("user_notifications").insert({
       user_id,
       title: "💰 Nạp tiền thành công",
-      message: `Đã nhận ${amount.toLocaleString()} VND từ ${details?.sender_name || "Chuyển khoản ngân hàng"} (xử lý thủ công)`,
+      message: `Đã nhận ${amountVND.toLocaleString()} VND (≈ $${amountUSD.toFixed(2)}) từ ${details?.sender_name || "Chuyển khoản ngân hàng"} (xử lý thủ công)`,
       type: "success",
-      metadata: { amount, manual_match: true },
+      metadata: { amount_vnd: amountVND, amount_usd: amountUSD, exchange_rate: usdToVnd, manual_match: true },
     });
 
     return new Response(
-      JSON.stringify({ success: true, amount, new_balance: newBalance }),
+      JSON.stringify({ success: true, amount_vnd: amountVND, amount_usd: amountUSD, exchange_rate: usdToVnd, new_balance: newBalance }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
