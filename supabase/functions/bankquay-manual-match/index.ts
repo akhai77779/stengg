@@ -46,10 +46,56 @@ serve(async (req) => {
       });
     }
 
-    const { audit_log_id, user_id } = await req.json();
+    const { audit_log_id, user_id, action } = await req.json();
 
-    if (!audit_log_id || !user_id) {
-      return new Response(JSON.stringify({ success: false, error: "Missing audit_log_id or user_id" }), {
+    if (!audit_log_id) {
+      return new Response(JSON.stringify({ success: false, error: "Missing audit_log_id" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle reject action
+    if (action === "reject") {
+      // Update the audit log action to mark as rejected
+      const { data: logEntry, error: logError } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .eq("id", audit_log_id)
+        .eq("action", "bankquay_unmatched")
+        .single();
+
+      if (logError || !logEntry) {
+        return new Response(JSON.stringify({ success: false, error: "Audit log not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Log the rejection
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        action: "bankquay_rejected",
+        entity_type: "deposit",
+        entity_id: audit_log_id,
+        details: {
+          amount: (logEntry.details as Record<string, unknown>)?.amount,
+          sender_name: (logEntry.details as Record<string, unknown>)?.sender_name,
+          content: (logEntry.details as Record<string, unknown>)?.content,
+          bank_name: (logEntry.details as Record<string, unknown>)?.bank_name,
+        },
+      });
+
+      // Delete the unmatched record so it disappears from the list
+      await supabase.from("audit_logs").delete().eq("id", audit_log_id);
+
+      return new Response(
+        JSON.stringify({ success: true, action: "rejected" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // For approve action, user_id is required
+    if (!user_id) {
+      return new Response(JSON.stringify({ success: false, error: "Missing user_id" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
