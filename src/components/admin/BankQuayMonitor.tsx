@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Ban, RefreshCw, Loader2, UserPlus } from "lucide-react";
+import { AlertTriangle, Ban, RefreshCw, Loader2, UserPlus, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ export function BankQuayMonitor() {
   const [matchDialog, setMatchDialog] = useState<MatchTarget | null>(null);
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [rejectDialog, setRejectDialog] = useState<AuditLogEntry | null>(null);
   const [newAlert, setNewAlert] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -159,6 +160,24 @@ export function BankQuayMonitor() {
     },
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: async (auditLogId: string) => {
+      const { data, error } = await supabase.functions.invoke("bankquay-manual-match", {
+        body: { audit_log_id: auditLogId, action: "reject" },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Đã từ chối giao dịch");
+      setRejectDialog(null);
+      queryClient.invalidateQueries({ queryKey: ["bankquay-unmatched"] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Lỗi: ${err.message}`);
+    },
+  });
   const handleRefresh = () => {
     refetchUnmatched();
     refetchSig();
@@ -254,7 +273,7 @@ export function BankQuayMonitor() {
                             <TableCell className="text-xs">
                               {(d?.bank_name as string) || "—"}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-1">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -262,7 +281,16 @@ export function BankQuayMonitor() {
                                 onClick={() => openMatchDialog(log)}
                               >
                                 <UserPlus className="h-3.5 w-3.5" />
-                                Khớp
+                                Duyệt thủ công
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => setRejectDialog(log)}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Từ chối
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -331,7 +359,7 @@ export function BankQuayMonitor() {
       <Dialog open={!!matchDialog} onOpenChange={(open) => !open && setMatchDialog(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Khớp giao dịch thủ công</DialogTitle>
+            <DialogTitle>Duyệt thủ công giao dịch</DialogTitle>
             <DialogDescription>
               Chọn người dùng để cộng{" "}
               <span className="font-semibold text-primary">
@@ -416,7 +444,59 @@ export function BankQuayMonitor() {
               ) : (
                 <UserPlus className="h-4 w-4 mr-1" />
               )}
-              Xác nhận khớp
+              Xác nhận duyệt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Confirmation Dialog */}
+      <Dialog open={!!rejectDialog} onOpenChange={(open) => !open && setRejectDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Từ chối giao dịch</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn từ chối giao dịch{" "}
+              <span className="font-semibold text-primary">
+                {rejectDialog?.details?.amount
+                  ? Number(rejectDialog.details.amount).toLocaleString()
+                  : 0}{" "}
+                VND
+              </span>{" "}
+              từ {(rejectDialog?.details?.sender_name as string) || "không rõ"}?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+            <p>
+              <span className="text-muted-foreground">Người gửi:</span>{" "}
+              {(rejectDialog?.details?.sender_name as string) || "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Nội dung:</span>{" "}
+              {(rejectDialog?.details?.content as string) || "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Ngân hàng:</span>{" "}
+              {(rejectDialog?.details?.bank_name as string) || "—"}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialog(null)}>
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectDialog && rejectMutation.mutate(rejectDialog.id)}
+              disabled={rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-1" />
+              )}
+              Xác nhận từ chối
             </Button>
           </DialogFooter>
         </DialogContent>
