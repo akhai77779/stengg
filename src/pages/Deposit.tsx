@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useDepositSettings, BankConfig } from "@/hooks/useDepositSettings";
 
 const Deposit = () => {
@@ -18,6 +20,21 @@ const Deposit = () => {
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Check if BankQuay auto-deposit is enabled
+  const { data: bankquayEnabled, isLoading: bankquayLoading } = useQuery({
+    queryKey: ["bankquay-enabled-setting"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "bankquay_enabled")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return false;
+      return (data.value as { enabled?: boolean })?.enabled ?? false;
+    },
+  });
 
   // Get bank config from settings
   const bankSetting = settings.find(s => s.method_type === 'bank' && s.is_active);
@@ -79,7 +96,7 @@ const Deposit = () => {
 
   const presetAmounts = [100000, 200000, 500000, 1000000, 2000000, 5000000];
 
-  if (settingsLoading) {
+  if (settingsLoading || bankquayLoading) {
     return (
       <Layout hideFooter>
         <div className="min-h-screen flex items-center justify-center">
@@ -89,7 +106,8 @@ const Deposit = () => {
     );
   }
 
-  if (!bankConfig || !bankConfig.bank_bin || !bankConfig.account_number) {
+  // Show "Liên hệ CSKH" when BankQuay is disabled OR no bank config
+  if (!bankquayEnabled || !bankConfig || !bankConfig.bank_bin || !bankConfig.account_number) {
     return (
       <Layout hideFooter>
         <div className="min-h-screen pb-20 md:pb-8">
@@ -106,9 +124,15 @@ const Deposit = () => {
               <h1 className="text-lg md:text-xl font-bold text-foreground">{t("deposit")}</h1>
             </div>
             <Card className="bg-card border-border">
-              <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">
-                  Chưa cấu hình thông tin ngân hàng. Vui lòng liên hệ hỗ trợ.
+              <CardContent className="pt-6 text-center space-y-3">
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                  <Banknote className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-medium">
+                  Vui lòng liên hệ CSKH để được hỗ trợ nạp tiền
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Liên hệ bộ phận chăm sóc khách hàng qua Live Chat để được hướng dẫn
                 </p>
               </CardContent>
             </Card>
