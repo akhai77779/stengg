@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2, Clock, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,10 +11,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useDepositSettings, BankConfig } from "@/hooks/useDepositSettings";
+import { useAuth } from "@/hooks/useAuth";
 
 const Deposit = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { settings, isLoading: settingsLoading } = useDepositSettings();
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,6 +24,7 @@ const Deposit = () => {
   const [copied, setCopied] = useState(false);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [depositSuccess, setDepositSuccess] = useState<{ amount_usd: number; amount_vnd: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cancelQr = useCallback(() => {
@@ -33,6 +36,12 @@ const Deposit = () => {
       timerRef.current = null;
     }
   }, []);
+
+  const resetDeposit = useCallback(() => {
+    cancelQr();
+    setDepositSuccess(null);
+    setAmount("");
+  }, [cancelQr]);
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -50,6 +59,39 @@ const Deposit = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [expiresAt, cancelQr]);
+
+  // Realtime: listen for successful deposit transactions
+  useEffect(() => {
+    if (!qrUrl || !user?.id) return;
+
+    const channel = supabase
+      .channel("deposit-status-check")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const tx = payload.new as { type: string; status: string; amount: number; notes: string | null };
+          if (tx.type === "deposit" && tx.status === "approved") {
+            // Parse VND from notes if available (format: "... 500,000 VND → $20.00 ...")
+            const vndMatch = tx.notes?.match(/([\d,]+)\s*VND/);
+            const amountVnd = vndMatch ? parseInt(vndMatch[1].replace(/,/g, ""), 10) : 0;
+            setDepositSuccess({ amount_usd: tx.amount, amount_vnd: amountVnd });
+            cancelQr();
+            toast.success("🎉 Nạp tiền thành công!", { duration: 8000 });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qrUrl, user?.id, cancelQr]);
 
   // Check if BankQuay auto-deposit is enabled
   const { data: bankquayEnabled, isLoading: bankquayLoading } = useQuery({
@@ -264,8 +306,39 @@ const Deposit = () => {
                 )}
               </Button>
 
+              {/* Deposit Success */}
+              {depositSuccess && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <div className="text-center space-y-3">
+                    <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground">Nạp tiền thành công!</h3>
+                    {depositSuccess.amount_vnd > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {depositSuccess.amount_vnd.toLocaleString()} VND
+                      </p>
+                    )}
+                    <p className="text-2xl font-bold text-primary">
+                      +${depositSuccess.amount_usd.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Số dư đã được cập nhật vào tài khoản của bạn
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={resetDeposit}>
+                      Nạp thêm
+                    </Button>
+                    <Button className="flex-1" onClick={() => navigate("/")}>
+                      Về trang chủ
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* QR Code Display */}
-              {qrUrl && timeLeft > 0 && (
+              {qrUrl && timeLeft > 0 && !depositSuccess && (
                 <div className="space-y-4 pt-4 border-t border-border">
                   {/* Countdown Timer */}
                   <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg mx-auto w-fit ${
@@ -275,6 +348,12 @@ const Deposit = () => {
                     <span className="font-mono font-semibold text-lg">
                       {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
                     </span>
+                  </div>
+
+                  {/* Waiting indicator */}
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Đang chờ xác nhận thanh toán...</span>
                   </div>
 
                   <div className="text-center space-y-2">
