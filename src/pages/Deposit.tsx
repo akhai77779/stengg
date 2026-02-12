@@ -60,9 +60,21 @@ const Deposit = () => {
     };
   }, [expiresAt, cancelQr]);
 
-  // Realtime: listen for successful deposit transactions
+  // Realtime: listen for successful deposit transactions (INSERT for auto-match, UPDATE for admin approval)
   useEffect(() => {
     if (!qrUrl || !user?.id) return;
+
+    const handleDepositEvent = (payload: { new: Record<string, unknown> }) => {
+      const tx = payload.new as { type: string; status: string; amount: number; notes: string | null };
+      if (tx.type === "deposit" && tx.status === "approved") {
+        // Parse VND from notes if available (format: "... 500,000 VND → $20.00 ...")
+        const vndMatch = tx.notes?.match(/([\d,]+)\s*VND/);
+        const amountVnd = vndMatch ? parseInt(vndMatch[1].replace(/,/g, ""), 10) : 0;
+        setDepositSuccess({ amount_usd: tx.amount, amount_vnd: amountVnd });
+        cancelQr();
+        toast.success("🎉 Nạp tiền thành công!", { duration: 8000 });
+      }
+    };
 
     const channel = supabase
       .channel("deposit-status-check")
@@ -74,17 +86,17 @@ const Deposit = () => {
           table: "transactions",
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          const tx = payload.new as { type: string; status: string; amount: number; notes: string | null };
-          if (tx.type === "deposit" && tx.status === "approved") {
-            // Parse VND from notes if available (format: "... 500,000 VND → $20.00 ...")
-            const vndMatch = tx.notes?.match(/([\d,]+)\s*VND/);
-            const amountVnd = vndMatch ? parseInt(vndMatch[1].replace(/,/g, ""), 10) : 0;
-            setDepositSuccess({ amount_usd: tx.amount, amount_vnd: amountVnd });
-            cancelQr();
-            toast.success("🎉 Nạp tiền thành công!", { duration: 8000 });
-          }
-        }
+        handleDepositEvent
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        handleDepositEvent
       )
       .subscribe();
 
@@ -140,14 +152,44 @@ const Deposit = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast.error("Vui lòng đăng nhập để nạp tiền.");
+      return;
+    }
+
     setLoading(true);
     try {
+      // Fetch exchange rate
+      const { data: rateData } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "exchange_rates")
+        .maybeSingle();
+      const usdToVnd = (rateData?.value as { usd_to_vnd?: number })?.usd_to_vnd || 25000;
+      const amountUSD = numericAmount / usdToVnd;
+
       // VietQR API - Free QR code generation
       const addInfo = `NAP${Date.now()}`; 
       const encodedName = encodeURIComponent(bankConfig.account_holder || "");
       const encodedInfo = encodeURIComponent(addInfo);
       
       const qrApiUrl = `https://img.vietqr.io/image/${bankConfig.bank_bin}-${bankConfig.account_number}-compact2.png?amount=${numericAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
+
+      // Create pending deposit transaction so admin can see and approve
+      const { error: txError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "deposit",
+        amount: amountUSD,
+        status: "pending",
+        notes: `QR Deposit: ${numericAmount.toLocaleString()} VND → $${amountUSD.toFixed(2)} (rate: ${usdToVnd}). Ref: ${addInfo}`,
+      });
+
+      if (txError) {
+        console.error("Error creating pending transaction:", txError);
+        toast.error("Không thể tạo giao dịch. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
       
       setQrUrl(qrApiUrl);
       setExpiresAt(Date.now() + 15 * 60 * 1000); // 15 minutes
