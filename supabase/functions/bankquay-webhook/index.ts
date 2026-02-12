@@ -61,6 +61,34 @@ async function verifySignature(payload: string, signature: string, secret: strin
     return false;
   }
 }
+// In-memory rate limiter (per isolate instance)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 30; // max requests per window
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return false;
+  }
+  return true;
+}
+
+// Cleanup stale entries periodically
+function cleanupRateLimits() {
+  const now = Date.now();
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (now > value.resetAt) rateLimitMap.delete(key);
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -69,6 +97,20 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting by IP
+    const clientIp = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "unknown";
+    
+    // Periodic cleanup (1% chance)
+    if (Math.random() < 0.01) cleanupRateLimits();
+    
+    if (!checkRateLimit(clientIp)) {
+      console.error(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Too many requests" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const webhookSecret = Deno.env.get("BANKQUAY_WEBHOOK_SECRET");
