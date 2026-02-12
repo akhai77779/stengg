@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Banknote, QrCode, Copy, Check, Loader2, Clock } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +20,36 @@ const Deposit = () => {
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const cancelQr = useCallback(() => {
+    setQrUrl(null);
+    setExpiresAt(null);
+    setTimeLeft(0);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        cancelQr();
+        toast.error("Mã QR đã hết hạn. Vui lòng tạo mã mới.");
+      }
+    };
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [expiresAt, cancelQr]);
 
   // Check if BankQuay auto-deposit is enabled
   const { data: bankquayEnabled, isLoading: bankquayLoading } = useQuery({
@@ -48,7 +78,7 @@ const Deposit = () => {
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatAmount(e.target.value);
     setAmount(formatted);
-    if (qrUrl) setQrUrl(null);
+    if (qrUrl) cancelQr();
   };
 
   const getNumericAmount = () => {
@@ -78,7 +108,8 @@ const Deposit = () => {
       const qrApiUrl = `https://img.vietqr.io/image/${bankConfig.bank_bin}-${bankConfig.account_number}-compact2.png?amount=${numericAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
       
       setQrUrl(qrApiUrl);
-      toast.success("Mã QR đã được tạo!");
+      setExpiresAt(Date.now() + 15 * 60 * 1000); // 15 minutes
+      toast.success("Mã QR đã được tạo! Bạn có 15 phút để thanh toán.");
     } catch (error) {
       console.error("Error generating QR:", error);
       toast.error("Không thể tạo mã QR. Vui lòng thử lại.");
@@ -234,8 +265,18 @@ const Deposit = () => {
               </Button>
 
               {/* QR Code Display */}
-              {qrUrl && (
+              {qrUrl && timeLeft > 0 && (
                 <div className="space-y-4 pt-4 border-t border-border">
+                  {/* Countdown Timer */}
+                  <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg mx-auto w-fit ${
+                    timeLeft <= 60 ? "bg-destructive/10 text-destructive" : timeLeft <= 180 ? "bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary"
+                  }`}>
+                    <Clock className="h-4 w-4" />
+                    <span className="font-mono font-semibold text-lg">
+                      {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+
                   <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">
                       Quét mã QR bên dưới để thanh toán
@@ -273,9 +314,12 @@ const Deposit = () => {
                     </div>
                   </div>
 
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-1">
                     <p className="text-sm text-amber-800 dark:text-amber-200 text-center">
                       ⚠️ Vui lòng chuyển <strong>đúng số tiền</strong> để giao dịch được xử lý tự động
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                      Mã QR sẽ hết hạn sau {Math.ceil(timeLeft / 60)} phút
                     </p>
                   </div>
                 </div>
