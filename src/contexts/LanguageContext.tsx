@@ -58,7 +58,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.news': 'Tin tức',
     'admin.products': 'Sản phẩm',
     'admin.charity': 'Từ thiện',
-    'admin.transactions': 'Đơn rút tiền',
+    'admin.transactions': 'Giao dịch Nạp/Rút',
     'admin.auditLogs': 'Audit logs',
     'admin.users': 'Người dùng',
     'admin.settings': 'Cấu hình',
