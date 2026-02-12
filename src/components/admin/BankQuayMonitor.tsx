@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +39,60 @@ export function BankQuayMonitor() {
   const [matchDialog, setMatchDialog] = useState<MatchTarget | null>(null);
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newAlert, setNewAlert] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Realtime subscription for new BankQuay audit logs
+  useEffect(() => {
+    const channel = supabase
+      .channel("bankquay-monitor-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "audit_logs",
+        },
+        (payload) => {
+          const action = payload.new?.action as string;
+          if (action === "bankquay_unmatched") {
+            const details = payload.new?.details as Record<string, unknown> | null;
+            const amount = details?.amount ? Number(details.amount).toLocaleString() : "?";
+            const sender = (details?.sender_name as string) || "Không rõ";
+            toast.warning(`💰 Giao dịch BankQuay chưa khớp: ${amount} VND từ ${sender}`, {
+              duration: 10000,
+            });
+            setNewAlert("unmatched");
+            queryClient.invalidateQueries({ queryKey: ["bankquay-unmatched"] });
+            // Play notification sound
+            try {
+              if (!audioRef.current) {
+                audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1sbWhkd4NzfH2CgYR5d3V7f3+AfHp5eHx/gH+AfHl5eHx/gH+BfHl5eHx/gH+BfHl5eHx/gH+BfHl5");
+              }
+              audioRef.current.play().catch(() => {});
+            } catch {}
+          } else if (action === "bankquay_invalid_signature") {
+            toast.error("🚨 Phát hiện request BankQuay có signature không hợp lệ!", {
+              duration: 10000,
+            });
+            setNewAlert("invalid_sig");
+            queryClient.invalidateQueries({ queryKey: ["bankquay-invalid-signature"] });
+          } else if (action === "bankquay_auto_deposit") {
+            const details = payload.new?.details as Record<string, unknown> | null;
+            const amount = details?.amount ? Number(details.amount).toLocaleString() : "?";
+            toast.success(`✅ Nạp tiền tự động thành công: ${amount} VND`, {
+              duration: 8000,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: unmatchedLogs, isLoading: unmatchedLoading, refetch: refetchUnmatched } = useQuery({
     queryKey: ["bankquay-unmatched"],
@@ -142,9 +195,9 @@ export function BankQuayMonitor() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === newAlert) setNewAlert(null); }}>
             <TabsList className="w-full">
-              <TabsTrigger value="unmatched" className="flex-1 gap-1.5">
+              <TabsTrigger value="unmatched" className={`flex-1 gap-1.5 ${newAlert === "unmatched" ? "animate-pulse" : ""}`}>
                 Chưa khớp
                 {unmatchedCount > 0 && (
                   <Badge variant="destructive" className="h-5 min-w-5 px-1 text-xs">
@@ -152,7 +205,7 @@ export function BankQuayMonitor() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="invalid_sig" className="flex-1 gap-1.5">
+              <TabsTrigger value="invalid_sig" className={`flex-1 gap-1.5 ${newAlert === "invalid_sig" ? "animate-pulse" : ""}`}>
                 <Ban className="h-3.5 w-3.5" />
                 Signature lỗi
                 {invalidSigCount > 0 && (
