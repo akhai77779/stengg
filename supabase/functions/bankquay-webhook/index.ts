@@ -280,6 +280,21 @@ serve(async (req) => {
       );
     }
 
+    // Fetch exchange rate for VND -> USD conversion
+    let usdToVnd = 25000; // default
+    const { data: rateData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "exchange_rates")
+      .single();
+    if (rateData?.value && typeof rateData.value === "object" && "usd_to_vnd" in (rateData.value as Record<string, unknown>)) {
+      usdToVnd = Number((rateData.value as Record<string, unknown>).usd_to_vnd) || 25000;
+    }
+
+    const amountVND = payload.amount;
+    const amountUSD = amountVND / usdToVnd;
+    console.log(`Converting ${amountVND} VND -> ${amountUSD} USD (rate: ${usdToVnd})`);
+
     // Get current balance
     const { data: currentProfile, error: balanceError } = await supabase
       .from("profiles")
@@ -296,7 +311,7 @@ serve(async (req) => {
     }
 
     const currentBalance = currentProfile.balance || 0;
-    const newBalance = currentBalance + payload.amount;
+    const newBalance = currentBalance + amountUSD;
 
     // Update user balance
     const { error: updateError } = await supabase
@@ -319,9 +334,9 @@ serve(async (req) => {
     const { error: txCreateError } = await supabase.from("transactions").insert({
       user_id: userId,
       type: "deposit",
-      amount: payload.amount,
+      amount: amountUSD,
       status: "approved",
-      notes: `Auto-deposit via BankQuay. Sender: ${payload.sender_name || 'N/A'}. Account: ${payload.sender_account || 'N/A'}`,
+      notes: `Auto-deposit via BankQuay. ${amountVND.toLocaleString()} VND → ${amountUSD.toFixed(2)} USD (rate: ${usdToVnd}). Sender: ${payload.sender_name || 'N/A'}`,
       tx_hash: payload.transaction_id || null,
     });
 
@@ -335,7 +350,9 @@ serve(async (req) => {
       action: "bankquay_auto_deposit",
       entity_type: "deposit",
       details: {
-        amount: payload.amount,
+        amount_vnd: amountVND,
+        amount_usd: amountUSD,
+        exchange_rate: usdToVnd,
         content: payload.content,
         sender_name: payload.sender_name,
         sender_account: payload.sender_account,
@@ -350,10 +367,12 @@ serve(async (req) => {
     await supabase.from("user_notifications").insert({
       user_id: userId,
       title: "💰 Nạp tiền thành công",
-      message: `Đã nhận ${payload.amount.toLocaleString()} VND từ ${payload.sender_name || 'Chuyển khoản ngân hàng'}`,
+      message: `Đã nhận ${amountVND.toLocaleString()} VND (≈ $${amountUSD.toFixed(2)}) từ ${payload.sender_name || 'Chuyển khoản ngân hàng'}`,
       type: "success",
       metadata: {
-        amount: payload.amount,
+        amount_vnd: amountVND,
+        amount_usd: amountUSD,
+        exchange_rate: usdToVnd,
         sender: payload.sender_name,
         auto_deposit: true,
       },
@@ -366,7 +385,9 @@ serve(async (req) => {
         success: true,
         message: "Deposit processed successfully",
         user_id: userId,
-        amount: payload.amount,
+        amount_vnd: amountVND,
+        amount_usd: amountUSD,
+        exchange_rate: usdToVnd,
         new_balance: newBalance,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
