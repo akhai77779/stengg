@@ -61,33 +61,45 @@ async function verifySignature(payload: string, signature: string, secret: strin
     return false;
   }
 }
-// In-memory rate limiter (per isolate instance)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 30; // max requests per window
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  
-  entry.count++;
-  if (entry.count > RATE_LIMIT_MAX) {
-    return false;
-  }
-  return true;
+// Convert IP to a deterministic UUID v5-like format for rate_limits.user_id
+async function ipToUuid(ip: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode("bankquay-webhook:" + ip);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Format as UUID: 8-4-4-4-12
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
 }
 
-// Cleanup stale entries periodically
-function cleanupRateLimits() {
-  const now = Date.now();
-  for (const [key, value] of rateLimitMap.entries()) {
-    if (now > value.resetAt) rateLimitMap.delete(key);
+async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
+  const ipUuid = await ipToUuid(ip);
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_SECONDS * 1000).toISOString();
+  
+  const { count, error } = await supabase
+    .from("rate_limits")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", ipUuid)
+    .eq("action_type", "bankquay_webhook")
+    .gte("created_at", windowStart);
+
+  if (error) {
+    console.error("Rate limit check error:", error);
+    return true;
   }
+
+  if ((count || 0) >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  await supabase.from("rate_limits").insert({
+    user_id: ipUuid,
+    action_type: "bankquay_webhook",
+  });
+
+  return true;
 }
 
 serve(async (req) => {
@@ -97,25 +109,23 @@ serve(async (req) => {
   }
 
   try {
-    // Rate limiting by IP
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const webhookSecret = Deno.env.get("BANKQUAY_WEBHOOK_SECRET");
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Rate limiting by IP (database-backed)
     const clientIp = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "unknown";
     
-    // Periodic cleanup (1% chance)
-    if (Math.random() < 0.01) cleanupRateLimits();
-    
-    if (!checkRateLimit(clientIp)) {
+    const allowed = await checkRateLimit(supabase, clientIp);
+    if (!allowed) {
       console.error(`Rate limit exceeded for IP: ${clientIp}`);
       return new Response(
         JSON.stringify({ success: false, error: "Too many requests" }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
       );
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const webhookSecret = Deno.env.get("BANKQUAY_WEBHOOK_SECRET");
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get raw body for signature verification
     const rawBody = await req.text();
