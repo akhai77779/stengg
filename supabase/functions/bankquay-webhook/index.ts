@@ -198,8 +198,10 @@ serve(async (req) => {
     // Try to match by NAP prefix (auto-generated from deposit page)
     const napMatch = content.match(/NAP(\d+)/);
     
-    // Try to match by user code
-    const userCodeMatch = content.match(/(\d{6,10})/);
+    // Try to match by user code - look for standalone 5-digit number (not part of NAP timestamp)
+    // Remove NAP prefix and its digits first, then search for user code
+    const contentWithoutNap = content.replace(/NAP\d+/g, "").trim();
+    const userCodeMatch = contentWithoutNap.match(/(\d{5,10})/);
 
     let userId: string | null = null;
 
