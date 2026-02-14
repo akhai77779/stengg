@@ -2,10 +2,20 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bankquay-signature",
-};
+// Whitelist production domains only
+const ALLOWED_ORIGINS = [
+  "https://stengg-it-com.lovable.app",
+  "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bankquay-signature",
+  };
+}
 
 interface BankQuayCallback {
   // BankQuay webhook payload structure
@@ -103,6 +113,18 @@ async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Validate Origin for non-webhook calls (browser requests)
+  const origin = req.headers.get("Origin");
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    console.error(`Blocked request from unauthorized origin: ${origin}`);
+    return new Response(
+      JSON.stringify({ success: false, error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
