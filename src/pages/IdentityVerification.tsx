@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -56,6 +56,8 @@ export default function IdentityVerification() {
   const [isUploadingFront, setIsUploadingFront] = useState(false);
   const [isUploadingBack, setIsUploadingBack] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [signedFrontUrl, setSignedFrontUrl] = useState<string>('');
+  const [signedBackUrl, setSignedBackUrl] = useState<string>('');
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
   
@@ -63,6 +65,15 @@ export default function IdentityVerification() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const generateSignedUrl = useCallback(async (url: string): Promise<string> => {
+    const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/identity-documents\/(.+)/);
+    if (!match) return url;
+    const { data } = await supabase.storage
+      .from('identity-documents')
+      .createSignedUrl(match[1], 3600);
+    return data?.signedUrl || url;
+  }, []);
 
   // Fetch profile data - using profiles_safe view for security
   useEffect(() => {
@@ -105,6 +116,9 @@ export default function IdentityVerification() {
         setExpiryDate(verification.expiry_date);
         setFrontImage(verification.front_image_url);
         setBackImage(verification.back_image_url);
+        // Generate signed URLs for display
+        generateSignedUrl(verification.front_image_url).then(setSignedFrontUrl);
+        generateSignedUrl(verification.back_image_url).then(setSignedBackUrl);
       }
       setIsFetching(false);
     };
@@ -157,6 +171,15 @@ export default function IdentityVerification() {
         .getPublicUrl(fileName);
 
       setImage(publicUrl.publicUrl);
+
+      // Generate signed URL for display
+      const { data: signedData } = await supabase.storage
+        .from('identity-documents')
+        .createSignedUrl(fileName, 3600);
+      if (signedData?.signedUrl) {
+        if (type === 'front') setSignedFrontUrl(signedData.signedUrl);
+        else setSignedBackUrl(signedData.signedUrl);
+      }
 
       toast({
         title: t('common.success'),
@@ -428,11 +451,17 @@ export default function IdentityVerification() {
                 <Label>{t('identity.frontPhoto')}</Label>
                 {frontImage ? (
                   <div className="relative group">
+                    {signedFrontUrl ? (
                     <img
-                      src={frontImage}
+                      src={signedFrontUrl}
                       alt="Front"
                       className="w-full h-40 object-cover rounded-lg border border-border"
                     />
+                    ) : (
+                      <div className="w-full h-40 rounded-lg border border-border flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                     {canEdit && (
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                         <Button
@@ -485,11 +514,17 @@ export default function IdentityVerification() {
                 <Label>{t('identity.backPhoto')}</Label>
                 {backImage ? (
                   <div className="relative group">
+                    {signedBackUrl ? (
                     <img
-                      src={backImage}
+                      src={signedBackUrl}
                       alt="Back"
                       className="w-full h-40 object-cover rounded-lg border border-border"
                     />
+                    ) : (
+                      <div className="w-full h-40 rounded-lg border border-border flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                     {canEdit && (
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                         <Button
