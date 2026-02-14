@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,12 @@ interface IdentityVerification {
   updated_at: string;
 }
 
+// Extract storage path from a Supabase public URL
+function extractStoragePath(url: string): string | null {
+  const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/identity-documents\/(.+)/);
+  return match ? match[1] : null;
+}
+
 export default function AdminIdentityVerifications() {
   const [verifications, setVerifications] = useState<IdentityVerification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +73,28 @@ export default function AdminIdentityVerifications() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [signedFrontUrl, setSignedFrontUrl] = useState<string>('');
+  const [signedBackUrl, setSignedBackUrl] = useState<string>('');
   const { toast } = useToast();
+
+  const generateSignedUrls = useCallback(async (verification: IdentityVerification) => {
+    const frontPath = extractStoragePath(verification.front_image_url);
+    const backPath = extractStoragePath(verification.back_image_url);
+
+    if (frontPath) {
+      const { data } = await supabase.storage
+        .from('identity-documents')
+        .createSignedUrl(frontPath, 3600); // 1 hour
+      if (data?.signedUrl) setSignedFrontUrl(data.signedUrl);
+    }
+
+    if (backPath) {
+      const { data } = await supabase.storage
+        .from('identity-documents')
+        .createSignedUrl(backPath, 3600);
+      if (data?.signedUrl) setSignedBackUrl(data.signedUrl);
+    }
+  }, []);
 
   useEffect(() => {
     fetchVerifications();
@@ -282,6 +309,9 @@ export default function AdminIdentityVerifications() {
                         onClick={() => {
                           setSelectedVerification(v);
                           setRejectionReason(v.rejection_reason || '');
+                          setSignedFrontUrl('');
+                          setSignedBackUrl('');
+                          generateSignedUrls(v);
                           setIsDetailOpen(true);
                         }}
                       >
@@ -356,21 +386,33 @@ export default function AdminIdentityVerifications() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Ảnh mặt trước</p>
-                  <img
-                    src={selectedVerification.front_image_url}
-                    alt="Front"
-                    className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
-                    onClick={() => window.open(selectedVerification.front_image_url, '_blank')}
-                  />
+                  {signedFrontUrl ? (
+                    <img
+                      src={signedFrontUrl}
+                      alt="Front"
+                      className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
+                      onClick={() => window.open(signedFrontUrl, '_blank')}
+                    />
+                  ) : (
+                    <div className="w-full h-40 rounded-lg border border-border flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Ảnh mặt sau</p>
-                  <img
-                    src={selectedVerification.back_image_url}
-                    alt="Back"
-                    className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
-                    onClick={() => window.open(selectedVerification.back_image_url, '_blank')}
-                  />
+                  {signedBackUrl ? (
+                    <img
+                      src={signedBackUrl}
+                      alt="Back"
+                      className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer"
+                      onClick={() => window.open(signedBackUrl, '_blank')}
+                    />
+                  ) : (
+                    <div className="w-full h-40 rounded-lg border border-border flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
               </div>
 
