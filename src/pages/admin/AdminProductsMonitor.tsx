@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type Timeframe = '1m' | '5m' | '15m' | '1h';
 
@@ -173,6 +174,7 @@ export default function AdminProductsMonitor() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch OHLC from external API via ohlc edge function
   const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
@@ -218,6 +220,37 @@ export default function AdminProductsMonitor() {
 
   useEffect(() => {
     loadProducts(timeframe);
+  }, [loadProducts, timeframe]);
+
+  // Sync price history from external API
+  const syncPriceHistory = useCallback(async () => {
+    setIsSyncing(true);
+    const toastId = toast.loading('Đang đồng bộ dữ liệu giá...');
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-price-history', {
+        body: {},
+      });
+
+      if (error) {
+        toast.error('Đồng bộ thất bại: ' + error.message, { id: toastId });
+        return;
+      }
+
+      const stats = data?.stats;
+      const synced = stats?.products?.synced ?? 0;
+      const records = stats?.records?.inserted ?? 0;
+      toast.success(
+        `Đồng bộ thành công! ${synced} sản phẩm, ${records} bản ghi mới`,
+        { id: toastId }
+      );
+
+      // Reload charts after sync
+      await loadProducts(timeframe);
+    } catch (err) {
+      toast.error('Lỗi đồng bộ: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
+    } finally {
+      setIsSyncing(false);
+    }
   }, [loadProducts, timeframe]);
 
   // Handle timeframe change: mark charts as loading, then reload
@@ -316,9 +349,21 @@ export default function AdminProductsMonitor() {
 
           <Button
             size="sm"
+            variant="default"
+            onClick={syncPriceHistory}
+            disabled={isSyncing || isLoadingList}
+            className="gap-2 h-8"
+            title="Đồng bộ dữ liệu giá từ API ngoài vào database"
+          >
+            <Database className={cn('w-3.5 h-3.5', isSyncing && 'animate-pulse')} />
+            {isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ dữ liệu'}
+          </Button>
+
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => loadProducts(timeframe)}
-            disabled={isLoadingList || isChangingTimeframe}
+            disabled={isLoadingList || isChangingTimeframe || isSyncing}
             className="gap-2 h-8"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />
