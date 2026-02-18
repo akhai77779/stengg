@@ -31,9 +31,12 @@ interface Product {
   image_url: string | null;
 }
 
+type DataSource = 'live' | 'db_cache' | 'none';
+
 interface ProductWithChart extends Product {
   ohlcData: OHLCData[];
   isLoading: boolean;
+  dataSource: DataSource;
 }
 
 const COLORS = [
@@ -71,6 +74,22 @@ function formatVolume(volume: string | null) {
   return num.toFixed(2);
 }
 
+function DataSourceBadge({ source }: { source: DataSource }) {
+  if (source === 'live') return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-green-500/10 text-green-400 border-green-500/30">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
+      Live API
+    </span>
+  );
+  if (source === 'db_cache') return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+      DB Cache
+    </span>
+  );
+  return null;
+}
+
 function ProductChartCard({
   product,
   colorClass,
@@ -95,12 +114,16 @@ function ProductChartCard({
             <div className="flex items-center gap-2 mb-0.5">
               {product.image_url ? (
                 <img src={product.image_url} alt={product.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+
               ) : (
                 <Activity className="w-4 h-4 text-primary flex-shrink-0" />
               )}
               <h3 className="font-semibold text-sm text-foreground truncate leading-tight">{product.name}</h3>
             </div>
-            {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
+            <div className="flex items-center gap-2 mt-0.5">
+              {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
+              {!product.isLoading && <DataSourceBadge source={product.dataSource} />}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className="text-base font-bold text-foreground font-mono tabular-nums">{formatPrice(product.price)}</span>
@@ -177,7 +200,7 @@ export default function AdminProductsMonitor() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch OHLC from external API via ohlc edge function
-  const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
+  const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<{ candles: OHLCData[]; source: DataSource }> => {
     try {
       const { data, error } = await supabase.functions.invoke('ohlc', {
         body: { productId, timeframe: tf, limit: 100 },
@@ -185,15 +208,15 @@ export default function AdminProductsMonitor() {
 
       if (error || !data?.candles) {
         console.warn(`[Monitor] ohlc fetch failed for ${productId}:`, error?.message);
-        return [];
+        return { candles: [], source: 'none' };
       }
 
-      return (data.candles as OHLCData[]).filter(
-        (c) => c.open > 0 || c.close > 0
-      );
+      const candles = (data.candles as OHLCData[]).filter(c => c.open > 0 || c.close > 0);
+      const source: DataSource = data.source === 'db_fallback' ? 'db_cache' : 'live';
+      return { candles, source };
     } catch (err) {
       console.warn(`[Monitor] ohlc error for ${productId}:`, err);
-      return [];
+      return { candles: [], source: 'none' };
     }
   }, []);
 
@@ -209,12 +232,12 @@ export default function AdminProductsMonitor() {
 
     if (error || !data) { setIsLoadingList(false); return; }
 
-    setProducts(data.map(p => ({ ...p, ohlcData: [], isLoading: true })));
+    setProducts(data.map(p => ({ ...p, ohlcData: [], isLoading: true, dataSource: 'none' as DataSource })));
     setIsLoadingList(false);
 
     // Fetch OHLC for all products in parallel
     const ohlcResults = await Promise.all(data.map(p => fetchOHLC(p.id, tf)));
-    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], isLoading: false })));
+    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i].candles, isLoading: false, dataSource: ohlcResults[i].source })));
     setLastUpdated(new Date());
   }, [fetchOHLC]);
 
@@ -283,9 +306,9 @@ export default function AdminProductsMonitor() {
         const newRow = payload.new as { product_id: string };
         if (!newRow?.product_id) return;
         // Re-fetch only the affected product's candles from external API
-        const candles = await fetchOHLC(newRow.product_id, timeframe);
+        const result = await fetchOHLC(newRow.product_id, timeframe);
         setProducts(prev => prev.map(p =>
-          p.id === newRow.product_id ? { ...p, ohlcData: candles } : p
+          p.id === newRow.product_id ? { ...p, ohlcData: result.candles, dataSource: result.source } : p
         ));
         setLastUpdated(new Date());
       })
