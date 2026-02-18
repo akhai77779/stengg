@@ -376,6 +376,17 @@ export default function AdminSettings() {
               </div>
             )}
           </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              onClick={save}
+              disabled={loading || saving || !state.externalApiEnabled}
+              size="sm"
+              className="min-w-[140px]"
+            >
+              {saving ? "Đang lưu..." : "Lưu cấu hình API"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
