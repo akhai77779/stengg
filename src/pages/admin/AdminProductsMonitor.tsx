@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff, Database } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff, Database, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -198,6 +198,7 @@ export default function AdminProductsMonitor() {
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingImages, setIsSyncingImages] = useState(false);
 
   // Fetch OHLC from external API via ohlc edge function
   const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<{ candles: OHLCData[]; source: DataSource }> => {
@@ -273,6 +274,35 @@ export default function AdminProductsMonitor() {
       toast.error('Lỗi đồng bộ: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
     } finally {
       setIsSyncing(false);
+    }
+  }, [loadProducts, timeframe]);
+
+  // Sync product images from external API to local storage
+  const syncProductImages = useCallback(async () => {
+    setIsSyncingImages(true);
+    const toastId = toast.loading('Đang tải ảnh sản phẩm...');
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-product-images', {
+        body: {},
+      });
+
+      if (error) {
+        toast.error('Lỗi tải ảnh: ' + error.message, { id: toastId });
+        return;
+      }
+
+      const stats = data?.stats;
+      toast.success(
+        `Ảnh đồng bộ xong! ${stats?.synced ?? 0} ảnh mới, ${stats?.alreadyLocal ?? 0} đã có`,
+        { id: toastId }
+      );
+
+      // Reload products to show new images
+      await loadProducts(timeframe);
+    } catch (err) {
+      toast.error('Lỗi: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
+    } finally {
+      setIsSyncingImages(false);
     }
   }, [loadProducts, timeframe]);
 
@@ -374,7 +404,7 @@ export default function AdminProductsMonitor() {
             size="sm"
             variant="default"
             onClick={syncPriceHistory}
-            disabled={isSyncing || isLoadingList}
+            disabled={isSyncing || isLoadingList || isSyncingImages}
             className="gap-2 h-8"
             title="Đồng bộ dữ liệu giá từ API ngoài vào database"
           >
@@ -385,8 +415,20 @@ export default function AdminProductsMonitor() {
           <Button
             size="sm"
             variant="outline"
+            onClick={syncProductImages}
+            disabled={isSyncingImages || isLoadingList || isSyncing}
+            className="gap-2 h-8"
+            title="Tải ảnh sản phẩm từ API ngoài vào storage"
+          >
+            <Image className={cn('w-3.5 h-3.5', isSyncingImages && 'animate-pulse')} />
+            {isSyncingImages ? 'Đang tải ảnh...' : 'Đồng bộ ảnh'}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => loadProducts(timeframe)}
-            disabled={isLoadingList || isChangingTimeframe || isSyncing}
+            disabled={isLoadingList || isChangingTimeframe || isSyncing || isSyncingImages}
             className="gap-2 h-8"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />

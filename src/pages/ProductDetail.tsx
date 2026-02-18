@@ -108,8 +108,17 @@ const ProductDetail = () => {
     return candleData[candleData.length - 1].close;
   }, [candleData]);
 
-  // Use candle price if available, otherwise fallback to product price
-  const displayPrice = latestCandlePrice ?? product?.price ?? null;
+  // Check if candle data is recent (within last 10 minutes)
+  const isCandleDataRecent = useMemo(() => {
+    if (candleData.length === 0) return false;
+    const lastCandle = candleData[candleData.length - 1];
+    if (!lastCandle?.time) return false;
+    const candleTime = new Date(lastCandle.time).getTime();
+    return Date.now() - candleTime < 10 * 60 * 1000; // 10 minutes
+  }, [candleData]);
+
+  // Use candle price only if data is recent, otherwise fallback to product price (realtime)
+  const displayPrice = (isCandleDataRecent ? latestCandlePrice : null) ?? product?.price ?? null;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
