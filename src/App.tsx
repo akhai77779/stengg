@@ -41,6 +41,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOptionTrades from "./pages/admin/AdminOptionTrades";
 import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications";
 import AdminLiveChat from "./pages/admin/AdminLiveChat";
+import AdminProductsMonitor from "./pages/admin/AdminProductsMonitor";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                     <Route path="banners" element={<AdminBanners />} />
                     <Route path="news" element={<AdminNews />} />
                     <Route path="products" element={<AdminProducts />} />
+                    <Route path="products-monitor" element={<AdminProductsMonitor />} />
                     <Route path="option-trades" element={<AdminOptionTrades />} />
                     <Route path="charity" element={<AdminCharity />} />
                     <Route path="transactions" element={<AdminTransactions />} />
