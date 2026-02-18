@@ -30,6 +30,7 @@ export default function AdminSettings() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{
     success: boolean;
+    apiAvailable?: boolean;
     results?: {
       banners: { synced: number; errors: number; skipped: number };
       products: { synced: number; errors: number; skipped: number };
@@ -161,10 +162,15 @@ export default function AdminSettings() {
       }
 
       if (data?.success) {
-        toast.success("Đồng bộ dữ liệu thành công!");
+        if (data?.external_api_available === false) {
+          toast.warning("API ngoài không khả dụng. Dữ liệu DB được giữ nguyên.");
+        } else {
+          toast.success("Đồng bộ dữ liệu thành công!");
+        }
         setSyncResult({
           success: true,
           results: data.results,
+          apiAvailable: data.external_api_available ?? true,
         });
       } else {
         toast.error("Đồng bộ thất bại: " + (data?.error || "Unknown error"));
@@ -325,51 +331,64 @@ export default function AdminSettings() {
           </Button>
 
           {syncResult && (
-            <div className={`p-4 rounded-lg border ${syncResult.success ? 'bg-green-500/10 border-green-500/30' : 'bg-destructive/10 border-destructive/30'}`}>
-              <div className="flex items-center gap-2 mb-3">
-                {syncResult.success ? (
+            <div className={`p-4 rounded-lg border ${
+              syncResult.success && syncResult.apiAvailable !== false
+                ? 'bg-green-500/10 border-green-500/30'
+                : syncResult.success && syncResult.apiAvailable === false
+                ? 'bg-yellow-500/10 border-yellow-500/30'
+                : 'bg-destructive/10 border-destructive/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                {syncResult.success && syncResult.apiAvailable !== false ? (
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
+                ) : syncResult.success && syncResult.apiAvailable === false ? (
+                  <XCircle className="w-5 h-5 text-yellow-500" />
                 ) : (
                   <XCircle className="w-5 h-5 text-destructive" />
                 )}
-                <span className={`font-medium ${syncResult.success ? 'text-green-500' : 'text-destructive'}`}>
-                  {syncResult.success ? 'Đồng bộ thành công!' : 'Đồng bộ thất bại'}
+                <span className={`font-medium ${
+                  syncResult.success && syncResult.apiAvailable !== false
+                    ? 'text-green-500'
+                    : syncResult.success && syncResult.apiAvailable === false
+                    ? 'text-yellow-500'
+                    : 'text-destructive'
+                }`}>
+                  {syncResult.success && syncResult.apiAvailable !== false
+                    ? 'Đồng bộ thành công!'
+                    : syncResult.success && syncResult.apiAvailable === false
+                    ? 'API ngoài không khả dụng'
+                    : 'Đồng bộ thất bại'}
                 </span>
               </div>
 
-              {syncResult.results && (
+              {syncResult.apiAvailable === false && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Không thể kết nối tới <code className="bg-muted px-1 rounded">admin.stenggg.com</code>. 
+                  Dữ liệu trong database được giữ nguyên. Kiểm tra lại domain/DNS hoặc cấu hình API URL.
+                </p>
+              )}
+
+              {syncResult.results && syncResult.apiAvailable !== false && (
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div className="space-y-1">
                     <div className="font-medium">Products</div>
-                    <div className="text-muted-foreground">
-                      ✓ {syncResult.results.products.synced} synced
-                    </div>
+                    <div className="text-muted-foreground">✓ {syncResult.results.products.synced} synced</div>
                     {syncResult.results.products.errors > 0 && (
-                      <div className="text-destructive">
-                        ✗ {syncResult.results.products.errors} errors
-                      </div>
+                      <div className="text-destructive">✗ {syncResult.results.products.errors} errors</div>
                     )}
                   </div>
                   <div className="space-y-1">
                     <div className="font-medium">News</div>
-                    <div className="text-muted-foreground">
-                      ✓ {syncResult.results.news.synced} synced
-                    </div>
+                    <div className="text-muted-foreground">✓ {syncResult.results.news.synced} synced</div>
                     {syncResult.results.news.errors > 0 && (
-                      <div className="text-destructive">
-                        ✗ {syncResult.results.news.errors} errors
-                      </div>
+                      <div className="text-destructive">✗ {syncResult.results.news.errors} errors</div>
                     )}
                   </div>
                   <div className="space-y-1">
                     <div className="font-medium">Banners</div>
-                    <div className="text-muted-foreground">
-                      ✓ {syncResult.results.banners.synced} synced
-                    </div>
+                    <div className="text-muted-foreground">✓ {syncResult.results.banners.synced} synced</div>
                     {syncResult.results.banners.errors > 0 && (
-                      <div className="text-destructive">
-                        ✗ {syncResult.results.banners.errors} errors
-                      </div>
+                      <div className="text-destructive">✗ {syncResult.results.banners.errors} errors</div>
                     )}
                   </div>
                 </div>

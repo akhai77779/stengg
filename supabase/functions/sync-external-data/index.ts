@@ -201,41 +201,58 @@ Deno.serve(async (req) => {
     // Use service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log("Fetching data from external API:", EXTERNAL_API_URL);
-
-    // Fetch from external API
-    const response = await fetch(EXTERNAL_API_URL, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "ST-Engineering-Sync/1.0",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`External API returned ${response.status}: ${response.statusText}`);
-    }
-
-    const externalData: ExternalApiResponse = await response.json();
-    console.log("API response code:", externalData.code, "message:", externalData.message);
-
-    const dataContainer = externalData.data;
-    if (!dataContainer) {
-      throw new Error("No data container in API response");
-    }
-
-    // Extract data from actual API structure
-    const homeList = dataContainer.homeList || [];
-    const noticeList = dataContainer.noticeList || [];
-    const optionList = dataContainer.optionList || [];
-
-    console.log(`Found: ${homeList.length} banners (homeList), ${optionList.length} products (optionList), ${noticeList.length} news (noticeList)`);
-
     const results = {
       banners: { synced: 0, errors: 0, skipped: 0 },
       products: { synced: 0, errors: 0, skipped: 0 },
       news: { synced: 0, errors: 0, skipped: 0 },
     };
+
+    let externalApiAvailable = false;
+    let homeList: HomeItem[] = [];
+    let noticeList: NoticeItem[] = [];
+    let optionList: OptionItem[] = [];
+    let wilsonlink: { kefu_link?: string } | undefined;
+
+    // Try to fetch from external API - gracefully handle DNS/network failures
+    console.log("Fetching data from external API:", EXTERNAL_API_URL);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(EXTERNAL_API_URL, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Sync/1.0",
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const externalData: ExternalApiResponse = await response.json();
+        console.log("API response code:", externalData.code, "message:", externalData.message);
+        const dataContainer = externalData.data;
+        if (dataContainer) {
+          homeList = dataContainer.homeList || [];
+          noticeList = dataContainer.noticeList || [];
+          optionList = dataContainer.optionList || [];
+          wilsonlink = dataContainer.wilsonlink;
+          externalApiAvailable = true;
+          console.log(`Found: ${homeList.length} banners, ${optionList.length} products, ${noticeList.length} news`);
+        }
+      } else {
+        console.warn(`External API returned ${response.status}: ${response.statusText}`);
+      }
+    } catch (fetchErr) {
+      console.warn("External API not reachable (DNS/network error):", fetchErr instanceof Error ? fetchErr.message.substring(0, 200) : "Unknown");
+      // Continue with empty lists - will still process getBetCoinList and other APIs below
+    }
+
+    console.log(`Found: ${homeList.length} banners (homeList), ${optionList.length} products (optionList), ${noticeList.length} news (noticeList)`);
+
+    // Note: results already declared above
 
     // Sync banners from homeList
     for (let i = 0; i < homeList.length; i++) {
@@ -635,7 +652,7 @@ Deno.serve(async (req) => {
     }
 
     // Save kefu_link to app_settings if available
-    if (dataContainer.wilsonlink?.kefu_link) {
+    if (wilsonlink?.kefu_link) {
       try {
         await supabase
           .from("app_settings")
@@ -670,7 +687,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Đồng bộ dữ liệu thành công",
+        message: externalApiAvailable 
+          ? "Đồng bộ dữ liệu thành công" 
+          : "API ngoài không khả dụng (DNS/network). Dữ liệu hiện tại trong DB được giữ nguyên.",
+        external_api_available: externalApiAvailable,
         results,
         source: EXTERNAL_API_URL,
       }),
@@ -681,14 +701,21 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Sync error:", error);
+    // Return 200 with error info instead of 500 to avoid blank screen
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+        external_api_available: false,
+        results: {
+          banners: { synced: 0, errors: 0, skipped: 0 },
+          products: { synced: 0, errors: 0, skipped: 0 },
+          news: { synced: 0, errors: 0, skipped: 0 },
+        },
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200,
       }
     );
   }
