@@ -174,57 +174,25 @@ export default function AdminProductsMonitor() {
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
 
-  // Fetch OHLC from local price_history with aggregation by timeframe
-  const fetchOHLCLocal = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
-    // Determine how many minutes per bucket
-    const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
-    const limit = tf === '1m' ? 80 : 160; // fetch more raw rows for aggregation
+  // Fetch OHLC from external API via ohlc edge function
+  const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ohlc', {
+        body: { productId, timeframe: tf, limit: 100 },
+      });
 
-    const { data: rows } = await supabase
-      .from('price_history')
-      .select('open_price, high_price, low_price, close_price, recorded_at')
-      .eq('product_id', productId)
-      .order('recorded_at', { ascending: false })
-      .limit(limit);
-
-    if (!rows || rows.length === 0) return [];
-
-    // Sort ascending
-    const sorted = [...rows].reverse();
-
-    if (minutesPerBucket === 1) {
-      return sorted.map(r => ({
-        time: r.recorded_at,
-        open: r.open_price,
-        high: r.high_price,
-        low: r.low_price,
-        close: r.close_price,
-      }));
-    }
-
-    // Aggregate into larger buckets
-    const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
-    for (const r of sorted) {
-      const ts = new Date(r.recorded_at).getTime();
-      const bucketMs = minutesPerBucket * 60 * 1000;
-      const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
-      const existing = buckets.get(bucketKey);
-      if (!existing) {
-        buckets.set(bucketKey, {
-          time: new Date(bucketKey).toISOString(),
-          open: r.open_price,
-          high: r.high_price,
-          low: r.low_price,
-          close: r.close_price,
-        });
-      } else {
-        existing.high = Math.max(existing.high, r.high_price);
-        existing.low = Math.min(existing.low, r.low_price);
-        existing.close = r.close_price; // last row in bucket = close
+      if (error || !data?.candles) {
+        console.warn(`[Monitor] ohlc fetch failed for ${productId}:`, error?.message);
+        return [];
       }
-    }
 
-    return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+      return (data.candles as OHLCData[]).filter(
+        (c) => c.open > 0 || c.close > 0
+      );
+    } catch (err) {
+      console.warn(`[Monitor] ohlc error for ${productId}:`, err);
+      return [];
+    }
   }, []);
 
   // Load top 10 products
@@ -243,10 +211,10 @@ export default function AdminProductsMonitor() {
     setIsLoadingList(false);
 
     // Fetch OHLC for all products in parallel
-    const ohlcResults = await Promise.all(data.map(p => fetchOHLCLocal(p.id, tf)));
+    const ohlcResults = await Promise.all(data.map(p => fetchOHLC(p.id, tf)));
     setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], isLoading: false })));
     setLastUpdated(new Date());
-  }, [fetchOHLCLocal]);
+  }, [fetchOHLC]);
 
   useEffect(() => {
     loadProducts(timeframe);
@@ -274,26 +242,23 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Realtime: price_history for 1m (live candle update when timeframe is 1m)
+  // Realtime: product price updates — reload chart data when product prices change
   useEffect(() => {
-    if (timeframe !== '1m') return;
     const channel = supabase
       .channel('admin-monitor-price-history')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
-        const newRow = payload.new as { product_id: string; recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number };
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, async (payload) => {
+        const newRow = payload.new as { product_id: string };
         if (!newRow?.product_id) return;
-        setProducts(prev => prev.map(p => {
-          if (p.id !== newRow.product_id) return p;
-          const newCandle: OHLCData = { time: newRow.recorded_at, open: newRow.open_price, high: newRow.high_price, low: newRow.low_price, close: newRow.close_price };
-          const idx = p.ohlcData.findIndex(c => c.time === newCandle.time);
-          const updated = idx >= 0 ? p.ohlcData.map((c, i) => i === idx ? newCandle : c) : [...p.ohlcData.slice(-79), newCandle];
-          return { ...p, ohlcData: updated };
-        }));
+        // Re-fetch only the affected product's candles from external API
+        const candles = await fetchOHLC(newRow.product_id, timeframe);
+        setProducts(prev => prev.map(p =>
+          p.id === newRow.product_id ? { ...p, ohlcData: candles } : p
+        ));
         setLastUpdated(new Date());
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [timeframe]);
+  }, [timeframe, fetchOHLC]);
 
   return (
     <div className="space-y-5">
@@ -412,11 +377,7 @@ export default function AdminProductsMonitor() {
 
       <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50">
         Khung thời gian: <span className="font-semibold text-foreground">{timeframe}</span> —{' '}
-        dữ liệu từ{' '}
-        {timeframe === '1m'
-          ? <><code className="bg-muted px-1 rounded">price_history</code> (local DB)</>
-          : <><code className="bg-muted px-1 rounded">ohlc</code> edge function (external API)</>
-        }
+        dữ liệu từ <code className="bg-muted px-1 rounded">ohlc</code> edge function (external API)
       </p>
     </div>
   );
