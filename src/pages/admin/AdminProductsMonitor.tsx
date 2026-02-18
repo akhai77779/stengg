@@ -5,8 +5,17 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, Wifi, WifiOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type Timeframe = '1m' | '5m' | '15m' | '1h';
+
+const TIMEFRAMES: { label: string; value: Timeframe }[] = [
+  { label: '1m', value: '1m' },
+  { label: '5m', value: '5m' },
+  { label: '15m', value: '15m' },
+  { label: '1h', value: '1h' },
+];
 
 interface Product {
   id: string;
@@ -84,45 +93,28 @@ function ProductChartCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-6 h-6 rounded object-cover flex-shrink-0"
-                />
+                <img src={product.image_url} alt={product.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
               ) : (
                 <Activity className="w-4 h-4 text-primary flex-shrink-0" />
               )}
-              <h3 className="font-semibold text-sm text-foreground truncate leading-tight">
-                {product.name}
-              </h3>
+              <h3 className="font-semibold text-sm text-foreground truncate leading-tight">{product.name}</h3>
             </div>
-            {product.symbol && (
-              <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>
-            )}
+            {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-base font-bold text-foreground font-mono tabular-nums">
-              {formatPrice(product.price)}
-            </span>
+            <span className="text-base font-bold text-foreground font-mono tabular-nums">{formatPrice(product.price)}</span>
             <Badge
               variant="outline"
               className={cn(
                 'text-xs px-1.5 py-0 h-5 font-mono font-medium border',
-                isPositive
-                  ? 'bg-green-500/15 text-green-400 border-green-500/40'
-                  : 'bg-red-500/15 text-red-400 border-red-500/40'
+                isPositive ? 'bg-green-500/15 text-green-400 border-green-500/40' : 'bg-red-500/15 text-red-400 border-red-500/40'
               )}
             >
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3 mr-0.5" />
-              ) : (
-                <TrendingDown className="w-3 h-3 mr-0.5" />
-              )}
+              {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
               {formatChange(product.price_change)}%
             </Badge>
           </div>
         </div>
-
         {/* 24h stats */}
         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
@@ -165,10 +157,7 @@ function ProductChartCard({
 
       {/* Footer */}
       <div className="px-4 pb-3">
-        <Link
-          to={`/products/${product.id}`}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-        >
+        <Link to={`/products/${product.id}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
           <ExternalLink className="w-3 h-3" />
           Xem giao dịch
         </Link>
@@ -182,31 +171,64 @@ export default function AdminProductsMonitor() {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [timeframe, setTimeframe] = useState<Timeframe>('1m');
+  const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
 
-  // Fetch OHLC data for a product (last 60 candles from price_history, 1min intervals)
-  const fetchOHLC = useCallback(async (productId: string): Promise<OHLCData[]> => {
-    const { data, error } = await supabase
+  // Fetch OHLC from local price_history with aggregation by timeframe
+  const fetchOHLCLocal = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
+    // Determine how many minutes per bucket
+    const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
+    const limit = tf === '1m' ? 80 : 160; // fetch more raw rows for aggregation
+
+    const { data: rows } = await supabase
       .from('price_history')
       .select('open_price, high_price, low_price, close_price, recorded_at')
       .eq('product_id', productId)
       .order('recorded_at', { ascending: false })
-      .limit(60);
+      .limit(limit);
 
-    if (error || !data) return [];
+    if (!rows || rows.length === 0) return [];
 
-    return data
-      .reverse()
-      .map((row) => ({
-        time: row.recorded_at,
-        open: row.open_price,
-        high: row.high_price,
-        low: row.low_price,
-        close: row.close_price,
+    // Sort ascending
+    const sorted = [...rows].reverse();
+
+    if (minutesPerBucket === 1) {
+      return sorted.map(r => ({
+        time: r.recorded_at,
+        open: r.open_price,
+        high: r.high_price,
+        low: r.low_price,
+        close: r.close_price,
       }));
+    }
+
+    // Aggregate into larger buckets
+    const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
+    for (const r of sorted) {
+      const ts = new Date(r.recorded_at).getTime();
+      const bucketMs = minutesPerBucket * 60 * 1000;
+      const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+      const existing = buckets.get(bucketKey);
+      if (!existing) {
+        buckets.set(bucketKey, {
+          time: new Date(bucketKey).toISOString(),
+          open: r.open_price,
+          high: r.high_price,
+          low: r.low_price,
+          close: r.close_price,
+        });
+      } else {
+        existing.high = Math.max(existing.high, r.high_price);
+        existing.low = Math.min(existing.low, r.low_price);
+        existing.close = r.close_price; // last row in bucket = close
+      }
+    }
+
+    return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }, []);
 
   // Load top 10 products
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (tf: Timeframe) => {
     setIsLoadingList(true);
     const { data, error } = await supabase
       .from('products')
@@ -215,116 +237,94 @@ export default function AdminProductsMonitor() {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (error || !data) {
-      setIsLoadingList(false);
-      return;
-    }
+    if (error || !data) { setIsLoadingList(false); return; }
 
-    // Initialize with loading state
-    const initial: ProductWithChart[] = data.map((p) => ({
-      ...p,
-      ohlcData: [],
-      isLoading: true,
-    }));
-    setProducts(initial);
+    setProducts(data.map(p => ({ ...p, ohlcData: [], isLoading: true })));
     setIsLoadingList(false);
 
-    // Fetch OHLC for each product in parallel
-    const ohlcResults = await Promise.all(data.map((p) => fetchOHLC(p.id)));
-
-    setProducts(data.map((p, i) => ({
-      ...p,
-      ohlcData: ohlcResults[i],
-      isLoading: false,
-    })));
+    // Fetch OHLC for all products in parallel
+    const ohlcResults = await Promise.all(data.map(p => fetchOHLCLocal(p.id, tf)));
+    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], isLoading: false })));
     setLastUpdated(new Date());
-  }, [fetchOHLC]);
+  }, [fetchOHLCLocal]);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    loadProducts(timeframe);
+  }, [loadProducts, timeframe]);
 
-  // Subscribe to realtime product price updates
+  // Handle timeframe change: mark charts as loading, then reload
+  const handleTimeframeChange = useCallback(async (tf: Timeframe) => {
+    if (tf === timeframe) return;
+    setIsChangingTimeframe(true);
+    setProducts(prev => prev.map(p => ({ ...p, ohlcData: [], isLoading: true })));
+    setTimeframe(tf);
+    // loadProducts will run via useEffect
+    setTimeout(() => setIsChangingTimeframe(false), 500);
+  }, [timeframe]);
+
+  // Realtime: product price updates
   useEffect(() => {
     const channel = supabase
       .channel('admin-monitor-products')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'products' },
-        (payload) => {
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.id === payload.new.id
-                ? { ...p, ...(payload.new as Product) }
-                : p
-            )
-          );
-          setLastUpdated(new Date());
-        }
-      )
-      .subscribe((status) => {
-        setRealtimeConnected(status === 'SUBSCRIBED');
-      });
-
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
+        setProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...(payload.new as Product) } : p));
+        setLastUpdated(new Date());
+      })
+      .subscribe((status) => setRealtimeConnected(status === 'SUBSCRIBED'));
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Subscribe to realtime price_history updates → update OHLC charts
+  // Realtime: price_history for 1m (live candle update when timeframe is 1m)
   useEffect(() => {
+    if (timeframe !== '1m') return;
     const channel = supabase
       .channel('admin-monitor-price-history')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'price_history' },
-        (payload) => {
-          const newRow = payload.new as {
-            product_id: string;
-            recorded_at: string;
-            open_price: number;
-            high_price: number;
-            low_price: number;
-            close_price: number;
-          };
-          if (!newRow?.product_id) return;
-
-          setProducts((prev) =>
-            prev.map((p) => {
-              if (p.id !== newRow.product_id) return p;
-              const newCandle: OHLCData = {
-                time: newRow.recorded_at,
-                open: newRow.open_price,
-                high: newRow.high_price,
-                low: newRow.low_price,
-                close: newRow.close_price,
-              };
-              // Update or append candle
-              const existingIdx = p.ohlcData.findIndex((c) => c.time === newCandle.time);
-              const updated =
-                existingIdx >= 0
-                  ? p.ohlcData.map((c, i) => (i === existingIdx ? newCandle : c))
-                  : [...p.ohlcData.slice(-59), newCandle];
-              return { ...p, ohlcData: updated };
-            })
-          );
-          setLastUpdated(new Date());
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
+        const newRow = payload.new as { product_id: string; recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number };
+        if (!newRow?.product_id) return;
+        setProducts(prev => prev.map(p => {
+          if (p.id !== newRow.product_id) return p;
+          const newCandle: OHLCData = { time: newRow.recorded_at, open: newRow.open_price, high: newRow.high_price, low: newRow.low_price, close: newRow.close_price };
+          const idx = p.ohlcData.findIndex(c => c.time === newCandle.time);
+          const updated = idx >= 0 ? p.ohlcData.map((c, i) => i === idx ? newCandle : c) : [...p.ohlcData.slice(-79), newCandle];
+          return { ...p, ohlcData: updated };
+        }));
+        setLastUpdated(new Date());
+      })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [timeframe]);
 
   return (
     <div className="space-y-5">
       {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gradient">Market Monitor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Biểu đồ nến live của 10 sản phẩm — dữ liệu từ database theo thời gian thực
+            Biểu đồ nến live của 10 sản phẩm — dữ liệu realtime
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Timeframe selector */}
+          <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5">
+            {TIMEFRAMES.map(tf => (
+              <button
+                key={tf.value}
+                onClick={() => handleTimeframeChange(tf.value)}
+                disabled={isChangingTimeframe}
+                className={cn(
+                  'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[40px]',
+                  timeframe === tf.value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                )}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
           {/* Realtime indicator */}
           <div className="flex items-center gap-1.5 text-xs">
             {realtimeConnected ? (
@@ -342,19 +342,21 @@ export default function AdminProductsMonitor() {
               </>
             )}
           </div>
+
           {lastUpdated && (
             <span className="text-xs text-muted-foreground hidden sm:block">
               {lastUpdated.toLocaleTimeString('vi-VN')}
             </span>
           )}
+
           <Button
             size="sm"
             variant="outline"
-            onClick={loadProducts}
-            disabled={isLoadingList}
+            onClick={() => loadProducts(timeframe)}
+            disabled={isLoadingList || isChangingTimeframe}
             className="gap-2 h-8"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5', isLoadingList && 'animate-spin')} />
+            <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />
             Làm mới
           </Button>
         </div>
@@ -364,41 +366,16 @@ export default function AdminProductsMonitor() {
       {products.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            {
-              label: 'Sản phẩm',
-              value: products.length,
-              suffix: '/10',
-              color: 'text-primary',
-            },
-            {
-              label: 'Tăng',
-              value: products.filter((p) => (p.price_change || 0) >= 0).length,
-              suffix: '',
-              color: 'text-green-400',
-            },
-            {
-              label: 'Giảm',
-              value: products.filter((p) => (p.price_change || 0) < 0).length,
-              suffix: '',
-              color: 'text-red-400',
-            },
-            {
-              label: 'Có biểu đồ',
-              value: products.filter((p) => p.ohlcData.length > 0).length,
-              suffix: '',
-              color: 'text-amber-400',
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between"
-            >
+            { label: 'Sản phẩm', value: products.length, suffix: '/10', color: 'text-primary' },
+            { label: 'Tăng', value: products.filter(p => (p.price_change || 0) >= 0).length, suffix: '', color: 'text-green-400' },
+            { label: 'Giảm', value: products.filter(p => (p.price_change || 0) < 0).length, suffix: '', color: 'text-red-400' },
+            { label: 'Có biểu đồ', value: products.filter(p => p.ohlcData.length > 0).length, suffix: '', color: 'text-amber-400' },
+          ].map(stat => (
+            <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">{stat.label}</span>
               <span className={cn('text-lg font-bold font-mono', stat.color)}>
                 {stat.value}
-                {stat.suffix && (
-                  <span className="text-xs text-muted-foreground">{stat.suffix}</span>
-                )}
+                {stat.suffix && <span className="text-xs text-muted-foreground">{stat.suffix}</span>}
               </span>
             </div>
           ))}
@@ -423,25 +400,23 @@ export default function AdminProductsMonitor() {
       ) : products.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p>Chưa có sản phẩm nào. Hãy thêm sản phẩm trước.</p>
+          <p>Chưa có sản phẩm nào.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {products.map((product, index) => (
-            <ProductChartCard
-              key={product.id}
-              product={product}
-              colorClass={COLORS[index % COLORS.length]}
-            />
+            <ProductChartCard key={product.id} product={product} colorClass={COLORS[index % COLORS.length]} />
           ))}
         </div>
       )}
 
-      {/* Footer note */}
       <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50">
-        Dữ liệu được đồng bộ tự động từ bảng{' '}
-        <code className="bg-muted px-1 rounded text-xs">price_history</code> —{' '}
-        biểu đồ cập nhật realtime qua Supabase Realtime subscription
+        Khung thời gian: <span className="font-semibold text-foreground">{timeframe}</span> —{' '}
+        dữ liệu từ{' '}
+        {timeframe === '1m'
+          ? <><code className="bg-muted px-1 rounded">price_history</code> (local DB)</>
+          : <><code className="bg-muted px-1 rounded">ohlc</code> edge function (external API)</>
+        }
       </p>
     </div>
   );
