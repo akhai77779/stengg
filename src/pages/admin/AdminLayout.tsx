@@ -24,6 +24,7 @@ import {
   Clock,
   UserCheck,
   MessageCircle,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -59,6 +60,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       { to: "/admin/banners", label: t('admin.banners'), icon: ImageIcon },
       { to: "/admin/news", label: t('admin.news'), icon: Newspaper },
       { to: "/admin/products", label: t('admin.products'), icon: Package },
+      { to: "/admin/products-monitor", label: "Market Monitor", icon: LayoutDashboard },
       { to: "/admin/option-trades", label: "Option Trades", icon: Clock, badgeKey: 'option_trade' },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
       { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' },
