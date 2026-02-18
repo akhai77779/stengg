@@ -23,7 +23,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-const EXTERNAL_KLINE_API_URL = "https://admin.stenggg.com/api/app/option/getKline";
+const DEFAULT_BASE_URL = "https://admin.stenggg.com";
+const DEFAULT_KLINE_PATH = "/api/app/option/getKline";
 
 // In-memory cache for kline data
 interface CacheEntry {
@@ -192,6 +193,7 @@ Deno.serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY");
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
@@ -207,6 +209,27 @@ Deno.serve(async (req) => {
         headers: authHeader ? { Authorization: authHeader } : {},
       },
     });
+
+    // Read external API base URL from app_settings (using service role to bypass RLS)
+    let klineApiUrl = `${DEFAULT_BASE_URL}${DEFAULT_KLINE_PATH}`;
+    try {
+      const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY);
+      const { data: apiConfigRow } = await serviceClient
+        .from("app_settings")
+        .select("value")
+        .eq("key", "external_api_config")
+        .maybeSingle();
+
+      if (apiConfigRow?.value) {
+        const cfg = apiConfigRow.value as { base_url?: string; enabled?: boolean };
+        if (cfg.base_url && /^https?:\/\/.+/.test(cfg.base_url)) {
+          klineApiUrl = `${cfg.base_url.replace(/\/$/, "")}${DEFAULT_KLINE_PATH}`;
+          console.log(`Using configured API base URL: ${cfg.base_url}`);
+        }
+      }
+    } catch (cfgErr) {
+      console.warn("Could not read external_api_config, using default:", cfgErr);
+    }
 
     const body = await req.json().catch(() => ({}));
     const productId = typeof body.productId === "string" ? body.productId : "";
@@ -285,7 +308,7 @@ Deno.serve(async (req) => {
     // Build external API URL
     const period = timeframeToPeriod(timeframe);
     const encodedSymbol = encodeURIComponent(symbol);
-    const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=${period}&size=${limit}&from=${fromTimestamp}&to=${toTimestamp}&zip=0`;
+    const apiUrl = `${klineApiUrl}?symbol=${encodedSymbol}&period=${period}&size=${limit}&from=${fromTimestamp}&to=${toTimestamp}&zip=0`;
 
     console.log(`Fetching kline data from: ${apiUrl}`);
 
