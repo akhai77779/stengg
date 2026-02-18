@@ -23,10 +23,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-const EXTERNAL_API_URL = "https://admin.stenggg.com/api/app/indexList";
-const EXTERNAL_NEWS_API_URL = "https://admin.stenggg.com/api/app/getNews";
-const EXTERNAL_COIN_LIST_API_URL = "https://admin.stenggg.com/api/app/option/getBetCoinList";
-const EXTERNAL_OPTION_TIME_API_URL = "https://admin.stenggg.com/api/app/option/getOptionTime";
+// Default fallback URLs (overridden by app_settings.external_api_config)
+const DEFAULT_BASE_URL = "https://admin.stenggg.com";
 
 // Actual API structure based on response
 interface OptionItem {
@@ -200,6 +198,38 @@ Deno.serve(async (req) => {
     
     // Use service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Read external API base URL from app_settings
+    let baseUrl = DEFAULT_BASE_URL;
+    try {
+      const { data: apiConfigRow } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "external_api_config")
+        .maybeSingle();
+      
+      if (apiConfigRow?.value) {
+        const cfg = apiConfigRow.value as { base_url?: string; enabled?: boolean };
+        if (cfg.enabled === false) {
+          return new Response(
+            JSON.stringify({ success: false, error: "External API sync is disabled by admin.", external_api_available: false, results: { banners: { synced: 0, errors: 0, skipped: 0 }, products: { synced: 0, errors: 0, skipped: 0 }, news: { synced: 0, errors: 0, skipped: 0 } } }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+        if (cfg.base_url && /^https?:\/\/.+/.test(cfg.base_url)) {
+          baseUrl = cfg.base_url.replace(/\/$/, ""); // strip trailing slash
+        }
+      }
+    } catch (cfgErr) {
+      console.warn("Could not read external_api_config, using default:", cfgErr);
+    }
+
+    const EXTERNAL_API_URL = `${baseUrl}/api/app/indexList`;
+    const EXTERNAL_NEWS_API_URL = `${baseUrl}/api/app/getNews`;
+    const EXTERNAL_COIN_LIST_API_URL = `${baseUrl}/api/app/option/getBetCoinList`;
+    const EXTERNAL_OPTION_TIME_API_URL = `${baseUrl}/api/app/option/getOptionTime`;
+
+    console.log(`Using external API base URL: ${baseUrl}`);
 
     const results = {
       banners: { synced: 0, errors: 0, skipped: 0 },
