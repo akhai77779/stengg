@@ -312,6 +312,90 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching kline data from: ${apiUrl}`);
 
+    // Helper: fallback to price_history table in DB
+    async function fallbackToPriceHistory(): Promise<Response> {
+      console.log(`Falling back to price_history DB for product ${productId}, timeframe ${timeframe}`);
+      try {
+        const serviceClient = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY!);
+        
+        // Determine bucket size in minutes based on timeframe
+        const bucketMinutes: Record<string, number> = {
+          "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "1d": 1440
+        };
+        const bucketMin = bucketMinutes[timeframe] ?? 1;
+        
+        const { data: rows, error: dbErr } = await serviceClient
+          .from("price_history")
+          .select("recorded_at, open_price, high_price, low_price, close_price")
+          .eq("product_id", productId)
+          .order("recorded_at", { ascending: false })
+          .limit(limit * (bucketMin === 1 ? 1 : bucketMin));
+
+        if (dbErr || !rows || rows.length === 0) {
+          console.log("No price_history data found, returning empty candles");
+          return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // For 1m timeframe, use rows directly
+        let candles: { time: string; open: number; high: number; low: number; close: number }[] = [];
+
+        if (bucketMin === 1) {
+          candles = rows.map(r => ({
+            time: r.recorded_at,
+            open: r.open_price,
+            high: r.high_price,
+            low: r.low_price,
+            close: r.close_price,
+          })).reverse();
+        } else {
+          // Aggregate rows into larger timeframe buckets
+          const bucketMap = new Map<number, { open: number; high: number; low: number; close: number; firstTs: number }>();
+          const bucketMs = bucketMin * 60 * 1000;
+          
+          for (const r of [...rows].reverse()) {
+            const ts = new Date(r.recorded_at).getTime();
+            const bucketTs = Math.floor(ts / bucketMs) * bucketMs;
+            const existing = bucketMap.get(bucketTs);
+            if (!existing) {
+              bucketMap.set(bucketTs, { open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price, firstTs: ts });
+            } else {
+              existing.high = Math.max(existing.high, r.high_price);
+              existing.low = Math.min(existing.low, r.low_price);
+              existing.close = r.close_price;
+            }
+          }
+          
+          candles = Array.from(bucketMap.entries())
+            .sort(([a], [b]) => a - b)
+            .slice(-limit)
+            .map(([ts, v]) => ({
+              time: new Date(ts).toISOString(),
+              open: v.open,
+              high: v.high,
+              low: v.low,
+              close: v.close,
+            }));
+        }
+
+        console.log(`DB fallback: returning ${candles.length} candles`);
+        const responseData = { candles, nextCursor: null, symbol, source: "db_fallback" };
+        setCacheData(cacheKey, responseData);
+        return new Response(JSON.stringify(responseData), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (fallbackErr) {
+        console.error("DB fallback error:", fallbackErr);
+        return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Use fetchWithRetry for resilience against transient network errors
     let response: Response;
     try {
@@ -321,22 +405,17 @@ Deno.serve(async (req) => {
           "Accept": "application/json",
           "User-Agent": "ST-Engineering-Chart/1.0",
         },
-      }, 3, 300);
+      }, 2, 300);
     } catch (fetchError) {
       console.error(`External API fetch failed after retries:`, fetchError);
-      // Return empty candles instead of error to prevent UI breaking
-      return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Fallback to price_history DB
+      return fallbackToPriceHistory();
     }
 
     if (!response.ok) {
       console.error(`External API error: ${response.status}`);
-      return new Response(JSON.stringify({ error: "Failed to fetch chart data", status: response.status }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Fallback to price_history DB on API error
+      return fallbackToPriceHistory();
     }
 
     const apiData: KlineApiResponse = await response.json();
@@ -359,6 +438,10 @@ Deno.serve(async (req) => {
     console.log(`Received ${klineList.length} kline items`);
     if (klineList.length > 0) {
       console.log('Sample kline item:', JSON.stringify(klineList[0]));
+    } else {
+      // External API returned empty data - fallback to DB
+      console.log("External API returned empty kline data, falling back to DB");
+      return fallbackToPriceHistory();
     }
 
     // Convert to candle format
