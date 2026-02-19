@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink,
+  WifiOff, Play, Pause, SkipForward, SkipBack, History,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Timeframe = '1m' | '5m' | '15m' | '1h';
@@ -16,6 +19,16 @@ const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: '15m', value: '15m' },
   { label: '1h', value: '1h' },
 ];
+
+// Playback speeds: how many minutes of data to advance per tick
+const PLAYBACK_SPEEDS = [
+  { label: '1×', minutesPerTick: 1 },
+  { label: '5×', minutesPerTick: 5 },
+  { label: '30×', minutesPerTick: 30 },
+];
+
+// Tick interval in ms
+const TICK_MS = 1500;
 
 interface Product {
   id: string;
@@ -32,7 +45,15 @@ interface Product {
 
 interface ProductWithChart extends Product {
   ohlcData: OHLCData[];
+  playbackPrice: number | null;
+  playbackChange: number | null;
   isLoading: boolean;
+}
+
+// All raw candles per product for playback
+interface ProductRawData {
+  id: string;
+  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[];
 }
 
 const COLORS = [
@@ -70,23 +91,48 @@ function formatVolume(volume: string | null) {
   return num.toFixed(2);
 }
 
+// Aggregate raw 1m rows into OHLC based on timeframe
+function aggregateOHLC(
+  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[],
+  tf: Timeframe
+): OHLCData[] {
+  const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
+  if (minutesPerBucket === 1) {
+    return rows.map(r => ({ time: r.recorded_at, open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price }));
+  }
+  const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
+  for (const r of rows) {
+    const ts = new Date(r.recorded_at).getTime();
+    const bucketMs = minutesPerBucket * 60 * 1000;
+    const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+    const existing = buckets.get(bucketKey);
+    if (!existing) {
+      buckets.set(bucketKey, { time: new Date(bucketKey).toISOString(), open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price });
+    } else {
+      existing.high = Math.max(existing.high, r.high_price);
+      existing.low = Math.min(existing.low, r.low_price);
+      existing.close = r.close_price;
+    }
+  }
+  return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+}
+
 function ProductChartCard({
   product,
   colorClass,
+  isPlayback,
 }: {
   product: ProductWithChart;
   colorClass: string;
+  isPlayback: boolean;
 }) {
   const chartRef = useRef<CandlestickChartRef>(null);
-  const isPositive = (product.price_change || 0) >= 0;
+  const displayPrice = isPlayback ? product.playbackPrice : product.price;
+  const displayChange = isPlayback ? product.playbackChange : product.price_change;
+  const isPositive = (displayChange || 0) >= 0;
 
   return (
-    <Card
-      className={cn(
-        'relative overflow-hidden border bg-gradient-to-br transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5',
-        colorClass
-      )}
-    >
+    <Card className={cn('relative overflow-hidden border bg-gradient-to-br transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5', colorClass)}>
       {/* Header */}
       <CardHeader className="pb-2 pt-3 px-4">
         <div className="flex items-start justify-between gap-2">
@@ -102,7 +148,7 @@ function ProductChartCard({
             {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-base font-bold text-foreground font-mono tabular-nums">{formatPrice(product.price)}</span>
+            <span className="text-base font-bold text-foreground font-mono tabular-nums">{formatPrice(displayPrice)}</span>
             <Badge
               variant="outline"
               className={cn(
@@ -111,7 +157,7 @@ function ProductChartCard({
               )}
             >
               {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-              {formatChange(product.price_change)}%
+              {formatChange(displayChange)}%
             </Badge>
           </div>
         </div>
@@ -174,35 +220,36 @@ export default function AdminProductsMonitor() {
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
 
-  // Fetch OHLC from local price_history with aggregation by timeframe
-  const fetchOHLCLocal = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
-    // Determine how many minutes per bucket
-    const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
-    const limit = tf === '1m' ? 80 : 160; // fetch more raw rows for aggregation
+  // --- Playback state ---
+  const [isPlaybackMode, setIsPlaybackMode] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [availableDays, setAvailableDays] = useState<string[]>([]); // sorted list of DATE strings
+  const [currentDayIndex, setCurrentDayIndex] = useState(0);
+  const [playbackCursorMs, setPlaybackCursorMs] = useState<number>(0); // current timestamp within the day
+  const [speedIndex, setSpeedIndex] = useState(0); // index into PLAYBACK_SPEEDS
+  const [playbackProgress, setPlaybackProgress] = useState(0); // 0-100
+  const [dayStartMs, setDayStartMs] = useState(0);
+  const [dayEndMs, setDayEndMs] = useState(0);
 
+  // Raw all-data cache per product (loaded once for all days)
+  const rawDataRef = useRef<ProductRawData[]>([]);
+  const playbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fetch OHLC from local price_history for LIVE mode
+  const fetchOHLCLocal = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
+    const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
+    const limit = tf === '1m' ? 80 : 160;
     const { data: rows } = await supabase
       .from('price_history')
       .select('open_price, high_price, low_price, close_price, recorded_at')
       .eq('product_id', productId)
       .order('recorded_at', { ascending: false })
       .limit(limit);
-
     if (!rows || rows.length === 0) return [];
-
-    // Sort ascending
     const sorted = [...rows].reverse();
-
     if (minutesPerBucket === 1) {
-      return sorted.map(r => ({
-        time: r.recorded_at,
-        open: r.open_price,
-        high: r.high_price,
-        low: r.low_price,
-        close: r.close_price,
-      }));
+      return sorted.map(r => ({ time: r.recorded_at, open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price }));
     }
-
-    // Aggregate into larger buckets
     const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
     for (const r of sorted) {
       const ts = new Date(r.recorded_at).getTime();
@@ -210,24 +257,17 @@ export default function AdminProductsMonitor() {
       const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
       const existing = buckets.get(bucketKey);
       if (!existing) {
-        buckets.set(bucketKey, {
-          time: new Date(bucketKey).toISOString(),
-          open: r.open_price,
-          high: r.high_price,
-          low: r.low_price,
-          close: r.close_price,
-        });
+        buckets.set(bucketKey, { time: new Date(bucketKey).toISOString(), open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price });
       } else {
         existing.high = Math.max(existing.high, r.high_price);
         existing.low = Math.min(existing.low, r.low_price);
-        existing.close = r.close_price; // last row in bucket = close
+        existing.close = r.close_price;
       }
     }
-
     return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }, []);
 
-  // Load top 10 products
+  // Load top 10 products (LIVE mode)
   const loadProducts = useCallback(async (tf: Timeframe) => {
     setIsLoadingList(true);
     const { data, error } = await supabase
@@ -236,34 +276,202 @@ export default function AdminProductsMonitor() {
       .eq('status', 'available')
       .order('created_at', { ascending: false })
       .limit(10);
-
     if (error || !data) { setIsLoadingList(false); return; }
-
-    setProducts(data.map(p => ({ ...p, ohlcData: [], isLoading: true })));
+    setProducts(data.map(p => ({ ...p, ohlcData: [], playbackPrice: null, playbackChange: null, isLoading: true })));
     setIsLoadingList(false);
-
-    // Fetch OHLC for all products in parallel
     const ohlcResults = await Promise.all(data.map(p => fetchOHLCLocal(p.id, tf)));
-    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], isLoading: false })));
+    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], playbackPrice: null, playbackChange: null, isLoading: false })));
     setLastUpdated(new Date());
   }, [fetchOHLCLocal]);
 
   useEffect(() => {
-    loadProducts(timeframe);
-  }, [loadProducts, timeframe]);
+    if (!isPlaybackMode) loadProducts(timeframe);
+  }, [loadProducts, timeframe, isPlaybackMode]);
 
-  // Handle timeframe change: mark charts as loading, then reload
+  // Handle timeframe change
   const handleTimeframeChange = useCallback(async (tf: Timeframe) => {
     if (tf === timeframe) return;
     setIsChangingTimeframe(true);
     setProducts(prev => prev.map(p => ({ ...p, ohlcData: [], isLoading: true })));
     setTimeframe(tf);
-    // loadProducts will run via useEffect
     setTimeout(() => setIsChangingTimeframe(false), 500);
   }, [timeframe]);
 
-  // Realtime: product price updates
+  // --- PLAYBACK FUNCTIONS ---
+
+  // Load all raw data from DB for playback (all records, all products)
+  const loadPlaybackData = useCallback(async () => {
+    setIsLoadingList(true);
+    // 1. Get product list
+    const { data: productData } = await supabase
+      .from('products')
+      .select('id, name, symbol, price, price_change, high_24h, low_24h, volume, category, image_url')
+      .eq('status', 'available')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (!productData) { setIsLoadingList(false); return; }
+
+    setProducts(productData.map(p => ({
+      ...p, ohlcData: [], playbackPrice: p.price, playbackChange: p.price_change, isLoading: true
+    })));
+
+    // 2. Get distinct days
+    const { data: dayRows } = await supabase
+      .from('price_history')
+      .select('recorded_at')
+      .order('recorded_at', { ascending: true })
+      .limit(1);
+    
+    // Fetch all records for each product (up to limit)
+    const allRaw: ProductRawData[] = await Promise.all(productData.map(async (p) => {
+      const { data: rows } = await supabase
+        .from('price_history')
+        .select('recorded_at, open_price, high_price, low_price, close_price')
+        .eq('product_id', p.id)
+        .order('recorded_at', { ascending: true })
+        .limit(20000);
+      return { id: p.id, rows: rows || [] };
+    }));
+
+    rawDataRef.current = allRaw;
+
+    // 3. Compute available days from first product's data (or union)
+    const daySet = new Set<string>();
+    for (const pd of allRaw) {
+      for (const r of pd.rows) {
+        daySet.add(r.recorded_at.slice(0, 10));
+      }
+    }
+    const days = Array.from(daySet).sort();
+    setAvailableDays(days);
+
+    // 4. Start at day 0, cursor = start of day
+    const firstDay = days[0];
+    const startMs = new Date(firstDay + 'T00:00:00Z').getTime();
+    const endMs = new Date(firstDay + 'T23:59:59Z').getTime();
+    setCurrentDayIndex(0);
+    setPlaybackCursorMs(startMs);
+    setDayStartMs(startMs);
+    setDayEndMs(endMs);
+
+    // 5. Render initial slice
+    setProducts(productData.map((p, i) => {
+      const raw = allRaw[i];
+      const sliced = raw.rows.filter(r => new Date(r.recorded_at).getTime() <= startMs + 60 * 1000);
+      const ohlcData = aggregateOHLC(sliced, timeframe);
+      const lastClose = sliced.length > 0 ? sliced[sliced.length - 1].close_price : p.price;
+      return { ...p, ohlcData, playbackPrice: lastClose, playbackChange: null, isLoading: false };
+    }));
+
+    setIsLoadingList(false);
+    setLastUpdated(new Date());
+  }, [timeframe]);
+
+  // Re-render charts for a given cursor position
+  const renderAtCursor = useCallback((cursorMs: number, pData: typeof products) => {
+    const raw = rawDataRef.current;
+    if (!raw.length) return;
+
+    setProducts(prev => prev.map((p, i) => {
+      const rd = raw.find(r => r.id === p.id);
+      if (!rd) return p;
+      const sliced = rd.rows.filter(r => new Date(r.recorded_at).getTime() <= cursorMs);
+      const ohlcData = aggregateOHLC(sliced, timeframe);
+      const lastRow = sliced.length > 0 ? sliced[sliced.length - 1] : null;
+      const lastClose = lastRow ? lastRow.close_price : p.price;
+      const firstClose = sliced.length > 1 ? sliced[0].close_price : lastClose;
+      const pctChange = firstClose > 0 ? ((lastClose - firstClose) / firstClose) * 100 : 0;
+      return { ...p, ohlcData, playbackPrice: lastClose, playbackChange: pctChange, isLoading: false };
+    }));
+  }, [timeframe]);
+
+  // Advance cursor by N minutes, handle day boundary
+  const advanceCursor = useCallback((currentCursor: number, currentDayIdx: number, days: string[], minutesPerTick: number): { newCursor: number; newDayIdx: number; newStart: number; newEnd: number } => {
+    const newCursor = currentCursor + minutesPerTick * 60 * 1000;
+    const currentDayEnd = new Date(days[currentDayIdx] + 'T23:59:59Z').getTime();
+
+    if (newCursor > currentDayEnd) {
+      // Advance to next day (loop if at end)
+      const nextDayIdx = (currentDayIdx + 1) % days.length;
+      const nextDay = days[nextDayIdx];
+      const newStart = new Date(nextDay + 'T00:00:00Z').getTime();
+      const newEnd = new Date(nextDay + 'T23:59:59Z').getTime();
+      return { newCursor: newStart, newDayIdx: nextDayIdx, newStart, newEnd };
+    }
+
+    const start = new Date(days[currentDayIdx] + 'T00:00:00Z').getTime();
+    const end = currentDayEnd;
+    return { newCursor, newDayIdx: currentDayIdx, newStart: start, newEnd: end };
+  }, []);
+
+  // Playback tick
   useEffect(() => {
+    if (!isPlaybackMode || !isPlaying || availableDays.length === 0) return;
+
+    const speed = PLAYBACK_SPEEDS[speedIndex];
+
+    // Use refs to avoid stale closure
+    let cursor = playbackCursorMs;
+    let dayIdx = currentDayIndex;
+    let startMs = dayStartMs;
+    let endMs = dayEndMs;
+
+    playbackTimerRef.current = setInterval(() => {
+      const { newCursor, newDayIdx, newStart, newEnd } = advanceCursor(cursor, dayIdx, availableDays, speed.minutesPerTick);
+      cursor = newCursor;
+      dayIdx = newDayIdx;
+      startMs = newStart;
+      endMs = newEnd;
+
+      setPlaybackCursorMs(newCursor);
+      setCurrentDayIndex(newDayIdx);
+      setDayStartMs(newStart);
+      setDayEndMs(newEnd);
+
+      const progress = endMs > newStart ? ((newCursor - newStart) / (endMs - newStart)) * 100 : 0;
+      setPlaybackProgress(Math.min(100, progress));
+      setLastUpdated(new Date(newCursor));
+
+      renderAtCursor(newCursor, []);
+    }, TICK_MS);
+
+    return () => {
+      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaybackMode, isPlaying, speedIndex, availableDays]);
+
+  // Toggle playback mode
+  const togglePlaybackMode = useCallback(async () => {
+    if (!isPlaybackMode) {
+      setIsPlaying(false);
+      setIsPlaybackMode(true);
+      await loadPlaybackData();
+    } else {
+      setIsPlaying(false);
+      setIsPlaybackMode(false);
+      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+      loadProducts(timeframe);
+    }
+  }, [isPlaybackMode, loadPlaybackData, loadProducts, timeframe]);
+
+  // Navigate to specific day
+  const goToDay = useCallback((dayIdx: number) => {
+    if (availableDays.length === 0) return;
+    const day = availableDays[dayIdx];
+    const newStart = new Date(day + 'T00:00:00Z').getTime();
+    const newEnd = new Date(day + 'T23:59:59Z').getTime();
+    setCurrentDayIndex(dayIdx);
+    setPlaybackCursorMs(newStart);
+    setDayStartMs(newStart);
+    setDayEndMs(newEnd);
+    setPlaybackProgress(0);
+    renderAtCursor(newStart, []);
+  }, [availableDays, renderAtCursor]);
+
+  // Realtime: product price updates (LIVE mode only)
+  useEffect(() => {
+    if (isPlaybackMode) return;
     const channel = supabase
       .channel('admin-monitor-products')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
@@ -272,11 +480,11 @@ export default function AdminProductsMonitor() {
       })
       .subscribe((status) => setRealtimeConnected(status === 'SUBSCRIBED'));
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isPlaybackMode]);
 
-  // Realtime: price_history for 1m (live candle update when timeframe is 1m)
+  // Realtime: price_history for 1m (LIVE mode only)
   useEffect(() => {
-    if (timeframe !== '1m') return;
+    if (isPlaybackMode || timeframe !== '1m') return;
     const channel = supabase
       .channel('admin-monitor-price-history')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
@@ -293,7 +501,19 @@ export default function AdminProductsMonitor() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [timeframe]);
+  }, [timeframe, isPlaybackMode]);
+
+  // Format date nicely
+  const formatDay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Format cursor time
+  const formatCursorTime = (ms: number) => {
+    const d = new Date(ms);
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  };
 
   return (
     <div className="space-y-5">
@@ -302,73 +522,224 @@ export default function AdminProductsMonitor() {
         <div>
           <h1 className="text-xl font-bold text-gradient">Market Monitor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Biểu đồ nến live của 10 sản phẩm — dữ liệu realtime
+            {isPlaybackMode ? 'Chế độ phát lại lịch sử — dữ liệu từ database' : 'Biểu đồ nến live của 10 sản phẩm — dữ liệu realtime'}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Timeframe selector */}
-          <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5">
-            {TIMEFRAMES.map(tf => (
-              <button
-                key={tf.value}
-                onClick={() => handleTimeframeChange(tf.value)}
-                disabled={isChangingTimeframe}
-                className={cn(
-                  'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[40px]',
-                  timeframe === tf.value
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
-                )}
-              >
-                {tf.label}
-              </button>
-            ))}
-          </div>
+          {/* Timeframe selector (live mode only) */}
+          {!isPlaybackMode && (
+            <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5">
+              {TIMEFRAMES.map(tf => (
+                <button
+                  key={tf.value}
+                  onClick={() => handleTimeframeChange(tf.value)}
+                  disabled={isChangingTimeframe}
+                  className={cn(
+                    'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[40px]',
+                    timeframe === tf.value
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                  )}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Realtime indicator */}
-          <div className="flex items-center gap-1.5 text-xs">
-            {realtimeConnected ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                </span>
-                <span className="text-green-400 font-medium">Live</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Offline</span>
-              </>
-            )}
-          </div>
+          {/* Playback mode toggle */}
+          <Button
+            size="sm"
+            variant={isPlaybackMode ? 'default' : 'outline'}
+            onClick={togglePlaybackMode}
+            disabled={isLoadingList}
+            className="gap-1.5 h-8"
+          >
+            <History className="w-3.5 h-3.5" />
+            {isPlaybackMode ? 'Thoát Playback' : 'Phát lại'}
+          </Button>
 
-          {lastUpdated && (
+          {/* Realtime indicator (live mode) */}
+          {!isPlaybackMode && (
+            <div className="flex items-center gap-1.5 text-xs">
+              {realtimeConnected ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  <span className="text-green-400 font-medium">Live</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Offline</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {lastUpdated && !isPlaybackMode && (
             <span className="text-xs text-muted-foreground hidden sm:block">
               {lastUpdated.toLocaleTimeString('vi-VN')}
             </span>
           )}
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => loadProducts(timeframe)}
-            disabled={isLoadingList || isChangingTimeframe}
-            className="gap-2 h-8"
-          >
-            <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />
-            Làm mới
-          </Button>
+          {!isPlaybackMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => loadProducts(timeframe)}
+              disabled={isLoadingList || isChangingTimeframe}
+              className="gap-2 h-8"
+            >
+              <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />
+              Làm mới
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* ===== PLAYBACK CONTROLS ===== */}
+      {isPlaybackMode && availableDays.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+          {/* Day navigation */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium">Ngày:</span>
+            {availableDays.map((day, idx) => (
+              <button
+                key={day}
+                onClick={() => goToDay(idx)}
+                className={cn(
+                  'px-3 py-1 text-xs rounded-lg font-semibold transition-all border',
+                  currentDayIndex === idx
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                )}
+              >
+                {formatDay(day)}
+              </button>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>00:00</span>
+              <span className="font-mono text-foreground font-semibold">
+                {formatCursorTime(playbackCursorMs)} UTC
+              </span>
+              <span>23:59</span>
+            </div>
+            <div
+              className="w-full h-2 bg-muted rounded-full cursor-pointer overflow-hidden"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = (e.clientX - rect.left) / rect.width;
+                const newCursor = dayStartMs + ratio * (dayEndMs - dayStartMs);
+                setPlaybackCursorMs(newCursor);
+                setPlaybackProgress(ratio * 100);
+                renderAtCursor(newCursor, []);
+              }}
+            >
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${playbackProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Controls row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Prev day */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => goToDay((currentDayIndex - 1 + availableDays.length) % availableDays.length)}
+            >
+              <SkipBack className="w-3.5 h-3.5" />
+            </Button>
+
+            {/* Play/Pause */}
+            <Button
+              size="sm"
+              variant="default"
+              className="h-8 px-4 gap-2"
+              onClick={() => setIsPlaying(p => !p)}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {isPlaying ? 'Tạm dừng' : 'Phát'}
+            </Button>
+
+            {/* Next day */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => goToDay((currentDayIndex + 1) % availableDays.length)}
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+            </Button>
+
+            {/* Speed selector */}
+            <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5 ml-auto">
+              <span className="text-xs text-muted-foreground px-2">Tốc độ:</span>
+              {PLAYBACK_SPEEDS.map((s, idx) => (
+                <button
+                  key={s.label}
+                  onClick={() => setSpeedIndex(idx)}
+                  className={cn(
+                    'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200',
+                    speedIndex === idx
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Timeframe in playback */}
+            <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5">
+              {TIMEFRAMES.map(tf => (
+                <button
+                  key={tf.value}
+                  onClick={() => setTimeframe(tf.value)}
+                  className={cn(
+                    'px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200',
+                    timeframe === tf.value
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                  )}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center gap-2 text-xs">
+            <div className={cn('w-2 h-2 rounded-full', isPlaying ? 'bg-amber-400 animate-pulse' : 'bg-muted-foreground')} />
+            <span className="text-muted-foreground">
+              {isPlaying ? `Đang phát — ${PLAYBACK_SPEEDS[speedIndex].minutesPerTick} phút/tick` : 'Đã tạm dừng'}
+            </span>
+            <span className="ml-auto text-muted-foreground">
+              Loop: Khi hết <span className="text-foreground font-medium">{availableDays[availableDays.length - 1] ? formatDay(availableDays[availableDays.length - 1]) : ''}</span> → quay về <span className="text-foreground font-medium">{availableDays[0] ? formatDay(availableDays[0]) : ''}</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats Bar */}
       {products.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Sản phẩm', value: products.length, suffix: '/10', color: 'text-primary' },
-            { label: 'Tăng', value: products.filter(p => (p.price_change || 0) >= 0).length, suffix: '', color: 'text-green-400' },
-            { label: 'Giảm', value: products.filter(p => (p.price_change || 0) < 0).length, suffix: '', color: 'text-red-400' },
+            { label: 'Tăng', value: products.filter(p => ((isPlaybackMode ? p.playbackChange : p.price_change) || 0) >= 0).length, suffix: '', color: 'text-green-400' },
+            { label: 'Giảm', value: products.filter(p => ((isPlaybackMode ? p.playbackChange : p.price_change) || 0) < 0).length, suffix: '', color: 'text-red-400' },
             { label: 'Có biểu đồ', value: products.filter(p => p.ohlcData.length > 0).length, suffix: '', color: 'text-amber-400' },
           ].map(stat => (
             <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between">
@@ -405,17 +776,20 @@ export default function AdminProductsMonitor() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {products.map((product, index) => (
-            <ProductChartCard key={product.id} product={product} colorClass={COLORS[index % COLORS.length]} />
+            <ProductChartCard
+              key={product.id}
+              product={product}
+              colorClass={COLORS[index % COLORS.length]}
+              isPlayback={isPlaybackMode}
+            />
           ))}
         </div>
       )}
 
       <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50">
-        Khung thời gian: <span className="font-semibold text-foreground">{timeframe}</span> —{' '}
-        dữ liệu từ{' '}
-        {timeframe === '1m'
-          ? <><code className="bg-muted px-1 rounded">price_history</code> (local DB)</>
-          : <><code className="bg-muted px-1 rounded">ohlc</code> edge function (external API)</>
+        {isPlaybackMode
+          ? <>Playback — <code className="bg-muted px-1 rounded">price_history</code> {availableDays.length} ngày, loop tự động</>
+          : <>Khung thời gian: <span className="font-semibold text-foreground">{timeframe}</span> — dữ liệu từ <code className="bg-muted px-1 rounded">price_history</code></>
         }
       </p>
     </div>
