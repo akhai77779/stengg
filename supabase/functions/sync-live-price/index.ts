@@ -41,22 +41,39 @@ interface PriceControl {
 
 /**
  * Generate a realistic candle via random walk with optional trend bias.
+ * Includes mean-reversion to prevent runaway price drift.
  *
- * @param basePrice  - The reference price to start from
- * @param control    - Price control settings (direction + strength)
+ * @param basePrice     - The current price (last close)
+ * @param referencePrice - The anchor price (e.g. session open) used for mean-reversion
+ * @param control       - Price control settings (direction + strength)
  */
 function generateCandle(
   basePrice: number,
+  referencePrice: number,
   control: PriceControl,
 ): { open: number; high: number; low: number; close: number } {
   const baseVolatility = 0.0005; // 0.05% per tick
   const volatility = baseVolatility * Math.max(0.1, control.strength);
 
   // Trend bias: bull = positive lean, bear = negative lean, neutral = none
-  const bias =
-    control.direction === "bull" ? 0.4
-    : control.direction === "bear" ? -0.4
+  // Cap bias at ±0.3 so it's a gentle nudge, not a runaway
+  const rawBias =
+    control.direction === "bull" ? 0.3
+    : control.direction === "bear" ? -0.3
     : 0;
+
+  // Mean-reversion force: if price has drifted > 5% from reference, pull it back
+  // This prevents compounding bull/bear from causing runaway prices
+  const drift = (basePrice - referencePrice) / referencePrice; // relative drift
+  const maxDrift = 0.05; // 5% max allowed drift from reference
+  let reversionBias = 0;
+  if (Math.abs(drift) > maxDrift) {
+    // Apply a corrective force proportional to how far we've drifted
+    const excess = Math.abs(drift) - maxDrift;
+    reversionBias = -Math.sign(drift) * Math.min(0.6, excess * 4);
+  }
+
+  const bias = rawBias + reversionBias;
 
   // Random movement with bias (-1 to +1, shifted by bias)
   const random = Math.random() * 2 - 1; // -1..+1
@@ -174,8 +191,23 @@ Deno.serve(async (req) => {
           return;
         }
 
-        // Generate candle with price control applied
-        const candle = generateCandle(basePrice, control);
+        // Fetch an anchor price from ~1 hour ago to use as mean-reversion reference
+        // This prevents compounding bull/bear drift from causing runaway prices
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+        const { data: anchorCandle } = await db
+          .from("price_history")
+          .select("close_price")
+          .eq("product_id", product.id)
+          .lte("recorded_at", oneHourAgo)
+          .order("recorded_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Use anchor from 1h ago; if not available fall back to basePrice (no reversion)
+        const referencePrice = anchorCandle?.close_price ?? basePrice;
+
+        // Generate candle with price control + mean-reversion applied
+        const candle = generateCandle(basePrice, referencePrice, control);
         const newPrice = candle.close;
 
         // 1. Update product.price
