@@ -4,18 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import {
-  TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink,
-  WifiOff, Database, Image, Zap, Minus, RotateCcw,
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useLivePriceSync } from '@/hooks/useLivePriceSync';
 
 type Timeframe = '1m' | '5m' | '15m' | '1h';
-type TrendDirection = 'bull' | 'bear' | 'neutral';
 
 const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: '1m', value: '1m' },
@@ -37,18 +30,9 @@ interface Product {
   image_url: string | null;
 }
 
-type DataSource = 'live' | 'db_cache' | 'none';
-
-interface PriceControl {
-  direction: TrendDirection;
-  strength: number;
-}
-
 interface ProductWithChart extends Product {
   ohlcData: OHLCData[];
   isLoading: boolean;
-  dataSource: DataSource;
-  priceControl: PriceControl;
 }
 
 const COLORS = [
@@ -86,117 +70,21 @@ function formatVolume(volume: string | null) {
   return num.toFixed(2);
 }
 
-function DataSourceBadge({ source }: { source: DataSource }) {
-  if (source === 'live') return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-green-500/10 text-green-400 border-green-500/30">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-      Live API
-    </span>
-  );
-  if (source === 'db_cache') return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-      DB Cache
-    </span>
-  );
-  return null;
-}
-
-/** Pill button for direction selection */
-function DirectionPill({
-  value,
-  current,
-  onClick,
-}: {
-  value: TrendDirection;
-  current: TrendDirection;
-  onClick: () => void;
-}) {
-  const config: Record<TrendDirection, { label: string; icon: React.ReactNode; active: string; inactive: string }> = {
-    bull: {
-      label: 'Bull',
-      icon: <TrendingUp className="w-3 h-3" />,
-      active: 'bg-green-500/20 text-green-400 border-green-500/50',
-      inactive: 'text-muted-foreground border-border hover:border-green-500/30 hover:text-green-400',
-    },
-    neutral: {
-      label: 'Neutral',
-      icon: <Minus className="w-3 h-3" />,
-      active: 'bg-primary/15 text-primary border-primary/40',
-      inactive: 'text-muted-foreground border-border hover:border-primary/30 hover:text-primary',
-    },
-    bear: {
-      label: 'Bear',
-      icon: <TrendingDown className="w-3 h-3" />,
-      active: 'bg-red-500/20 text-red-400 border-red-500/50',
-      inactive: 'text-muted-foreground border-border hover:border-red-500/30 hover:text-red-400',
-    },
-  };
-  const c = config[value];
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border transition-all duration-150',
-        current === value ? c.active : c.inactive,
-      )}
-    >
-      {c.icon}
-      {c.label}
-    </button>
-  );
-}
-
 function ProductChartCard({
   product,
   colorClass,
-  onControlChange,
 }: {
   product: ProductWithChart;
   colorClass: string;
-  onControlChange: (id: string, control: PriceControl) => void;
 }) {
   const chartRef = useRef<CandlestickChartRef>(null);
   const isPositive = (product.price_change || 0) >= 0;
-  const ctrl = product.priceControl;
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Local state for slider — only persist on release
-  const [localStrength, setLocalStrength] = useState(ctrl.strength);
-
-  // Keep in sync when parent updates
-  useEffect(() => { setLocalStrength(ctrl.strength); }, [ctrl.strength]);
-
-  const handleDirectionChange = async (dir: TrendDirection) => {
-    onControlChange(product.id, { ...ctrl, direction: dir });
-    await persistControl(product.id, dir, ctrl.strength);
-  };
-
-  const handleStrengthCommit = async (val: number[]) => {
-    const strength = val[0];
-    onControlChange(product.id, { ...ctrl, strength });
-    await persistControl(product.id, ctrl.direction, strength);
-  };
-
-  const persistControl = async (productId: string, direction: TrendDirection, strength: number) => {
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('product_price_controls')
-        .upsert({ product_id: productId, direction, strength, updated_at: new Date().toISOString() }, {
-          onConflict: 'product_id',
-        });
-      if (error) toast.error('Lưu thất bại: ' + error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border bg-gradient-to-br transition-all duration-300 hover:shadow-lg hover:shadow-primary/10',
-        colorClass,
+        'relative overflow-hidden border bg-gradient-to-br transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5',
+        colorClass
       )}
     >
       {/* Header */}
@@ -211,10 +99,7 @@ function ProductChartCard({
               )}
               <h3 className="font-semibold text-sm text-foreground truncate leading-tight">{product.name}</h3>
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
-              {!product.isLoading && <DataSourceBadge source={product.dataSource} />}
-            </div>
+            {product.symbol && <span className="text-xs text-muted-foreground font-mono">{product.symbol}</span>}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className="text-base font-bold text-foreground font-mono tabular-nums">{formatPrice(product.price)}</span>
@@ -222,7 +107,7 @@ function ProductChartCard({
               variant="outline"
               className={cn(
                 'text-xs px-1.5 py-0 h-5 font-mono font-medium border',
-                isPositive ? 'bg-green-500/15 text-green-400 border-green-500/40' : 'bg-red-500/15 text-red-400 border-red-500/40',
+                isPositive ? 'bg-green-500/15 text-green-400 border-green-500/40' : 'bg-red-500/15 text-red-400 border-red-500/40'
               )}
             >
               {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
@@ -230,7 +115,6 @@ function ProductChartCard({
             </Badge>
           </div>
         </div>
-
         {/* 24h stats */}
         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
@@ -249,70 +133,27 @@ function ProductChartCard({
       </CardHeader>
 
       {/* Chart */}
-      <CardContent className="px-2 pb-2 pt-0">
+      <CardContent className="px-2 pb-3 pt-0">
         {product.isLoading ? (
-          <div className="h-[140px] flex items-center justify-center">
+          <div className="h-[160px] flex items-center justify-center">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <RefreshCw className="w-5 h-5 animate-spin" />
               <span className="text-xs">Đang tải...</span>
             </div>
           </div>
         ) : product.ohlcData.length === 0 ? (
-          <div className="h-[140px] flex items-center justify-center text-muted-foreground text-xs">
+          <div className="h-[160px] flex items-center justify-center text-muted-foreground text-xs">
             Chưa có dữ liệu OHLC
           </div>
         ) : (
           <CandlestickChart
             ref={chartRef}
             data={product.ohlcData}
-            height={140}
+            height={160}
             indicatorConfig={{ ma: { enabled: false, period: 7, color: '#f59e0b' }, ema: { enabled: false, period: 25, color: '#8b5cf6' } }}
           />
         )}
       </CardContent>
-
-      {/* ── Price Control Panel ── */}
-      <div className="mx-3 mb-3 px-3 py-2.5 rounded-lg bg-background/60 border border-border/60 space-y-2">
-        {/* Direction */}
-        <div className="flex items-center justify-between gap-1">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Trend</span>
-          <div className="flex items-center gap-1">
-            {(['bull', 'neutral', 'bear'] as TrendDirection[]).map(dir => (
-              <DirectionPill
-                key={dir}
-                value={dir}
-                current={ctrl.direction}
-                onClick={() => handleDirectionChange(dir)}
-              />
-            ))}
-            {isSaving && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground ml-1" />}
-          </div>
-        </div>
-
-        {/* Volatility Strength */}
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-            Volatility
-          </span>
-          <div className="flex-1">
-            <Slider
-              min={0.1}
-              max={5}
-              step={0.1}
-              value={[localStrength]}
-              onValueChange={(v) => setLocalStrength(v[0])}
-              onValueCommit={handleStrengthCommit}
-              className="h-3"
-            />
-          </div>
-          <span className={cn(
-            'text-[11px] font-mono font-bold w-7 text-right',
-            localStrength > 3 ? 'text-red-400' : localStrength > 1.5 ? 'text-amber-400' : 'text-muted-foreground',
-          )}>
-            {localStrength.toFixed(1)}x
-          </span>
-        </div>
-      </div>
 
       {/* Footer */}
       <div className="px-4 pb-3">
@@ -332,153 +173,92 @@ export default function AdminProductsMonitor() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isSyncingImages, setIsSyncingImages] = useState(false);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 
-  // Auto-sync live price every 5 seconds
-  const { isSyncing: isLiveSyncing, lastSyncAt: liveSyncAt } = useLivePriceSync({
-    enabled: autoSyncEnabled,
-    interval: 5000,
-  });
+  // Fetch OHLC from local price_history with aggregation by timeframe
+  const fetchOHLCLocal = useCallback(async (productId: string, tf: Timeframe): Promise<OHLCData[]> => {
+    // Determine how many minutes per bucket
+    const minutesPerBucket = tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : 60;
+    const limit = tf === '1m' ? 80 : 160; // fetch more raw rows for aggregation
 
-  const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<{ candles: OHLCData[]; source: DataSource }> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('ohlc', {
-        body: { productId, timeframe: tf, limit: 100 },
-      });
-      if (error || !data?.candles) return { candles: [], source: 'none' };
-      const candles = (data.candles as OHLCData[]).filter(c => c.open > 0 || c.close > 0);
-      const source: DataSource = data.source === 'db_fallback' ? 'db_cache' : 'live';
-      return { candles, source };
-    } catch {
-      return { candles: [], source: 'none' };
+    const { data: rows } = await supabase
+      .from('price_history')
+      .select('open_price, high_price, low_price, close_price, recorded_at')
+      .eq('product_id', productId)
+      .order('recorded_at', { ascending: false })
+      .limit(limit);
+
+    if (!rows || rows.length === 0) return [];
+
+    // Sort ascending
+    const sorted = [...rows].reverse();
+
+    if (minutesPerBucket === 1) {
+      return sorted.map(r => ({
+        time: r.recorded_at,
+        open: r.open_price,
+        high: r.high_price,
+        low: r.low_price,
+        close: r.close_price,
+      }));
     }
+
+    // Aggregate into larger buckets
+    const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
+    for (const r of sorted) {
+      const ts = new Date(r.recorded_at).getTime();
+      const bucketMs = minutesPerBucket * 60 * 1000;
+      const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+      const existing = buckets.get(bucketKey);
+      if (!existing) {
+        buckets.set(bucketKey, {
+          time: new Date(bucketKey).toISOString(),
+          open: r.open_price,
+          high: r.high_price,
+          low: r.low_price,
+          close: r.close_price,
+        });
+      } else {
+        existing.high = Math.max(existing.high, r.high_price);
+        existing.low = Math.min(existing.low, r.low_price);
+        existing.close = r.close_price; // last row in bucket = close
+      }
+    }
+
+    return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }, []);
 
+  // Load top 10 products
   const loadProducts = useCallback(async (tf: Timeframe) => {
     setIsLoadingList(true);
-    const [productsRes, controlsRes] = await Promise.all([
-      supabase
-        .from('products')
-        .select('id, name, symbol, price, price_change, high_24h, low_24h, volume, category, image_url')
-        .eq('status', 'available')
-        .order('created_at', { ascending: false })
-        .limit(10),
-      supabase
-        .from('product_price_controls')
-        .select('product_id, direction, strength'),
-    ]);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, symbol, price, price_change, high_24h, low_24h, volume, category, image_url')
+      .eq('status', 'available')
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-    if (productsRes.error || !productsRes.data) { setIsLoadingList(false); return; }
+    if (error || !data) { setIsLoadingList(false); return; }
 
-    const controlMap = new Map<string, PriceControl>();
-    for (const c of controlsRes.data ?? []) {
-      controlMap.set(c.product_id, {
-        direction: (c.direction ?? 'neutral') as TrendDirection,
-        strength: typeof c.strength === 'number' ? c.strength : 1,
-      });
-    }
-
-    const defaultControl: PriceControl = { direction: 'neutral', strength: 1 };
-    setProducts(productsRes.data.map(p => ({
-      ...p,
-      ohlcData: [],
-      isLoading: true,
-      dataSource: 'none' as DataSource,
-      priceControl: controlMap.get(p.id) ?? defaultControl,
-    })));
+    setProducts(data.map(p => ({ ...p, ohlcData: [], isLoading: true })));
     setIsLoadingList(false);
 
-    const ohlcResults = await Promise.all(productsRes.data.map(p => fetchOHLC(p.id, tf)));
-    setProducts(productsRes.data.map((p, i) => ({
-      ...p,
-      ohlcData: ohlcResults[i].candles,
-      isLoading: false,
-      dataSource: ohlcResults[i].source,
-      priceControl: controlMap.get(p.id) ?? defaultControl,
-    })));
+    // Fetch OHLC for all products in parallel
+    const ohlcResults = await Promise.all(data.map(p => fetchOHLCLocal(p.id, tf)));
+    setProducts(data.map((p, i) => ({ ...p, ohlcData: ohlcResults[i], isLoading: false })));
     setLastUpdated(new Date());
-  }, [fetchOHLC]);
+  }, [fetchOHLCLocal]);
 
-  useEffect(() => { loadProducts(timeframe); }, [loadProducts, timeframe]);
-
-  /** Called by card when direction/strength changes — update local state only */
-  const handleControlChange = useCallback((id: string, control: PriceControl) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, priceControl: control } : p));
-  }, []);
-
-  const [isResetting, setIsResetting] = useState(false);
-  /** Reset ALL products to neutral direction, strength 1x */
-  const resetAllControls = useCallback(async () => {
-    setIsResetting(true);
-    const toastId = toast.loading('Đang reset tất cả về Neutral...');
-    try {
-      const productIds = products.map(p => p.id);
-      if (productIds.length === 0) {
-        toast.info('Không có sản phẩm nào để reset', { id: toastId });
-        return;
-      }
-      const rows = productIds.map(id => ({
-        product_id: id,
-        direction: 'neutral' as TrendDirection,
-        strength: 1,
-        updated_at: new Date().toISOString(),
-      }));
-      const { error } = await supabase
-        .from('product_price_controls')
-        .upsert(rows, { onConflict: 'product_id' });
-      if (error) {
-        toast.error('Reset thất bại: ' + error.message, { id: toastId });
-        return;
-      }
-      // Update local state
-      setProducts(prev => prev.map(p => ({ ...p, priceControl: { direction: 'neutral', strength: 1 } })));
-      toast.success(`Đã reset ${productIds.length} sản phẩm về Neutral 1x`, { id: toastId });
-    } catch (err) {
-      toast.error('Lỗi: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
-    } finally {
-      setIsResetting(false);
-    }
-  }, [products]);
-
-  const syncPriceHistory = useCallback(async () => {
-    setIsSyncing(true);
-    const toastId = toast.loading('Đang đồng bộ dữ liệu giá...');
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-price-history', { body: {} });
-      if (error) { toast.error('Đồng bộ thất bại: ' + error.message, { id: toastId }); return; }
-      const stats = data?.stats;
-      toast.success(`Đồng bộ thành công! ${stats?.products?.synced ?? 0} sản phẩm, ${stats?.records?.inserted ?? 0} bản ghi mới`, { id: toastId });
-      await loadProducts(timeframe);
-    } catch (err) {
-      toast.error('Lỗi đồng bộ: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
-    } finally {
-      setIsSyncing(false);
-    }
+  useEffect(() => {
+    loadProducts(timeframe);
   }, [loadProducts, timeframe]);
 
-  const syncProductImages = useCallback(async () => {
-    setIsSyncingImages(true);
-    const toastId = toast.loading('Đang tải ảnh sản phẩm...');
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-product-images', { body: {} });
-      if (error) { toast.error('Lỗi tải ảnh: ' + error.message, { id: toastId }); return; }
-      const stats = data?.stats;
-      toast.success(`Ảnh đồng bộ xong! ${stats?.synced ?? 0} ảnh mới, ${stats?.alreadyLocal ?? 0} đã có`, { id: toastId });
-      await loadProducts(timeframe);
-    } catch (err) {
-      toast.error('Lỗi: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
-    } finally {
-      setIsSyncingImages(false);
-    }
-  }, [loadProducts, timeframe]);
-
+  // Handle timeframe change: mark charts as loading, then reload
   const handleTimeframeChange = useCallback(async (tf: Timeframe) => {
     if (tf === timeframe) return;
     setIsChangingTimeframe(true);
     setProducts(prev => prev.map(p => ({ ...p, ohlcData: [], isLoading: true })));
     setTimeframe(tf);
+    // loadProducts will run via useEffect
     setTimeout(() => setIsChangingTimeframe(false), 500);
   }, [timeframe]);
 
@@ -494,22 +274,26 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Realtime: price history updates → reload chart candles
+  // Realtime: price_history for 1m (live candle update when timeframe is 1m)
   useEffect(() => {
+    if (timeframe !== '1m') return;
     const channel = supabase
       .channel('admin-monitor-price-history')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, async (payload) => {
-        const newRow = payload.new as { product_id: string };
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
+        const newRow = payload.new as { product_id: string; recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number };
         if (!newRow?.product_id) return;
-        const result = await fetchOHLC(newRow.product_id, timeframe);
-        setProducts(prev => prev.map(p =>
-          p.id === newRow.product_id ? { ...p, ohlcData: result.candles, dataSource: result.source } : p,
-        ));
+        setProducts(prev => prev.map(p => {
+          if (p.id !== newRow.product_id) return p;
+          const newCandle: OHLCData = { time: newRow.recorded_at, open: newRow.open_price, high: newRow.high_price, low: newRow.low_price, close: newRow.close_price };
+          const idx = p.ohlcData.findIndex(c => c.time === newCandle.time);
+          const updated = idx >= 0 ? p.ohlcData.map((c, i) => i === idx ? newCandle : c) : [...p.ohlcData.slice(-79), newCandle];
+          return { ...p, ohlcData: updated };
+        }));
         setLastUpdated(new Date());
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [timeframe, fetchOHLC]);
+  }, [timeframe]);
 
   return (
     <div className="space-y-5">
@@ -518,11 +302,11 @@ export default function AdminProductsMonitor() {
         <div>
           <h1 className="text-xl font-bold text-gradient">Market Monitor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Biểu đồ nến live — điều chỉnh trend & volatility cho từng sản phẩm
+            Biểu đồ nến live của 10 sản phẩm — dữ liệu realtime
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Timeframe */}
+          {/* Timeframe selector */}
           <div className="flex items-center bg-muted/60 rounded-lg p-1 gap-0.5">
             {TIMEFRAMES.map(tf => (
               <button
@@ -533,7 +317,7 @@ export default function AdminProductsMonitor() {
                   'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 min-w-[40px]',
                   timeframe === tf.value
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60',
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
                 )}
               >
                 {tf.label}
@@ -559,66 +343,17 @@ export default function AdminProductsMonitor() {
             )}
           </div>
 
-          {/* Auto sync toggle */}
-          <button
-            onClick={() => setAutoSyncEnabled(v => !v)}
-            title={autoSyncEnabled ? 'Tắt auto-sync giá live (đang bật, mỗi 5s)' : 'Bật auto-sync giá live mỗi 5s'}
-            className={cn(
-              'inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md border transition-all duration-200',
-              autoSyncEnabled
-                ? 'bg-primary/10 text-primary border-primary/40 hover:bg-primary/20'
-                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80',
-            )}
-          >
-            <Zap className={cn('w-3 h-3', autoSyncEnabled && isLiveSyncing && 'animate-pulse')} />
-            {autoSyncEnabled ? 'Auto' : 'Manual'}
-          </button>
-
-          {liveSyncAt && autoSyncEnabled && (
+          {lastUpdated && (
             <span className="text-xs text-muted-foreground hidden sm:block">
-              {liveSyncAt.toLocaleTimeString('vi-VN')}
+              {lastUpdated.toLocaleTimeString('vi-VN')}
             </span>
           )}
 
           <Button
             size="sm"
-            variant="default"
-            onClick={syncPriceHistory}
-            disabled={isSyncing || isLoadingList || isSyncingImages || isResetting}
-            className="gap-2 h-8"
-          >
-            <Database className={cn('w-3.5 h-3.5', isSyncing && 'animate-pulse')} />
-            {isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ dữ liệu'}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={syncProductImages}
-            disabled={isSyncingImages || isLoadingList || isSyncing}
-            className="gap-2 h-8"
-          >
-            <Image className={cn('w-3.5 h-3.5', isSyncingImages && 'animate-pulse')} />
-            {isSyncingImages ? 'Đang tải ảnh...' : 'Đồng bộ ảnh'}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={resetAllControls}
-            disabled={isResetting || isLoadingList}
-            className="gap-2 h-8 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
-            title="Reset tất cả sản phẩm về Neutral, strength 1x"
-          >
-            <RotateCcw className={cn('w-3.5 h-3.5', isResetting && 'animate-spin')} />
-            {isResetting ? 'Đang reset...' : 'Reset All'}
-          </Button>
-
-          <Button
-            size="sm"
             variant="outline"
             onClick={() => loadProducts(timeframe)}
-            disabled={isLoadingList || isChangingTimeframe || isSyncing || isSyncingImages}
+            disabled={isLoadingList || isChangingTimeframe}
             className="gap-2 h-8"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', (isLoadingList || isChangingTimeframe) && 'animate-spin')} />
@@ -627,14 +362,14 @@ export default function AdminProductsMonitor() {
         </div>
       </div>
 
-      {/* Summary Stats */}
+      {/* Summary Stats Bar */}
       {products.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Sản phẩm', value: products.length, suffix: '/10', color: 'text-primary' },
             { label: 'Tăng', value: products.filter(p => (p.price_change || 0) >= 0).length, suffix: '', color: 'text-green-400' },
             { label: 'Giảm', value: products.filter(p => (p.price_change || 0) < 0).length, suffix: '', color: 'text-red-400' },
-            { label: 'Bull mode', value: products.filter(p => p.priceControl.direction === 'bull').length, suffix: '', color: 'text-emerald-400' },
+            { label: 'Có biểu đồ', value: products.filter(p => p.ohlcData.length > 0).length, suffix: '', color: 'text-amber-400' },
           ].map(stat => (
             <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">{stat.label}</span>
@@ -657,7 +392,7 @@ export default function AdminProductsMonitor() {
                 <div className="h-4 bg-muted rounded w-1/2" />
               </CardHeader>
               <CardContent>
-                <div className="h-[140px] bg-muted rounded" />
+                <div className="h-[160px] bg-muted rounded" />
               </CardContent>
             </Card>
           ))}
@@ -670,18 +405,18 @@ export default function AdminProductsMonitor() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {products.map((product, index) => (
-            <ProductChartCard
-              key={product.id}
-              product={product}
-              colorClass={COLORS[index % COLORS.length]}
-              onControlChange={handleControlChange}
-            />
+            <ProductChartCard key={product.id} product={product} colorClass={COLORS[index % COLORS.length]} />
           ))}
         </div>
       )}
 
       <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50">
-        Trend & Volatility ảnh hưởng đến giá sinh tự động mỗi 5 giây — cài đặt được lưu ngay lập tức
+        Khung thời gian: <span className="font-semibold text-foreground">{timeframe}</span> —{' '}
+        dữ liệu từ{' '}
+        {timeframe === '1m'
+          ? <><code className="bg-muted px-1 rounded">price_history</code> (local DB)</>
+          : <><code className="bg-muted px-1 rounded">ohlc</code> edge function (external API)</>
+        }
       </p>
     </div>
   );

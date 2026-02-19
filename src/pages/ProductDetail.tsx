@@ -108,17 +108,8 @@ const ProductDetail = () => {
     return candleData[candleData.length - 1].close;
   }, [candleData]);
 
-  // Check if candle data is recent (within last 10 minutes)
-  const isCandleDataRecent = useMemo(() => {
-    if (candleData.length === 0) return false;
-    const lastCandle = candleData[candleData.length - 1];
-    if (!lastCandle?.time) return false;
-    const candleTime = new Date(lastCandle.time).getTime();
-    return Date.now() - candleTime < 10 * 60 * 1000; // 10 minutes
-  }, [candleData]);
-
-  // Use candle price only if data is recent, otherwise fallback to product price (realtime)
-  const displayPrice = (isCandleDataRecent ? latestCandlePrice : null) ?? product?.price ?? null;
+  // Use candle price if available, otherwise fallback to product price
+  const displayPrice = latestCandlePrice ?? product?.price ?? null;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
@@ -544,20 +535,11 @@ const ProductDetail = () => {
         {/* Price Info Section - Top */}
         <div className="flex items-start justify-between px-1">
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <AnimatedPrice
-                value={displayPrice}
-                formatter={formatPrice}
-                className="text-2xl font-bold"
-              />
-              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 rounded-full">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                </span>
-                <span className="text-green-500 font-semibold text-[10px] uppercase tracking-wider">Live</span>
-              </span>
-            </div>
+            <AnimatedPrice
+              value={displayPrice}
+              formatter={formatPrice}
+              className="text-2xl font-bold"
+            />
             <div className="text-xs text-muted-foreground">
               ≈{formatPrice(displayPrice)}
             </div>

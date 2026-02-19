@@ -1112,7 +1112,6 @@ export type Database = {
         }
         Returns: Json
       }
-      run_live_price_sync_loop: { Args: never; Returns: undefined }
       settle_option_trade: {
         Args: { _exit_price: number; _trade_id: string }
         Returns: Json

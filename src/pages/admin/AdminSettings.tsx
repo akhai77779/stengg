@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { RefreshCw, CheckCircle2, XCircle, Loader2, Globe, AlertCircle } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { AdminDepositSettings } from "@/components/admin/AdminDepositSettings";
 type SettingsState = {
   usdToVnd: string;
@@ -15,8 +15,6 @@ type SettingsState = {
   minWithdrawAmount: string;
   bannersEnabled: boolean;
   supportEnabled: boolean;
-  externalApiBaseUrl: string;
-  externalApiEnabled: boolean;
 };
 
 const KEYS = [
@@ -24,7 +22,6 @@ const KEYS = [
   "withdraw_settings",
   "banners_enabled",
   "support_enabled",
-  "external_api_config",
 ] as const;
 
 export default function AdminSettings() {
@@ -46,8 +43,6 @@ export default function AdminSettings() {
     minWithdrawAmount: "10",
     bannersEnabled: true,
     supportEnabled: true,
-    externalApiBaseUrl: "https://admin.stenggg.com",
-    externalApiEnabled: true,
   });
 
   const parsed = useMemo(() => {
@@ -92,9 +87,6 @@ export default function AdminSettings() {
         const supportEnabled = map.get("support_enabled") as
           | { enabled?: boolean }
           | undefined;
-        const externalApiConfig = map.get("external_api_config") as
-          | { base_url?: string; enabled?: boolean }
-          | undefined;
 
         if (!mounted) return;
         setState((s) => ({
@@ -104,8 +96,6 @@ export default function AdminSettings() {
           minWithdrawAmount: String(withdrawSettings?.min_amount ?? 10),
           bannersEnabled: Boolean(bannersEnabled?.enabled ?? true),
           supportEnabled: Boolean(supportEnabled?.enabled ?? true),
-          externalApiBaseUrl: externalApiConfig?.base_url ?? "https://admin.stenggg.com",
-          externalApiEnabled: Boolean(externalApiConfig?.enabled ?? true),
         }));
       } catch (e) {
         console.error(e);
@@ -135,13 +125,6 @@ export default function AdminSettings() {
       return;
     }
 
-    // Validate API URL
-    const trimmedUrl = state.externalApiBaseUrl.trim();
-    if (trimmedUrl && !/^https?:\/\/.+/.test(trimmedUrl)) {
-      toast.error("API URL không hợp lệ. Phải bắt đầu bằng http:// hoặc https://");
-      return;
-    }
-
     setSaving(true);
     try {
       const payload = [
@@ -149,13 +132,6 @@ export default function AdminSettings() {
         { key: "withdraw_settings", value: { fee_rate: parsed.feeNum / 100, min_amount: parsed.minWithdrawNum } },
         { key: "banners_enabled", value: { enabled: state.bannersEnabled } },
         { key: "support_enabled", value: { enabled: state.supportEnabled } },
-        {
-          key: "external_api_config",
-          value: {
-            base_url: trimmedUrl || "https://admin.stenggg.com",
-            enabled: state.externalApiEnabled,
-          },
-        },
       ];
 
       const { error } = await supabase
@@ -322,74 +298,6 @@ export default function AdminSettings() {
         </CardContent>
       </Card>
 
-      {/* External API Config Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            Cấu hình API ngoài
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Cấu hình domain API bên ngoài để đồng bộ dữ liệu (products, news, banners). Thay đổi ở đây sẽ được áp dụng ngay khi nhấn "Đồng bộ ngay".
-          </p>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Bật/tắt đồng bộ API ngoài</div>
-              <div className="text-xs text-muted-foreground">
-                Khi tắt, chức năng "Đồng bộ ngay" sẽ không gọi API.
-              </div>
-            </div>
-            <Switch
-              checked={state.externalApiEnabled}
-              disabled={loading}
-              onCheckedChange={(checked) =>
-                setState((s) => ({ ...s, externalApiEnabled: checked }))
-              }
-            />
-          </div>
-
-          <div className="grid gap-3">
-            <Label htmlFor="externalApiUrl">Base URL của API ngoài</Label>
-            <div className="flex gap-2">
-              <Input
-                id="externalApiUrl"
-                type="url"
-                placeholder="https://admin.example.com"
-                value={state.externalApiBaseUrl}
-                disabled={loading || !state.externalApiEnabled}
-                onChange={(e) =>
-                  setState((s) => ({ ...s, externalApiBaseUrl: e.target.value }))
-                }
-                className="font-mono text-sm"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Hệ thống sẽ tự động thêm các path như <code className="bg-muted px-1 rounded">/api/app/indexList</code>, <code className="bg-muted px-1 rounded">/api/app/getNews</code>,...
-            </p>
-            {state.externalApiBaseUrl && !/^https?:\/\/.+/.test(state.externalApiBaseUrl.trim()) && (
-              <div className="flex items-center gap-2 text-xs text-destructive">
-                <AlertCircle className="w-3 h-3" />
-                URL phải bắt đầu bằng http:// hoặc https://
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              onClick={save}
-              disabled={loading || saving || !state.externalApiEnabled}
-              size="sm"
-              className="min-w-[140px]"
-            >
-              {saving ? "Đang lưu..." : "Lưu cấu hình API"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Sync External Data Card */}
       <Card>
         <CardHeader>
@@ -402,16 +310,10 @@ export default function AdminSettings() {
           <p className="text-sm text-muted-foreground">
             Đồng bộ dữ liệu từ API bên ngoài (products, news, banners, option times).
           </p>
-          {state.externalApiBaseUrl && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-              <Globe className="w-3 h-3 shrink-0" />
-              <span>Sẽ gọi tới: <code className="font-mono">{state.externalApiBaseUrl}</code></span>
-            </div>
-          )}
 
           <Button
             onClick={syncExternalData}
-            disabled={syncing || !state.externalApiEnabled}
+            disabled={syncing}
             variant="outline"
             className="gap-2"
           >
@@ -461,8 +363,8 @@ export default function AdminSettings() {
 
               {syncResult.apiAvailable === false && (
                 <p className="text-xs text-muted-foreground mb-3">
-                  Không thể kết nối tới <code className="bg-muted px-1 rounded">{state.externalApiBaseUrl || "API"}</code>. 
-                  Dữ liệu trong database được giữ nguyên. Hãy kiểm tra lại URL API ở trên và lưu cấu hình.
+                  Không thể kết nối tới <code className="bg-muted px-1 rounded">admin.stenggg.com</code>. 
+                  Dữ liệu trong database được giữ nguyên. Kiểm tra lại domain/DNS hoặc cấu hình API URL.
                 </p>
               )}
 
