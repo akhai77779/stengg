@@ -204,9 +204,16 @@ export default function Products() {
         {/* Header */}
         <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-0 md:top-16 z-10">
           <div className="container mx-auto px-4 py-4">
-            <h1 className="text-lg md:text-xl font-bold text-gradient mb-2 text-center">{t('products.title')}</h1>
+          <h1 className="text-lg md:text-xl font-bold text-gradient mb-2 text-center">{t('products.title')}</h1>
             <div className="gap-2 text-xs text-muted-foreground mb-2 flex items-center justify-center">
               <span>Singapore Technologies Engineering</span>
+              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 rounded-full ml-1">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                </span>
+                <span className="text-green-500 font-semibold text-[10px] uppercase tracking-wider">Live</span>
+              </span>
             </div>
           </div>
         </div>
