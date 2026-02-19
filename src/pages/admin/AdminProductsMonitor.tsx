@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -55,6 +55,135 @@ interface ProductRawData {
   id: string;
   rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[];
 }
+
+// ─── Drag Scrubber Component ─────────────────────────────────────────────────
+function DragScrubber({
+  progress,         // 0-100
+  cursorMs,
+  startMs,
+  endMs,
+  onSeek,           // (ratio: 0-1) => void
+  onDragStart,
+  onDragEnd,
+}: {
+  progress: number;
+  cursorMs: number;
+  startMs: number;
+  endMs: number;
+  onSeek: (ratio: number) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+
+  const getRatioFromEvent = useCallback((clientX: number): number => {
+    if (!trackRef.current) return 0;
+    const rect = trackRef.current.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }, []);
+
+  // Mouse events
+  useLayoutEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      onSeek(getRatioFromEvent(e.clientX));
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      onSeek(getRatioFromEvent(e.clientX));
+      onDragEnd?.();
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [getRatioFromEvent, onSeek, onDragEnd]);
+
+  // Touch events
+  useLayoutEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      onSeek(getRatioFromEvent(e.touches[0].clientX));
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      onSeek(getRatioFromEvent(e.changedTouches[0].clientX));
+      onDragEnd?.();
+    };
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    return () => {
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [getRatioFromEvent, onSeek, onDragEnd]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    onDragStart?.();
+    onSeek(getRatioFromEvent(e.clientX));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isDragging.current = true;
+    onDragStart?.();
+    onSeek(getRatioFromEvent(e.touches[0].clientX));
+  };
+
+  const formatTime = (ms: number) =>
+    new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+
+  const clampedProgress = Math.max(0, Math.min(100, progress));
+
+  return (
+    <div className="space-y-2">
+      {/* Time labels */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground select-none">
+        <span className="font-mono">00:00</span>
+        <span className="font-mono font-semibold text-foreground text-sm tabular-nums">
+          {formatTime(cursorMs)} <span className="text-muted-foreground text-xs">UTC</span>
+        </span>
+        <span className="font-mono">23:59</span>
+      </div>
+
+      {/* Track */}
+      <div
+        ref={trackRef}
+        className="relative w-full h-5 flex items-center cursor-pointer group select-none"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
+        {/* Track background */}
+        <div className="absolute inset-x-0 h-2 rounded-full bg-muted overflow-hidden top-1/2 -translate-y-1/2">
+          {/* Filled portion */}
+          <div
+            className="h-full rounded-full bg-primary transition-none"
+            style={{ width: `${clampedProgress}%` }}
+          />
+        </div>
+
+        {/* Thumb */}
+        <div
+          className="absolute -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-md transition-none z-10
+                     group-hover:scale-125 group-active:scale-110"
+          style={{ left: `${clampedProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const COLORS = [
   'from-blue-500/20 to-blue-600/5 border-blue-500/30',
@@ -622,32 +751,21 @@ export default function AdminProductsMonitor() {
             ))}
           </div>
 
-          {/* Progress bar */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>00:00</span>
-              <span className="font-mono text-foreground font-semibold">
-                {formatCursorTime(playbackCursorMs)} UTC
-              </span>
-              <span>23:59</span>
-            </div>
-            <div
-              className="w-full h-2 bg-muted rounded-full cursor-pointer overflow-hidden"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const ratio = (e.clientX - rect.left) / rect.width;
-                const newCursor = dayStartMs + ratio * (dayEndMs - dayStartMs);
-                setPlaybackCursorMs(newCursor);
-                setPlaybackProgress(ratio * 100);
-                renderAtCursor(newCursor, []);
-              }}
-            >
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-300"
-                style={{ width: `${playbackProgress}%` }}
-              />
-            </div>
-          </div>
+          {/* Drag Scrubber */}
+          <DragScrubber
+            progress={playbackProgress}
+            cursorMs={playbackCursorMs}
+            startMs={dayStartMs}
+            endMs={dayEndMs}
+            onDragStart={() => setIsPlaying(false)}
+            onSeek={(ratio) => {
+              const newCursor = dayStartMs + ratio * (dayEndMs - dayStartMs);
+              setPlaybackCursorMs(newCursor);
+              setPlaybackProgress(ratio * 100);
+              setLastUpdated(new Date(newCursor));
+              renderAtCursor(newCursor, []);
+            }}
+          />
 
           {/* Controls row */}
           <div className="flex items-center gap-3 flex-wrap">
