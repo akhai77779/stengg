@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
-import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff, Database, Image } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink, WifiOff, Database, Image, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLivePriceSync } from '@/hooks/useLivePriceSync';
 
 type Timeframe = '1m' | '5m' | '15m' | '1h';
 
@@ -199,6 +200,13 @@ export default function AdminProductsMonitor() {
   const [isChangingTimeframe, setIsChangingTimeframe] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSyncingImages, setIsSyncingImages] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+
+  // Auto-sync live price every 5 seconds (only current price + running candle)
+  const { isSyncing: isLiveSyncing, lastSyncAt: liveSyncAt } = useLivePriceSync({
+    enabled: autoSyncEnabled,
+    interval: 5000,
+  });
 
   // Fetch OHLC from external API via ohlc edge function
   const fetchOHLC = useCallback(async (productId: string, tf: Timeframe): Promise<{ candles: OHLCData[]; source: DataSource }> => {
@@ -394,9 +402,24 @@ export default function AdminProductsMonitor() {
             )}
           </div>
 
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground hidden sm:block">
-              {lastUpdated.toLocaleTimeString('vi-VN')}
+          {/* Auto live price sync toggle */}
+          <button
+            onClick={() => setAutoSyncEnabled(v => !v)}
+            title={autoSyncEnabled ? 'Tắt auto-sync giá live (đang bật, mỗi 5s)' : 'Bật auto-sync giá live mỗi 5s'}
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md border transition-all duration-200',
+              autoSyncEnabled
+                ? 'bg-primary/10 text-primary border-primary/40 hover:bg-primary/20'
+                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+            )}
+          >
+            <Zap className={cn('w-3 h-3', autoSyncEnabled && isLiveSyncing && 'animate-pulse')} />
+            {autoSyncEnabled ? 'Auto' : 'Manual'}
+          </button>
+
+          {liveSyncAt && autoSyncEnabled && (
+            <span className="text-xs text-muted-foreground hidden sm:block" title="Lần đồng bộ giá gần nhất">
+              {liveSyncAt.toLocaleTimeString('vi-VN')}
             </span>
           )}
 
