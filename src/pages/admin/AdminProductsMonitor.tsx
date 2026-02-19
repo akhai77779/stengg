@@ -483,10 +483,17 @@ export default function AdminProductsMonitor() {
     setDayStartMs(startMs);
     setDayEndMs(endMs);
 
-    // 5. Render initial slice
+    // 5. Render initial slice (show first 80 candles max)
+    const maxCandles = timeframe === '1m' ? 80 : timeframe === '5m' ? 80 : timeframe === '15m' ? 60 : 40;
+    const minutesPerBucket = timeframe === '1m' ? 1 : timeframe === '5m' ? 5 : timeframe === '15m' ? 15 : 60;
+    const windowMs = maxCandles * minutesPerBucket * 60 * 1000;
+    const initCursor = startMs + 60 * 1000;
     setProducts(productData.map((p, i) => {
       const raw = allRaw[i];
-      const sliced = raw.rows.filter(r => new Date(r.recorded_at).getTime() <= startMs + 60 * 1000);
+      const sliced = raw.rows.filter(r => {
+        const t = new Date(r.recorded_at).getTime();
+        return t <= initCursor && t >= (initCursor - windowMs);
+      });
       const ohlcData = aggregateOHLC(sliced, timeframe);
       const lastClose = sliced.length > 0 ? sliced[sliced.length - 1].close_price : p.price;
       return { ...p, ohlcData, playbackPrice: lastClose, playbackChange: null, isLoading: false };
@@ -501,10 +508,20 @@ export default function AdminProductsMonitor() {
     const raw = rawDataRef.current;
     if (!raw.length) return;
 
-    setProducts(prev => prev.map((p, i) => {
+    // Max candles to display per timeframe (keep chart tight and readable)
+    const maxCandles = timeframe === '1m' ? 80 : timeframe === '5m' ? 80 : timeframe === '15m' ? 60 : 40;
+    const minutesPerBucket = timeframe === '1m' ? 1 : timeframe === '5m' ? 5 : timeframe === '15m' ? 15 : 60;
+    const windowMs = maxCandles * minutesPerBucket * 60 * 1000;
+    const windowStart = cursorMs - windowMs;
+
+    setProducts(prev => prev.map((p) => {
       const rd = raw.find(r => r.id === p.id);
       if (!rd) return p;
-      const sliced = rd.rows.filter(r => new Date(r.recorded_at).getTime() <= cursorMs);
+      // Only rows up to cursor, within the sliding window
+      const sliced = rd.rows.filter(r => {
+        const t = new Date(r.recorded_at).getTime();
+        return t <= cursorMs && t >= windowStart;
+      });
       const ohlcData = aggregateOHLC(sliced, timeframe);
       const lastRow = sliced.length > 0 ? sliced[sliced.length - 1] : null;
       const lastClose = lastRow ? lastRow.close_price : p.price;
