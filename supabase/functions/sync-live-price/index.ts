@@ -34,23 +34,40 @@ interface LivePriceResult {
   error?: string;
 }
 
+interface PriceControl {
+  direction: "bull" | "bear" | "neutral";
+  strength: number; // 1 = default, 2 = 2x volatility, etc.
+}
+
 /**
- * Generate a realistic random walk candle from a base price.
- * Volatility is ~0.05% per tick (suitable for financial instruments).
+ * Generate a realistic candle via random walk with optional trend bias.
+ *
+ * @param basePrice  - The reference price to start from
+ * @param control    - Price control settings (direction + strength)
  */
-function generateCandle(basePrice: number): {
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-} {
-  const volatility = 0.0005; // 0.05%
-  const change = basePrice * volatility * (Math.random() * 2 - 1);
+function generateCandle(
+  basePrice: number,
+  control: PriceControl,
+): { open: number; high: number; low: number; close: number } {
+  const baseVolatility = 0.0005; // 0.05% per tick
+  const volatility = baseVolatility * Math.max(0.1, control.strength);
+
+  // Trend bias: bull = positive lean, bear = negative lean, neutral = none
+  const bias =
+    control.direction === "bull" ? 0.4
+    : control.direction === "bear" ? -0.4
+    : 0;
+
+  // Random movement with bias (-1 to +1, shifted by bias)
+  const random = Math.random() * 2 - 1; // -1..+1
+  const movement = (random + bias) * volatility * basePrice;
+
   const open = basePrice;
-  const close = Math.max(0.000001, basePrice + change);
-  const spread = Math.abs(change) * (0.5 + Math.random());
+  const close = Math.max(0.000001, basePrice + movement);
+  const spread = Math.abs(movement) * (0.5 + Math.random() * 0.5);
   const high = Math.max(open, close) + spread;
   const low = Math.max(0.000001, Math.min(open, close) - spread);
+
   return { open, high, low, close };
 }
 
@@ -105,6 +122,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fetch all price controls in one query
+    const productIds = products.map((p) => p.id);
+    const { data: controls } = await db
+      .from("product_price_controls")
+      .select("product_id, direction, strength")
+      .in("product_id", productIds);
+
+    // Build a map: productId -> PriceControl
+    const controlMap = new Map<string, PriceControl>();
+    for (const c of controls ?? []) {
+      controlMap.set(c.product_id, {
+        direction: (c.direction ?? "neutral") as PriceControl["direction"],
+        strength: typeof c.strength === "number" ? c.strength : 1,
+      });
+    }
+
     const results: LivePriceResult[] = [];
     const now = new Date();
     // Round down to current 1-minute candle boundary
@@ -112,13 +145,13 @@ Deno.serve(async (req) => {
 
     const tasks = products.map(async (product) => {
       const symbol = product.symbol ?? product.name ?? "UNKNOWN";
+      const control: PriceControl = controlMap.get(product.id) ?? { direction: "neutral", strength: 1 };
 
       try {
-        // Get the most recent price for this product (from price_history or products.price)
+        // Get the most recent price
         let basePrice: number | null = typeof product.price === "number" ? product.price : null;
 
         if (!basePrice || basePrice <= 0) {
-          // Fallback: get last close from price_history
           const { data: lastCandle } = await db
             .from("price_history")
             .select("close_price")
@@ -141,8 +174,8 @@ Deno.serve(async (req) => {
           return;
         }
 
-        // Generate a new candle via random walk
-        const candle = generateCandle(basePrice);
+        // Generate candle with price control applied
+        const candle = generateCandle(basePrice, control);
         const newPrice = candle.close;
 
         // 1. Update product.price
@@ -191,10 +224,10 @@ Deno.serve(async (req) => {
 
     await Promise.all(tasks);
 
-    const succeeded = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
 
-    console.log(`[sync-live-price] DB-only mode: ${succeeded} succeeded, ${failed} failed`);
+    console.log(`[sync-live-price] Done: ${succeeded} ok, ${failed} failed`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -206,7 +239,6 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[sync-live-price] Fatal:", msg);
