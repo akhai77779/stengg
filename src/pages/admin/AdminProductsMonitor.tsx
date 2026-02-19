@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { CandlestickChart, OHLCData, CandlestickChartRef } from '@/components/charts/CandlestickChart';
 import {
   TrendingUp, TrendingDown, Activity, RefreshCw, ExternalLink,
-  WifiOff, Database, Image, Zap, Minus,
+  WifiOff, Database, Image, Zap, Minus, RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -408,6 +408,40 @@ export default function AdminProductsMonitor() {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, priceControl: control } : p));
   }, []);
 
+  const [isResetting, setIsResetting] = useState(false);
+  /** Reset ALL products to neutral direction, strength 1x */
+  const resetAllControls = useCallback(async () => {
+    setIsResetting(true);
+    const toastId = toast.loading('Đang reset tất cả về Neutral...');
+    try {
+      const productIds = products.map(p => p.id);
+      if (productIds.length === 0) {
+        toast.info('Không có sản phẩm nào để reset', { id: toastId });
+        return;
+      }
+      const rows = productIds.map(id => ({
+        product_id: id,
+        direction: 'neutral' as TrendDirection,
+        strength: 1,
+        updated_at: new Date().toISOString(),
+      }));
+      const { error } = await supabase
+        .from('product_price_controls')
+        .upsert(rows, { onConflict: 'product_id' });
+      if (error) {
+        toast.error('Reset thất bại: ' + error.message, { id: toastId });
+        return;
+      }
+      // Update local state
+      setProducts(prev => prev.map(p => ({ ...p, priceControl: { direction: 'neutral', strength: 1 } })));
+      toast.success(`Đã reset ${productIds.length} sản phẩm về Neutral 1x`, { id: toastId });
+    } catch (err) {
+      toast.error('Lỗi: ' + (err instanceof Error ? err.message : 'Unknown'), { id: toastId });
+    } finally {
+      setIsResetting(false);
+    }
+  }, [products]);
+
   const syncPriceHistory = useCallback(async () => {
     setIsSyncing(true);
     const toastId = toast.loading('Đang đồng bộ dữ liệu giá...');
@@ -550,7 +584,7 @@ export default function AdminProductsMonitor() {
             size="sm"
             variant="default"
             onClick={syncPriceHistory}
-            disabled={isSyncing || isLoadingList || isSyncingImages}
+            disabled={isSyncing || isLoadingList || isSyncingImages || isResetting}
             className="gap-2 h-8"
           >
             <Database className={cn('w-3.5 h-3.5', isSyncing && 'animate-pulse')} />
@@ -566,6 +600,18 @@ export default function AdminProductsMonitor() {
           >
             <Image className={cn('w-3.5 h-3.5', isSyncingImages && 'animate-pulse')} />
             {isSyncingImages ? 'Đang tải ảnh...' : 'Đồng bộ ảnh'}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={resetAllControls}
+            disabled={isResetting || isLoadingList}
+            className="gap-2 h-8 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+            title="Reset tất cả sản phẩm về Neutral, strength 1x"
+          >
+            <RotateCcw className={cn('w-3.5 h-3.5', isResetting && 'animate-spin')} />
+            {isResetting ? 'Đang reset...' : 'Reset All'}
           </Button>
 
           <Button
