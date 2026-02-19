@@ -12,9 +12,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
 ];
 
-const DEFAULT_BASE_URL = "https://admin.stenggg.com";
-const DEFAULT_KLINE_PATH = "/api/app/option/getKline";
-
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
@@ -23,20 +20,6 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
-}
-
-interface KlineItem {
-  ts?: number; time?: number; t?: number;
-  open?: number | string; o?: number | string;
-  high?: number | string; h?: number | string;
-  low?: number | string; l?: number | string;
-  close?: number | string; c?: number | string;
-  vol?: number | string; v?: number | string;
-}
-
-interface KlineApiResponse {
-  code?: number;
-  data?: KlineItem[] | { list?: KlineItem[]; data?: KlineItem[] };
 }
 
 interface LivePriceResult {
@@ -49,6 +32,26 @@ interface LivePriceResult {
   candleTime: string | null;
   success: boolean;
   error?: string;
+}
+
+/**
+ * Generate a realistic random walk candle from a base price.
+ * Volatility is ~0.05% per tick (suitable for financial instruments).
+ */
+function generateCandle(basePrice: number): {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+} {
+  const volatility = 0.0005; // 0.05%
+  const change = basePrice * volatility * (Math.random() * 2 - 1);
+  const open = basePrice;
+  const close = Math.max(0.000001, basePrice + change);
+  const spread = Math.abs(change) * (0.5 + Math.random());
+  const high = Math.max(open, close) + spread;
+  const low = Math.max(0.000001, Math.min(open, close) - spread);
+  return { open, high, low, close };
 }
 
 Deno.serve(async (req) => {
@@ -68,38 +71,19 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Server misconfigured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Use service role for all DB operations
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    // Parse body: optional productIds array to filter specific products
     const body = await req.json().catch(() => ({}));
     const filterIds: string[] | null = Array.isArray(body?.productIds) ? body.productIds : null;
-
-    // Read external API config
-    let klineBaseUrl = `${DEFAULT_BASE_URL}${DEFAULT_KLINE_PATH}`;
-    try {
-      const { data: cfgRow } = await db
-        .from("app_settings")
-        .select("value")
-        .eq("key", "external_api_config")
-        .maybeSingle();
-      if (cfgRow?.value) {
-        const cfg = cfgRow.value as { base_url?: string };
-        if (cfg.base_url && /^https?:\/\/.+/.test(cfg.base_url)) {
-          klineBaseUrl = `${cfg.base_url.replace(/\/$/, "")}${DEFAULT_KLINE_PATH}`;
-        }
-      }
-    } catch (_) { /* use default */ }
 
     // Fetch available products
     let query = db.from("products").select("id, name, symbol, price").eq("status", "available");
@@ -114,132 +98,94 @@ Deno.serve(async (req) => {
       });
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    // Only fetch last 2 minutes of 1m candles (current + previous)
-    const from = now - 120;
+    if (products.length === 0) {
+      return new Response(JSON.stringify({ success: true, synced: 0, failed: 0, results: [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const results: LivePriceResult[] = [];
+    const now = new Date();
+    // Round down to current 1-minute candle boundary
+    const candleTime = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
 
-    // Process all products in parallel
     const tasks = products.map(async (product) => {
-      let symbol = product.symbol;
-      if (!symbol) {
-        const name = product.name || "";
-        if (name.toLowerCase().includes("wing") || name.toLowerCase().includes("wig")) {
-          symbol = "WIG/USDT";
-        } else {
-          symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 6).toUpperCase() + "/USDT";
-        }
-      }
+      const symbol = product.symbol ?? product.name ?? "UNKNOWN";
 
       try {
-        const encodedSymbol = encodeURIComponent(symbol);
-        const apiUrl = `${klineBaseUrl}?symbol=${encodedSymbol}&period=1min&size=2&from=${from}&to=${now}&zip=0`;
+        // Get the most recent price for this product (from price_history or products.price)
+        let basePrice: number | null = typeof product.price === "number" ? product.price : null;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        if (!basePrice || basePrice <= 0) {
+          // Fallback: get last close from price_history
+          const { data: lastCandle } = await db
+            .from("price_history")
+            .select("close_price")
+            .eq("product_id", product.id)
+            .order("recorded_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        let response: Response;
-        try {
-          response = await fetch(apiUrl, {
-            method: "GET",
-            headers: { "Accept": "application/json", "User-Agent": "ST-Engineering-Live/1.0" },
-            signal: controller.signal,
-          });
-        } finally {
-          clearTimeout(timeoutId);
-        }
-
-        if (!response.ok) {
-          results.push({ productId: product.id, symbol, price: null, open: null, high: null, low: null, candleTime: null, success: false, error: `HTTP ${response.status}` });
-          return;
-        }
-
-        const apiData: KlineApiResponse = await response.json();
-
-        // Extract kline list
-        let klineList: KlineItem[] = [];
-        if (Array.isArray(apiData.data)) {
-          klineList = apiData.data;
-        } else if (apiData.data && typeof apiData.data === "object") {
-          if ("data" in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
-            klineList = (apiData.data as { data: KlineItem[] }).data;
-          } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
-            klineList = apiData.data.list;
+          if (lastCandle?.close_price) {
+            basePrice = lastCandle.close_price;
           }
         }
 
-        if (klineList.length === 0) {
-          results.push({ productId: product.id, symbol, price: null, open: null, high: null, low: null, candleTime: null, success: false, error: "No kline data" });
+        if (!basePrice || basePrice <= 0) {
+          results.push({
+            productId: product.id, symbol,
+            price: null, open: null, high: null, low: null, candleTime: null,
+            success: false, error: "No base price available",
+          });
           return;
         }
 
-        // Sort ascending, take most recent candle
-        const sorted = klineList
-          .map(item => {
-            const ts = (item.ts ?? item.time ?? item.t ?? 0);
-            return {
-              ts,
-              open: Number(item.open ?? item.o ?? 0),
-              high: Number(item.high ?? item.h ?? 0),
-              low: Number(item.low ?? item.l ?? 0),
-              close: Number(item.close ?? item.c ?? 0),
-            };
-          })
-          .filter(c => c.ts > 0 && (c.open > 0 || c.close > 0))
-          .sort((a, b) => a.ts - b.ts);
+        // Generate a new candle via random walk
+        const candle = generateCandle(basePrice);
+        const newPrice = candle.close;
 
-        if (sorted.length === 0) {
-          results.push({ productId: product.id, symbol, price: null, open: null, high: null, low: null, candleTime: null, success: false, error: "Empty after filter" });
-          return;
-        }
-
-        const latest = sorted[sorted.length - 1];
-        const candleTime = new Date(latest.ts * 1000).toISOString();
-        const newPrice = latest.close;
-
-        // 1. Update product.price in the products table
-        const priceChanged = product.price === null || Math.abs((product.price as number) - newPrice) > 0.000001;
+        // 1. Update product.price
+        const priceChanged = Math.abs(basePrice - newPrice) > 0.000001;
         if (priceChanged) {
           await db
             .from("products")
-            .update({
-              price: newPrice,
-              updated_at: new Date().toISOString(),
-            })
+            .update({ price: newPrice, updated_at: new Date().toISOString() })
             .eq("id", product.id);
         }
 
-        // 2. Upsert the running candle into price_history (current 1m candle)
-        // This updates the currently open candle in real-time
+        // 2. Upsert the running 1m candle into price_history
         await db
           .from("price_history")
           .upsert({
             product_id: product.id,
             recorded_at: candleTime,
-            open_price: latest.open,
-            high_price: latest.high,
-            low_price: latest.low,
-            close_price: latest.close,
+            open_price: candle.open,
+            high_price: candle.high,
+            low_price: candle.low,
+            close_price: candle.close,
             volume: 0,
           }, {
             onConflict: "product_id,recorded_at",
-            ignoreDuplicates: false, // Always update to trigger realtime
+            ignoreDuplicates: false,
           });
 
         results.push({
-          productId: product.id,
-          symbol,
+          productId: product.id, symbol,
           price: newPrice,
-          open: latest.open,
-          high: latest.high,
-          low: latest.low,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
           candleTime,
           success: true,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        results.push({ productId: product.id, symbol, price: null, open: null, high: null, low: null, candleTime: null, success: false, error: msg });
+        results.push({
+          productId: product.id, symbol,
+          price: null, open: null, high: null, low: null, candleTime: null,
+          success: false, error: msg,
+        });
       }
     });
 
@@ -248,7 +194,7 @@ Deno.serve(async (req) => {
     const succeeded = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
 
-    console.log(`[sync-live-price] Done: ${succeeded} succeeded, ${failed} failed`);
+    console.log(`[sync-live-price] DB-only mode: ${succeeded} succeeded, ${failed} failed`);
 
     return new Response(JSON.stringify({
       success: true,
