@@ -7,9 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const EXTERNAL_CANDLES_API_URL = "https://admin.stenggg.com/api/candles";
-
-// In-memory cache for kline data
+// In-memory cache
 interface CacheEntry {
   data: { candles: unknown[]; nextCursor: string | null; symbol: string };
   timestamp: number;
@@ -52,35 +50,20 @@ function setCacheData(key: string, data: CacheEntry["data"]): void {
 
 type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 
-interface CandleItem {
-  time?: number; ts?: number; t?: number;
-  open?: number | string; high?: number | string; low?: number | string; close?: number | string;
-  vol?: number | string; volume?: number | string;
-  o?: number | string; h?: number | string; l?: number | string; c?: number | string; v?: number | string;
-}
-
-interface CandlesApiResponse {
-  code?: number;
-  message?: string;
-  data?: CandleItem[] | { list?: CandleItem[]; data?: CandleItem[] };
-}
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delayMs = 500): Promise<Response> {
-  let lastError: Error | null = null;
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-      return response;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      if (i < retries - 1) await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, i)));
-    }
+function getMinutesForTimeframe(tf: Timeframe): number {
+  switch (tf) {
+    case "1m": return 1;
+    case "5m": return 5;
+    case "15m": return 15;
+    case "30m": return 30;
+    case "1h": return 60;
+    case "1d": return 1440;
+    default: return 1;
   }
-  throw lastError || new Error("Fetch failed after retries");
 }
 
 /**
@@ -96,7 +79,6 @@ function applyPriceControlToCandles(
   const bias = direction === 'up' ? 1 : -1;
 
   return candles.map((c, i) => {
-    // Progressive bias: later candles get stronger effect
     const progress = (i + 1) / candles.length;
     const factor = 1 + bias * (strength * 0.001) * progress * (0.5 + Math.random() * 0.5);
 
@@ -108,6 +90,48 @@ function applyPriceControlToCandles(
       close: c.close * factor,
     };
   });
+}
+
+/**
+ * Aggregate 1m rows into larger timeframes
+ */
+function aggregateOHLC(
+  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[],
+  minutes: number
+): { time: string; open: number; high: number; low: number; close: number }[] {
+  if (minutes === 1) {
+    return rows.map(r => ({
+      time: r.recorded_at,
+      open: r.open_price,
+      high: r.high_price,
+      low: r.low_price,
+      close: r.close_price,
+    }));
+  }
+
+  const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
+  const bucketMs = minutes * 60 * 1000;
+
+  for (const r of rows) {
+    const ts = new Date(r.recorded_at).getTime();
+    const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+    const existing = buckets.get(bucketKey);
+    if (!existing) {
+      buckets.set(bucketKey, {
+        time: new Date(bucketKey).toISOString(),
+        open: r.open_price,
+        high: r.high_price,
+        low: r.low_price,
+        close: r.close_price,
+      });
+    } else {
+      existing.high = Math.max(existing.high, r.high_price);
+      existing.low = Math.min(existing.low, r.low_price);
+      existing.close = r.close_price;
+    }
+  }
+
+  return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 }
 
 Deno.serve(async (req) => {
@@ -154,10 +178,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const limit = clamp(Math.floor(limitRaw), 50, 500);
+    const limit = clamp(Math.floor(limitRaw), 10, 500);
 
-    // Check cache (skip if price control is active for this product)
-    // We need to check price control first to decide caching
+    // Check price controls
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     let activeControl: { direction: string; strength: number } | null = null;
 
@@ -172,7 +195,6 @@ Deno.serve(async (req) => {
 
       if (ctrl && ctrl.is_active) {
         if (ctrl.expires_at && new Date(ctrl.expires_at) <= new Date()) {
-          // Auto-deactivate expired
           await adminClient
             .from("product_price_controls")
             .update({ is_active: false, direction: 'neutral', strength: 1, expires_at: null })
@@ -183,7 +205,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Only use cache if no active control (controls add randomness)
+    // Only use cache if no active control
     if (!activeControl) {
       const cacheKey = getCacheKey(productId, timeframe, limit, cursor);
       const cacheTTL = getCacheTTL(timeframe);
@@ -209,61 +231,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    let symbol = product.symbol;
-    if (!symbol) {
-      const name = product.name || "";
-      if (name.toLowerCase().includes("wing") || name.toLowerCase().includes("wig")) {
-        symbol = "WIG/USDT";
-      } else {
-        symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase() + "/USDT";
-      }
+    const symbol = product.symbol || product.name || "";
+
+    // Read from price_history table (local DB only)
+    let query = supabase
+      .from("price_history")
+      .select("recorded_at, open_price, high_price, low_price, close_price")
+      .eq("product_id", productId)
+      .order("recorded_at", { ascending: true });
+
+    if (cursor) {
+      query = query.lt("recorded_at", cursor);
     }
 
-    const encodedSymbol = encodeURIComponent(symbol);
-    const apiUrl = `${EXTERNAL_CANDLES_API_URL}?symbol=${encodedSymbol}&interval=${timeframe}`;
+    // Fetch more raw rows for aggregation
+    const minutesPerBucket = getMinutesForTimeframe(timeframe);
+    const fetchLimit = Math.min(limit * minutesPerBucket, 1000);
 
-    let response: Response;
-    try {
-      response = await fetchWithRetry(apiUrl, {
-        method: "GET",
-        headers: { "Accept": "application/json", "User-Agent": "ST-Engineering-Chart/1.0" },
-      }, 3, 300);
-    } catch {
+    const { data: rows, error: dbError } = await query.limit(fetchLimit);
+
+    if (dbError) {
+      console.error("DB error:", dbError.message);
       return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: "Failed to fetch chart data", status: response.status }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const apiData: CandlesApiResponse = await response.json();
-
-    let candleList: CandleItem[] = [];
-    if (Array.isArray(apiData.data)) {
-      candleList = apiData.data;
-    } else if (apiData.data && typeof apiData.data === 'object') {
-      if ('data' in apiData.data && Array.isArray((apiData.data as { data?: CandleItem[] }).data)) {
-        candleList = (apiData.data as { data: CandleItem[] }).data;
-      } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
-        candleList = apiData.data.list;
-      }
-    }
-
-    let candles = candleList.map((item) => {
-      const time = item.ts ?? item.time ?? item.t ?? 0;
-      const open = Number(item.open ?? item.o ?? 0);
-      const high = Number(item.high ?? item.h ?? 0);
-      const low = Number(item.low ?? item.l ?? 0);
-      const close = Number(item.close ?? item.c ?? 0);
-      const timeMs = time > 1e12 ? time : time * 1000;
-
-      return { time: new Date(timeMs).toISOString(), open, high, low, close };
-    }).filter(c => c.open > 0 || c.close > 0)
-      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+    // Aggregate into requested timeframe
+    let candles = aggregateOHLC(rows || [], minutesPerBucket);
 
     // Apply price control bias if active
     if (activeControl) {
