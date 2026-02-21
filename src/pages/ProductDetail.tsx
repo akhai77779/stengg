@@ -43,6 +43,18 @@ const THROTTLE_MS: Record<string, number> = {
   "1d": 1000,  // 1s for 1d
 };
 
+// Generate embed slug from product name
+const generateProductSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+};
+
+const EMBED_BASE_URL = "https://preview-fdn8qxbfr8qo.devv.app/embed";
+
 interface Product {
   id: string;
   name: string;
@@ -619,69 +631,17 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* Chart - optimized for touch interactions */}
+        {/* Chart - Embedded from external chart service */}
         <Card className={`bg-card border-border transition-shadow duration-300 ${candleFlash ? 'animate-candle-flash' : ''}`}>
-          <CardContent className="p-2">
-            {/* Live indicator and countdown */}
-            {chartType === 'candle' && (
-              <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider">{t('product.live')}</span>
-                </div>
-                {realtimeStats.updateCount > 0 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    +{realtimeStats.updateCount} {t('product.updates')}
-                  </span>
-                )}
-              </div>
-                <CandleCountdown 
-                  timeframe={timeframe} 
-                  lastCandleTime={candleData.length > 0 ? candleData[candleData.length - 1].time : undefined}
-                />
-              </div>
-            )}
-            {/* Chart container with touch optimization */}
-            <div className="h-64 touch-action-chart gpu-accelerate">
-              {priceHistoryLoading ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : chartType === 'candle' ? (
-                <CandlestickChart data={candleData} height={256} indicatorConfig={indicatorConfig} />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      hide 
-                      domain={['dataMin - 100', 'dataMax + 100']}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="price"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+          <CardContent className="p-0 overflow-hidden">
+            <iframe
+              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=${timeframe.toUpperCase()}&indicators=${chartType === 'candle' && (indicatorConfig.ma.enabled || indicatorConfig.ema.enabled)}`}
+              className="w-full border-0"
+              style={{ height: '320px' }}
+              title={`${product.name} Chart`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+              loading="lazy"
+            />
           </CardContent>
         </Card>
 
