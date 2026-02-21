@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Layout } from '@/components/layout/Layout';
+import { supabase } from '@/integrations/supabase/client';
 import {
   BarChart3,
   TrendingUp,
@@ -11,6 +11,7 @@ import {
   Activity,
   Eye,
   Maximize2,
+  RefreshCw,
 } from 'lucide-react';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
@@ -19,102 +20,176 @@ import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
 import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
 
-import {
-  generateBase1MCandles,
-  aggregateCandles,
-  calculateSMA,
-  calculateRSI,
-  calculateMACD,
-} from '@/lib/chartUtils';
+import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
+import { TimeInterval, Candle, TechnicalIndicators } from '@/types/trading';
 
-import { TimeInterval, Candle, Product, TechnicalIndicators } from '@/types/trading';
-import { PRODUCTS } from '@/data/products';
+interface DBProduct {
+  id: string;
+  name: string;
+  symbol: string | null;
+  price: number | null;
+  price_change: number | null;
+  high_24h: number | null;
+  low_24h: number | null;
+  volume: string | null;
+  image_url: string | null;
+}
+
+type Timeframe = '1M' | '5M' | '15M' | '30M' | '1H' | '1D';
+
+function formatPrice(price: number | null) {
+  if (price === null || price === undefined) return '$0.00';
+  if (price >= 1000) return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (price >= 1) return '$' + price.toFixed(2);
+  return '$' + price.toFixed(4);
+}
+
+// Aggregate raw 1m rows into OHLC based on timeframe
+function aggregateOHLC(
+  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[],
+  tf: Timeframe
+): OHLCData[] {
+  const minutesMap: Record<Timeframe, number> = { '1M': 1, '5M': 5, '15M': 15, '30M': 30, '1H': 60, '1D': 1440 };
+  const minutesPerBucket = minutesMap[tf];
+
+  if (minutesPerBucket === 1) {
+    return rows.map(r => ({ time: r.recorded_at, open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price }));
+  }
+
+  const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
+  for (const r of rows) {
+    const ts = new Date(r.recorded_at).getTime();
+    const bucketMs = minutesPerBucket * 60 * 1000;
+    const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+    const existing = buckets.get(bucketKey);
+    if (!existing) {
+      buckets.set(bucketKey, { time: new Date(bucketKey).toISOString(), open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price });
+    } else {
+      existing.high = Math.max(existing.high, r.high_price);
+      existing.low = Math.min(existing.low, r.low_price);
+      existing.close = r.close_price;
+    }
+  }
+  return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+}
 
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('1M');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<DBProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [candleData, setCandleData] = useState<Map<string, Candle[]>>(new Map());
+  const [chartData, setChartData] = useState<OHLCData[]>([]);
+  const [isChartLoading, setIsChartLoading] = useState(false);
 
-  // Load products
+  // Load products from database
   useEffect(() => {
-    const chartProducts = PRODUCTS;
-    setProducts(chartProducts);
-    if (chartProducts.length > 0) {
-      const saved = localStorage.getItem('admin_monitor_product');
-      setSelectedProductId(saved && chartProducts.find(p => p.id === saved) ? saved : chartProducts[0].id);
-    }
-    const newCandleData = new Map<string, Candle[]>();
-    chartProducts.forEach(product => {
-      newCandleData.set(product.id, generateBase1MCandles(product, 1440));
-    });
-    setCandleData(newCandleData);
-    setIsLoading(false);
+    const loadProducts = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, symbol, price, price_change, high_24h, low_24h, volume, image_url')
+        .eq('status', 'available')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!error && data) {
+        setProducts(data);
+        const saved = localStorage.getItem('admin_monitor_product');
+        if (saved && data.find(p => p.id === saved)) {
+          setSelectedProductId(saved);
+        } else if (data.length > 0) {
+          setSelectedProductId(data[0].id);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadProducts();
 
     const savedTf = localStorage.getItem('admin_monitor_timeframe') as TimeInterval;
     if (savedTf) setTimeInterval(savedTf);
   }, []);
 
-  // Real-time price updates (every 3 seconds)
+  // Fetch OHLC data when product or timeframe changes
+  const fetchOHLC = useCallback(async (productId: string, tf: TimeInterval) => {
+    setIsChartLoading(true);
+    const limit = tf === '1M' ? 120 : tf === '5M' ? 200 : tf === '15M' ? 200 : 300;
+
+    const { data: rows } = await supabase
+      .from('price_history')
+      .select('open_price, high_price, low_price, close_price, recorded_at')
+      .eq('product_id', productId)
+      .order('recorded_at', { ascending: false })
+      .limit(limit);
+
+    if (rows && rows.length > 0) {
+      const sorted = [...rows].reverse();
+      setChartData(aggregateOHLC(sorted, tf));
+    } else {
+      setChartData([]);
+    }
+    setIsChartLoading(false);
+  }, []);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCandleData(prevData => {
-        const newData = new Map(prevData);
-        products.forEach(product => {
-          const candles = newData.get(product.id) || [];
-          if (candles.length > 0) {
-            const lastCandle = candles[candles.length - 1];
-            const newCandle = generateNextCandle(lastCandle, product);
-            newData.set(product.id, [...candles.slice(1), newCandle]);
-          }
-        });
-        return newData;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [products]);
+    if (selectedProductId) {
+      fetchOHLC(selectedProductId, timeInterval);
+    }
+  }, [selectedProductId, timeInterval, fetchOHLC]);
 
-  const generateNextCandle = (lastCandle: Candle, product: Product): Candle => {
-    const volatility = product.volatility;
-    let trendBias = 0;
-    if (product.trend === 'bullish') trendBias = 0.6;
-    else if (product.trend === 'bearish') trendBias = -0.6;
-    else if (product.trend === 'volatile') trendBias = (Math.random() - 0.5) * 2;
+  // Realtime subscription for products table (price updates)
+  useEffect(() => {
+    const channel = supabase
+      .channel('products-monitor')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
+        setProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } as DBProduct : p));
+      })
+      .subscribe();
 
-    const direction = Math.random() < 0.5 + trendBias * 0.1 ? 1 : -1;
-    const change = lastCandle.close * volatility * direction * (0.5 + Math.random() * 0.5);
-    const open = lastCandle.close;
-    const close = open + change;
-    const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5);
-    const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5);
-    const volume = 1000000 * (0.8 + Math.random() * 0.4) / 1440;
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
-    return { time: lastCandle.time + 60, open, high, low, close, volume };
-  };
+  // Realtime subscription for price_history (new candles)
+  useEffect(() => {
+    if (!selectedProductId) return;
 
-  const selectedProduct = useMemo(() => {
-    return products.find(p => p.id === selectedProductId) || null;
-  }, [products, selectedProductId]);
+    const channel = supabase
+      .channel('price-history-monitor')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'price_history',
+        filter: `product_id=eq.${selectedProductId}`,
+      }, (payload) => {
+        const row = payload.new as any;
+        const newOHLC: OHLCData = {
+          time: row.recorded_at,
+          open: row.open_price,
+          high: row.high_price,
+          low: row.low_price,
+          close: row.close_price,
+        };
+        setChartData(prev => [...prev, newOHLC]);
+      })
+      .subscribe();
 
-  // Convert Candle[] to OHLCData[] for the chart component
-  const displayCandles = useMemo(() => {
-    if (!selectedProductId) return [] as Candle[];
-    const baseCandles = candleData.get(selectedProductId) || [];
-    if (timeInterval === '1M') return baseCandles;
-    return aggregateCandles(baseCandles, timeInterval);
-  }, [candleData, selectedProductId, timeInterval]);
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedProductId]);
 
-  const chartOHLCData: OHLCData[] = useMemo(() => {
-    return displayCandles.map(c => ({
-      time: new Date(c.time * 1000).toISOString(),
+  const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId) || null, [products, selectedProductId]);
+
+  // Convert OHLCData to Candle[] for indicators & export
+  const displayCandles: Candle[] = useMemo(() => {
+    return chartData.map(c => ({
+      time: Math.floor(new Date(c.time).getTime() / 1000),
       open: c.open,
       high: c.high,
       low: c.low,
       close: c.close,
+      volume: 0,
     }));
-  }, [displayCandles]);
+  }, [chartData]);
 
   const technicalIndicators = useMemo((): TechnicalIndicators | null => {
     if (displayCandles.length < 50) return null;
@@ -127,11 +202,6 @@ export default function AdminProductsMonitor() {
     };
   }, [displayCandles]);
 
-  const currentPrice = useMemo(() => {
-    const candles = candleData.get(selectedProductId || '') || [];
-    return candles.length > 0 ? candles[candles.length - 1].close : 0;
-  }, [candleData, selectedProductId]);
-
   const handleProductSelect = useCallback((productId: string) => {
     setSelectedProductId(productId);
     localStorage.setItem('admin_monitor_product', productId);
@@ -142,24 +212,22 @@ export default function AdminProductsMonitor() {
     localStorage.setItem('admin_monitor_timeframe', interval);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
-  }, []);
+  const handleRefresh = useCallback(() => {
+    if (selectedProductId) fetchOHLC(selectedProductId, timeInterval);
+  }, [selectedProductId, timeInterval, fetchOHLC]);
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="flex flex-col items-center gap-3">
-            <Activity className="w-8 h-8 animate-pulse text-primary" />
-            <p className="text-muted-foreground">Loading products...</p>
-          </div>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Activity className="w-8 h-8 animate-pulse text-primary" />
+          <p className="text-muted-foreground">Đang tải sản phẩm...</p>
         </div>
-      </Layout>
+      </div>
     );
   }
 
-  const content = (
+  return (
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -177,7 +245,10 @@ export default function AdminProductsMonitor() {
             <Activity className="w-3 h-3" />
             Live
           </Badge>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={toggleFullscreen}>
+          <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setIsFullscreen(f => !f)}>
             {isFullscreen ? <Eye className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
@@ -189,19 +260,14 @@ export default function AdminProductsMonitor() {
         <div className="w-72 flex-shrink-0 border rounded-lg bg-card">
           <div className="p-3 border-b">
             <h2 className="text-sm font-semibold text-foreground">
-              Products ({products.length})
+              Sản phẩm ({products.length})
             </h2>
           </div>
           <ScrollArea className="h-[calc(100%-48px)]">
             <div className="p-2 space-y-1">
               {products.map((product) => {
-                const latestCandles = candleData.get(product.id);
-                const latestCandle = latestCandles?.[latestCandles.length - 1];
-                const price = latestCandle?.close || product.basePrice;
-                const change = latestCandle
-                  ? ((latestCandle.close - latestCandle.open) / latestCandle.open) * 100
-                  : 0;
                 const isSelected = selectedProductId === product.id;
+                const change = product.price_change || 0;
 
                 return (
                   <button
@@ -214,14 +280,18 @@ export default function AdminProductsMonitor() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <Activity className="w-4 h-4 text-primary flex-shrink-0" />
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                      ) : (
+                        <Activity className="w-4 h-4 text-primary flex-shrink-0" />
+                      )}
                       <div className="flex-1 ml-2 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{product.symbol}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{product.symbol || '-'}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-sm font-bold text-foreground font-mono">
-                          ${price.toFixed(2)}
+                          {formatPrice(product.price)}
                         </p>
                         <p className={`text-xs font-mono flex items-center gap-0.5 justify-end ${
                           change >= 0 ? 'text-green-500' : 'text-red-500'
@@ -246,14 +316,18 @@ export default function AdminProductsMonitor() {
               <div className="p-3 border-b">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3">
-                    <Activity className="w-5 h-5 text-primary" />
+                    {selectedProduct.image_url ? (
+                      <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-8 h-8 rounded object-cover" />
+                    ) : (
+                      <Activity className="w-5 h-5 text-primary" />
+                    )}
                     <div>
                       <h2 className="text-base font-bold text-foreground">{selectedProduct.name}</h2>
-                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol || '-'}</p>
                     </div>
                     <div className="ml-4">
                       <p className="text-lg font-bold text-foreground font-mono tabular-nums">
-                        ${currentPrice.toFixed(2)}
+                        {formatPrice(selectedProduct.price)}
                       </p>
                       {technicalIndicators && (
                         <p className="text-xs text-muted-foreground font-mono">
@@ -276,14 +350,24 @@ export default function AdminProductsMonitor() {
 
               {/* Candlestick Chart */}
               <div className="flex-1 p-2 min-h-0">
-                <CandlestickChart
-                  data={chartOHLCData}
-                  height={isFullscreen ? 500 : 380}
-                  indicatorConfig={{
-                    ma: { enabled: true, period: 20, color: '#3b82f6' },
-                    ema: { enabled: true, period: 12, color: '#f59e0b' },
-                  }}
-                />
+                {isChartLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : chartData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                    Chưa có dữ liệu OHLC cho sản phẩm này
+                  </div>
+                ) : (
+                  <CandlestickChart
+                    data={chartData}
+                    height={isFullscreen ? 500 : 380}
+                    indicatorConfig={{
+                      ma: { enabled: true, period: 20, color: '#3b82f6' },
+                      ema: { enabled: true, period: 12, color: '#f59e0b' },
+                    }}
+                  />
+                )}
               </div>
 
               {/* Technical Indicators */}
@@ -296,14 +380,12 @@ export default function AdminProductsMonitor() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
               <BarChart3 className="w-12 h-12 opacity-30" />
-              <h3 className="text-lg font-medium">Select a Product</h3>
-              <p className="text-sm">Choose a product from the sidebar to view its chart</p>
+              <h3 className="text-lg font-medium">Chọn sản phẩm</h3>
+              <p className="text-sm">Chọn một sản phẩm từ sidebar để xem biểu đồ</p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-
-  return isFullscreen ? content : <Layout>{content}</Layout>;
 }
