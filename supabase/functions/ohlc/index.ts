@@ -23,7 +23,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-const EXTERNAL_KLINE_API_URL = "https://admin.stenggg.com/api/app/option/getKline";
+const EXTERNAL_CANDLES_API_URL = "https://admin.stenggg.com/api/candles";
 
 // In-memory cache for kline data
 interface CacheEntry {
@@ -82,15 +82,16 @@ function setCacheData(key: string, data: CacheEntry["data"]): void {
 
 type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 
-interface KlineItem {
+interface CandleItem {
   time?: number;
-  ts?: number; // API uses 'ts' for timestamp
+  ts?: number;
   open?: number | string;
   high?: number | string;
   low?: number | string;
   close?: number | string;
   vol?: number | string;
-  // Alternative field names
+  volume?: number | string;
+  // Alternative short field names
   t?: number;
   o?: number | string;
   h?: number | string;
@@ -99,39 +100,15 @@ interface KlineItem {
   v?: number | string;
 }
 
-interface KlineApiResponse {
+interface CandlesApiResponse {
   code?: number;
   message?: string;
-  // API structure: { data: { data: KlineItem[], ch: string, ts: number } }
-  data?: KlineItem[] | {
-    list?: KlineItem[];
-    data?: KlineItem[]; // Nested data.data structure
+  data?: CandleItem[] | {
+    list?: CandleItem[];
+    data?: CandleItem[];
   };
 }
 
-function timeframeToPeriod(tf: Timeframe): string {
-  switch (tf) {
-    case "1m": return "1min";
-    case "5m": return "5min";
-    case "15m": return "15min";
-    case "30m": return "30min";
-    case "1h": return "1hour";
-    case "1d": return "1day";
-    default: return "1hour";
-  }
-}
-
-function timeframeToSeconds(tf: Timeframe): number {
-  switch (tf) {
-    case "1m": return 60;
-    case "5m": return 5 * 60;
-    case "15m": return 15 * 60;
-    case "30m": return 30 * 60;
-    case "1h": return 60 * 60;
-    case "1d": return 24 * 60 * 60;
-    default: return 60 * 60;
-  }
-}
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -276,18 +253,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculate time range
-    const bucketSec = timeframeToSeconds(timeframe);
-    const now = Math.floor(Date.now() / 1000);
-    const toTimestamp = cursor ? Math.floor(new Date(cursor).getTime() / 1000) : now;
-    const fromTimestamp = toTimestamp - (bucketSec * limit);
+    // Build external API URL using new /api/candles endpoint
 
-    // Build external API URL
-    const period = timeframeToPeriod(timeframe);
+    // Build external API URL using new /api/candles endpoint
     const encodedSymbol = encodeURIComponent(symbol);
-    const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=${period}&size=${limit}&from=${fromTimestamp}&to=${toTimestamp}&zip=0`;
+    const apiUrl = `${EXTERNAL_CANDLES_API_URL}?symbol=${encodedSymbol}&interval=${timeframe}`;
 
-    console.log(`Fetching kline data from: ${apiUrl}`);
+    console.log(`Fetching candle data from: ${apiUrl}`);
 
     // Use fetchWithRetry for resilience against transient network errors
     let response: Response;
@@ -316,50 +288,50 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiData: KlineApiResponse = await response.json();
+    const apiData: CandlesApiResponse = await response.json();
     console.log("API response code:", apiData.code);
 
-    // Extract kline data - handle different response formats
-    // API returns: { data: { data: [...], ch: "...", ts: ... } }
-    let klineList: KlineItem[] = [];
+    // Extract candle data - handle different response formats
+    let candleList: CandleItem[] = [];
     if (Array.isArray(apiData.data)) {
-      klineList = apiData.data;
+      candleList = apiData.data;
     } else if (apiData.data && typeof apiData.data === 'object') {
-      // Check for nested data.data structure
-      if ('data' in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
-        klineList = (apiData.data as { data: KlineItem[] }).data;
+      if ('data' in apiData.data && Array.isArray((apiData.data as { data?: CandleItem[] }).data)) {
+        candleList = (apiData.data as { data: CandleItem[] }).data;
       } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
-        klineList = apiData.data.list;
+        candleList = apiData.data.list;
       }
     }
 
-    console.log(`Received ${klineList.length} kline items`);
-    if (klineList.length > 0) {
-      console.log('Sample kline item:', JSON.stringify(klineList[0]));
+    console.log(`Received ${candleList.length} candle items`);
+    if (candleList.length > 0) {
+      console.log('Sample candle item:', JSON.stringify(candleList[0]));
     }
 
-    // Convert to candle format
-    const candles = klineList.map((item) => {
-      // Handle different field naming conventions - API uses 'ts' for timestamp
+    // Convert to candle format - handle multiple field naming conventions
+    const candles = candleList.map((item) => {
       const time = item.ts ?? item.time ?? item.t ?? 0;
       const open = Number(item.open ?? item.o ?? 0);
       const high = Number(item.high ?? item.h ?? 0);
       const low = Number(item.low ?? item.l ?? 0);
       const close = Number(item.close ?? item.c ?? 0);
 
+      // Handle both seconds and milliseconds timestamps
+      const timeMs = time > 1e12 ? time : time * 1000;
+
       return {
-        time: new Date(time * 1000).toISOString(),
+        time: new Date(timeMs).toISOString(),
         open,
         high,
         low,
         close,
       };
-    }).filter(c => c.open > 0 || c.close > 0) // Filter out invalid candles
+    }).filter(c => c.open > 0 || c.close > 0)
       .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
-    // Calculate next cursor for pagination
+    // Calculate next cursor for pagination (use earliest candle time)
     const nextCursor = candles.length > 0 
-      ? new Date(fromTimestamp * 1000).toISOString()
+      ? candles[0].time
       : null;
 
     // Cache the result
