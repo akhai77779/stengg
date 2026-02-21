@@ -73,56 +73,23 @@ function aggregateOHLC(
   return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 }
 
-// Momentum state for natural-looking price movement
-let _momentum = 0;
-let _trendSteps = 0;
-let _trendDir = 1;
-
-function generateSimulatedCandle(lastCandle: OHLCData): OHLCData {
-  const lastClose = lastCandle.close;
-  const baseVol = lastClose < 1 ? 0.0015 : lastClose < 100 ? 0.0012 : 0.0008;
-
-  // Switch micro-trend direction every 5-15 ticks
-  if (_trendSteps <= 0) {
-    _trendDir = Math.random() < 0.45 ? -1 : 1;
-    _trendSteps = 5 + Math.floor(Math.random() * 11);
-  }
-  _trendSteps--;
-
-  // Momentum with mean-reversion: drifts but pulls back
-  _momentum = _momentum * 0.7 + _trendDir * baseVol * 0.3 * Math.random();
-  _momentum = Math.max(-baseVol * 1.5, Math.min(baseVol * 1.5, _momentum));
-
-  // Noise component (smaller than momentum)
-  const noise = (Math.random() - 0.5) * baseVol * 0.4;
-
-  const change = lastClose * (_momentum + noise);
-  const open = lastClose;
-  const close = open + change;
-
-  // Wicks: asymmetric, sometimes long wicks for realism
-  const wickUp = Math.random() * baseVol * 0.25 * (Math.random() < 0.1 ? 3 : 1);
-  const wickDn = Math.random() * baseVol * 0.25 * (Math.random() < 0.1 ? 3 : 1);
-  const high = Math.max(open, close) * (1 + wickUp);
-  const low = Math.min(open, close) * (1 - wickDn);
-
-  const lastTime = new Date(lastCandle.time).getTime();
-  const nextTime = new Date(lastTime + 60 * 1000).toISOString();
-
-  return { time: nextTime, open, high, low, close };
-}
-
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('1M');
   const [products, setProducts] = useState<DBProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [chartData, setChartData] = useState<OHLCData[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
-  const liveTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load products from database
+  // Replay state
+  const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
+  const [displayIndex, setDisplayIndex] = useState(0);
+  const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const WINDOW_SIZE = 120;
+  const REPLAY_SPEED = 2000; // 2s per candle
+
+  // Load products
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
@@ -144,41 +111,37 @@ export default function AdminProductsMonitor() {
       }
       setIsLoading(false);
     };
-
     loadProducts();
-
     const savedTf = localStorage.getItem('admin_monitor_timeframe') as TimeInterval;
     if (savedTf) setTimeInterval(savedTf);
   }, []);
 
-  // Fetch OHLC data when product or timeframe changes
-  const fetchOHLC = useCallback(async (productId: string, tf: TimeInterval) => {
+  // Fetch ALL OHLC data for replay
+  const fetchAllOHLC = useCallback(async (productId: string, tf: TimeInterval) => {
     setIsChartLoading(true);
-    const limit = tf === '1M' ? 120 : tf === '5M' ? 200 : tf === '15M' ? 200 : 300;
-
     const { data: rows } = await supabase
       .from('price_history')
       .select('open_price, high_price, low_price, close_price, recorded_at')
       .eq('product_id', productId)
-      .order('recorded_at', { ascending: false })
-      .limit(limit);
+      .order('recorded_at', { ascending: true })
+      .limit(1000);
 
     if (rows && rows.length > 0) {
-      const sorted = [...rows].reverse();
-      setChartData(aggregateOHLC(sorted, tf));
+      const aggregated = aggregateOHLC(rows, tf);
+      setAllCandles(aggregated);
+      setDisplayIndex(Math.min(WINDOW_SIZE, aggregated.length));
     } else {
-      setChartData([]);
+      setAllCandles([]);
+      setDisplayIndex(0);
     }
     setIsChartLoading(false);
   }, []);
 
   useEffect(() => {
-    if (selectedProductId) {
-      fetchOHLC(selectedProductId, timeInterval);
-    }
-  }, [selectedProductId, timeInterval, fetchOHLC]);
+    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
+  }, [selectedProductId, timeInterval, fetchAllOHLC]);
 
-  // Realtime subscription for products table (price updates)
+  // Realtime product price updates
   useEffect(() => {
     const channel = supabase
       .channel('products-monitor')
@@ -186,75 +149,34 @@ export default function AdminProductsMonitor() {
         setProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } as DBProduct : p));
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Realtime subscription for price_history (new candles)
+  // Replay: advance index every 2s, loop when done
   useEffect(() => {
-    if (!selectedProductId) return;
+    if (replayRef.current) clearInterval(replayRef.current);
+    if (allCandles.length === 0 || isChartLoading) return;
 
-    const channel = supabase
-      .channel('price-history-monitor')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'price_history',
-        filter: `product_id=eq.${selectedProductId}`,
-      }, (payload) => {
-        const row = payload.new as any;
-        const newOHLC: OHLCData = {
-          time: row.recorded_at,
-          open: row.open_price,
-          high: row.high_price,
-          low: row.low_price,
-          close: row.close_price,
-        };
-        setChartData(prev => {
-          const updated = [...prev, newOHLC];
-          return updated.length > 200 ? updated.slice(updated.length - 200) : updated;
-        });
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [selectedProductId]);
-
-  // Simulated live tick: generate candle, save to DB, let realtime sub update chart
-  useEffect(() => {
-    if (liveTickRef.current) clearInterval(liveTickRef.current);
-    if (!selectedProductId || isChartLoading) return;
-
-    liveTickRef.current = setInterval(async () => {
-      const currentData = chartData;
-      if (currentData.length === 0) return;
-
-      const lastCandle = currentData[currentData.length - 1];
-      const newCandle = generateSimulatedCandle(lastCandle);
-
-      // Save to database — realtime subscription will update the chart
-      await supabase.from('price_history').insert({
-        product_id: selectedProductId,
-        open_price: newCandle.open,
-        high_price: newCandle.high,
-        low_price: newCandle.low,
-        close_price: newCandle.close,
-        recorded_at: newCandle.time,
+    replayRef.current = setInterval(() => {
+      setDisplayIndex(prev => {
+        if (prev >= allCandles.length) {
+          return Math.min(WINDOW_SIZE, allCandles.length); // loop back
+        }
+        return prev + 1;
       });
+    }, REPLAY_SPEED);
 
-      // Also update the product's current price in the products table
-      await supabase.from('products').update({
-        price: newCandle.close,
-        updated_at: new Date().toISOString(),
-      }).eq('id', selectedProductId);
-    }, 3000);
+    return () => { if (replayRef.current) clearInterval(replayRef.current); };
+  }, [allCandles, isChartLoading]);
 
-    return () => {
-      if (liveTickRef.current) clearInterval(liveTickRef.current);
-    };
-  }, [selectedProductId, isChartLoading, chartData]);
+  // Visible chart = sliding window
+  const chartData = useMemo(() => {
+    if (allCandles.length === 0) return [];
+    const end = displayIndex;
+    const start = Math.max(0, end - WINDOW_SIZE);
+    return allCandles.slice(start, end);
+  }, [allCandles, displayIndex]);
 
-  // Keep sidebar price in sync with latest chart candle
   const latestPrice = useMemo(() => {
     if (chartData.length === 0) return null;
     return chartData[chartData.length - 1].close;
@@ -302,8 +224,8 @@ export default function AdminProductsMonitor() {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    if (selectedProductId) fetchOHLC(selectedProductId, timeInterval);
-  }, [selectedProductId, timeInterval, fetchOHLC]);
+    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
+  }, [selectedProductId, timeInterval, fetchAllOHLC]);
 
   if (isLoading) {
     return (
