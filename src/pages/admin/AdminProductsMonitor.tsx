@@ -210,41 +210,49 @@ export default function AdminProductsMonitor() {
           low: row.low_price,
           close: row.close_price,
         };
-        setChartData(prev => [...prev, newOHLC]);
+        setChartData(prev => {
+          const updated = [...prev, newOHLC];
+          return updated.length > 200 ? updated.slice(updated.length - 200) : updated;
+        });
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [selectedProductId]);
 
-  // Simulated live tick every 3 seconds for smooth chart animation
+  // Simulated live tick: generate candle, save to DB, let realtime sub update chart
   useEffect(() => {
     if (liveTickRef.current) clearInterval(liveTickRef.current);
+    if (!selectedProductId || isChartLoading) return;
 
-    liveTickRef.current = setInterval(() => {
-      setChartData(prev => {
-        if (prev.length === 0) return prev;
-        const lastCandle = prev[prev.length - 1];
-        const newCandle = generateSimulatedCandle(lastCandle);
-        // Keep a sliding window of max 200 candles for performance
-        const updated = [...prev, newCandle];
-        return updated.length > 200 ? updated.slice(updated.length - 200) : updated;
+    liveTickRef.current = setInterval(async () => {
+      const currentData = chartData;
+      if (currentData.length === 0) return;
+
+      const lastCandle = currentData[currentData.length - 1];
+      const newCandle = generateSimulatedCandle(lastCandle);
+
+      // Save to database — realtime subscription will update the chart
+      await supabase.from('price_history').insert({
+        product_id: selectedProductId,
+        open_price: newCandle.open,
+        high_price: newCandle.high,
+        low_price: newCandle.low,
+        close_price: newCandle.close,
+        recorded_at: newCandle.time,
       });
 
-      // Also update the selected product's price in sidebar
-      setProducts(prevProducts => {
-        return prevProducts.map(p => {
-          if (p.id !== selectedProductId) return p;
-          // Use chart data's latest close for sidebar price
-          return p; // Will be updated via chartData
-        });
-      });
+      // Also update the product's current price in the products table
+      await supabase.from('products').update({
+        price: newCandle.close,
+        updated_at: new Date().toISOString(),
+      }).eq('id', selectedProductId);
     }, 3000);
 
     return () => {
       if (liveTickRef.current) clearInterval(liveTickRef.current);
     };
-  }, [selectedProductId, isChartLoading]);
+  }, [selectedProductId, isChartLoading, chartData]);
 
   // Keep sidebar price in sync with latest chart candle
   const latestPrice = useMemo(() => {
