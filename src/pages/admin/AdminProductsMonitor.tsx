@@ -73,18 +73,39 @@ function aggregateOHLC(
   return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 }
 
-// Generate a simulated tick based on the last candle's close price
-function generateSimulatedCandle(lastCandle: OHLCData, volatility: number = 0.003): OHLCData {
-  const lastClose = lastCandle.close;
-  const direction = Math.random() < 0.5 ? 1 : -1;
-  const change = lastClose * volatility * direction * (0.3 + Math.random() * 0.7);
+// Momentum state for natural-looking price movement
+let _momentum = 0;
+let _trendSteps = 0;
+let _trendDir = 1;
 
+function generateSimulatedCandle(lastCandle: OHLCData): OHLCData {
+  const lastClose = lastCandle.close;
+  const baseVol = lastClose < 1 ? 0.0015 : lastClose < 100 ? 0.0012 : 0.0008;
+
+  // Switch micro-trend direction every 5-15 ticks
+  if (_trendSteps <= 0) {
+    _trendDir = Math.random() < 0.45 ? -1 : 1;
+    _trendSteps = 5 + Math.floor(Math.random() * 11);
+  }
+  _trendSteps--;
+
+  // Momentum with mean-reversion: drifts but pulls back
+  _momentum = _momentum * 0.7 + _trendDir * baseVol * 0.3 * Math.random();
+  _momentum = Math.max(-baseVol * 1.5, Math.min(baseVol * 1.5, _momentum));
+
+  // Noise component (smaller than momentum)
+  const noise = (Math.random() - 0.5) * baseVol * 0.4;
+
+  const change = lastClose * (_momentum + noise);
   const open = lastClose;
   const close = open + change;
-  const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.3);
-  const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.3);
 
-  // Next candle is 60 seconds after last
+  // Wicks: asymmetric, sometimes long wicks for realism
+  const wickUp = Math.random() * baseVol * 0.25 * (Math.random() < 0.1 ? 3 : 1);
+  const wickDn = Math.random() * baseVol * 0.25 * (Math.random() < 0.1 ? 3 : 1);
+  const high = Math.max(open, close) * (1 + wickUp);
+  const low = Math.min(open, close) * (1 - wickDn);
+
   const lastTime = new Date(lastCandle.time).getTime();
   const nextTime = new Date(lastTime + 60 * 1000).toISOString();
 
