@@ -557,6 +557,336 @@ export default defineConfig(({ mode }) => ({
 
 ---
 
+## 📄 Detailed Component Code
+
+### 10. `src/pages/Login.tsx` - Login Page (343 lines)
+
+```tsx
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuickLogin } from '@/hooks/useQuickLogin';
+import { useLiveChat } from '@/contexts/LiveChatContext';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
+import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
+import { Typewriter } from '@/components/ui/typewriter';
+import { z } from 'zod';
+import { GuestFooter } from '@/components/guest/GuestFooter';
+import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
+import { QuickLoginUnlock } from '@/components/auth/QuickLoginUnlock';
+
+interface LocationState {
+  prefillEmail?: string;
+  skipQuickLogin?: boolean;
+}
+
+export default function Login() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showQuickLoginSetup, setShowQuickLoginSetup] = useState(false);
+  const [showQuickLoginUnlock, setShowQuickLoginUnlock] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
+  
+  const { user, signIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  const { t } = useLanguage();
+  const quickLogin = useQuickLogin();
+  const { openChat } = useLiveChat();
+
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
+  const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
+
+  // Check if quick login is available on mount
+  useEffect(() => {
+    const state = location.state as LocationState;
+    if (quickLogin.isAvailable && quickLogin.email && !state?.skipQuickLogin) {
+      setShowQuickLoginUnlock(true);
+    }
+  }, [quickLogin.isAvailable, quickLogin.email, location.state]);
+
+  // Handle prefill email from Switch Account page
+  useEffect(() => {
+    const state = location.state as LocationState;
+    if (state?.prefillEmail) {
+      setLoginEmail(state.prefillEmail);
+      setLoginMethod('email');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
+
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
+
+  const validateLoginForm = () => {
+    const newErrors: Record<string, string> = {};
+    try { emailSchema.parse(loginEmail); } catch (e) {
+      if (e instanceof z.ZodError) newErrors.loginEmail = e.errors[0].message;
+    }
+    try { passwordSchema.parse(loginPassword); } catch (e) {
+      if (e instanceof z.ZodError) newErrors.loginPassword = e.errors[0].message;
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const performLogin = async (email: string, password: string) => {
+    setIsLoading(true);
+    const { error } = await signIn(email, password);
+    setIsLoading(false);
+    if (error) {
+      toast({ variant: 'destructive', title: t('auth.login') + ' thất bại', description: error.message });
+      return;
+    }
+    toast({ title: t('auth.login') + ' thành công', description: t('auth.welcomeSubtitle') });
+    if (!quickLogin.isSetupForEmail(email)) {
+      setPendingCredentials({ email, password });
+      setShowQuickLoginSetup(true);
+    } else {
+      navigate('/');
+    }
+  };
+
+  // UI: Dark theme login page with phone/email tabs, password field, 
+  // remember me, forgot password, register link, promo card, quick login dialogs
+  return (
+    <div className="min-h-screen bg-[#0b0f1d] text-white flex flex-col">
+      {/* Header with logo, support button, language select */}
+      {/* Back button */}
+      {/* Login form with phone/email tabs */}
+      {/* Promo card with Smart City image */}
+      <GuestFooter />
+      {/* QuickLoginSetup + QuickLoginUnlock dialogs */}
+    </div>
+  );
+}
+```
+
+### 11. `src/pages/ProductDetail.tsx` - Product Detail + Trading (694 lines)
+
+```tsx
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Layout } from "@/components/layout/Layout";
+import { OptionsTradeSheet } from "@/components/product/OptionsTradeSheet";
+import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
+import { AnimatedPrice, AnimatedStat } from "@/components/product/AnimatedPrice";
+import { MiniPriceChart } from "@/components/product/MiniPriceChart";
+import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
+import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
+import { useProductRealtime, useUserTradesRealtime } from "@/hooks/useProductRealtime";
+import { useAuth } from "@/hooks/useAuth";
+import { useAutoSync } from "@/hooks/useAutoSync";
+
+const EMBED_BASE_URL = "https://preview-fdn8qxbfr8qo.devv.app/embed";
+
+const generateProductSlug = (name: string): string => {
+  return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim();
+};
+
+interface Product {
+  id: string; name: string; symbol?: string | null;
+  price: number | null; volume: string | null; turnover?: string | null;
+  price_change: number | null; image_url: string | null;
+  description: string | null; high_24h?: number | null; low_24h?: number | null;
+}
+
+const ProductDetail = () => {
+  const { id } = useParams();
+  const { user } = useAuth();
+  
+  // State: product, candleData, timeframe (persisted to localStorage), chartType, 
+  //   optionsSheetOpen, tradeDirection, historySheetOpen, activePositionCount
+  
+  // Candle cache with TTL per timeframe (500ms for 1m, up to 30s for 1d)
+  // Throttle intervals per timeframe (100ms for 1m, up to 1s for 1d)
+
+  // useProductRealtime hook - handles realtime price updates with throttling
+  const { status, stats, reconnect, isConnected } = useProductRealtime({
+    productId: id || '',
+    enabled: !!id,
+    onCandleUpdate: handleCandleUpdate,   // Merges new candle into candleData
+    onProductUpdate: handleProductUpdate, // Updates product state
+    throttleMs: THROTTLE_MS[timeframe],
+    reconnectDelay: 2000,
+    maxReconnectAttempts: 5,
+  });
+
+  // useUserTradesRealtime - listens for trade status changes
+  useUserTradesRealtime({
+    userId: user?.id || '',
+    productId: id,
+    enabled: !!user && !!id,
+    onTradeUpdate: fetchActivePositionCount,
+  });
+
+  // Fetch OHLC data from edge function
+  const fetchPriceHistory = async (tf) => {
+    const { data } = await supabase.functions.invoke("ohlc", {
+      body: { productId: id, timeframe: tf, limit: 200 },
+    });
+    // Process candles, update high/low, chart data
+  };
+
+  // Fallback polling when realtime disconnected (every 5s)
+  // refreshLatestCandles - fetch only last 2 candles and merge
+
+  return (
+    <Layout hideFooter>
+      {/* Header: back button, product name, mini sparkline, price change badge, realtime status */}
+      
+      {/* Price info: animated price display, 24h high/low/volume/turnover */}
+      
+      {/* Chart: embedded iframe from external chart service */}
+      <Card>
+        <iframe
+          src={\`\${EMBED_BASE_URL}?product=\${generateProductSlug(product.name)}&timeframe=1M&indicators=true\`}
+          style={{ height: '320px' }}
+        />
+      </Card>
+
+      {/* Position section: active trades count, ActiveOptionTrade component */}
+      
+      {/* Fixed bottom: Buy Up (green) / Buy Down (red) buttons */}
+      
+      {/* OptionsTradeSheet - bottom sheet for placing trades */}
+      {/* TransactionHistorySheet - trade history */}
+    </Layout>
+  );
+};
+
+export default ProductDetail;
+```
+
+### 12. `src/pages/Profile.tsx` - User Profile + Wallet (503 lines)
+
+```tsx
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Layout } from '@/components/layout/Layout';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useExternalBalance } from '@/hooks/useExternalBalance';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { useLiveChat } from '@/contexts/LiveChatContext';
+import { TransactionHistory } from '@/components/profile/TransactionHistory';
+import { NotificationBell } from '@/components/notifications';
+
+export default function Profile() {
+  const [showBalance, setShowBalance] = useState(true);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  const [identityVerification, setIdentityVerification] = useState(null);
+  const [todayProductEarnings, setTodayProductEarnings] = useState(0);
+  const [todayCharityEarnings, setTodayCharityEarnings] = useState(0);
+  const [totalCharityBalance, setTotalCharityBalance] = useState(0);
+  
+  const { user, signOut } = useAuth();
+  const { profile } = useProfile(user?.id);
+  const { balance: externalBalance, frozen: frozenBalance } = useExternalBalance(user?.id);
+  const { formatCurrency, currency } = useCurrency();
+  const { openChat } = useLiveChat();
+
+  // Balance: external API balance ?? local profile balance ?? 0
+  const balance = externalBalance ?? profile?.balance ?? 0;
+  const uid = profile?.user_code?.toString() || '00000';
+
+  // Fetch identity verification status
+  // Fetch today's earnings (won option trades + charity income)
+  // Realtime subscription to option_trades for live earnings update
+
+  const quickActions = [
+    { icon: ArrowDownToLine, label: 'Deposit', href: '/deposit' },
+    { icon: ArrowUpFromLine, label: 'Withdraw', href: '/withdraw' },
+    { icon: CreditCard, label: 'Transaction History', onClick: toggle },
+    { icon: Headphones, label: 'Customer Service', onClick: openChat },
+  ];
+
+  const accountSettings = [
+    { icon: Wallet, label: 'Wallet Details', href: '/wallet-details' },
+    { icon: UserCheck, label: 'Identity Verification', href: '/identity-verification' },
+    { icon: ShieldCheck, label: 'Security', href: '/security' },
+  ];
+
+  return (
+    <Layout hideFooter>
+      {/* User Card: avatar, name, UID with copy button */}
+      
+      {/* Balance Card */}
+      {/*   Available Balance + Charity Talent Balance */}
+      {/*   Today Earnings: product trade + charity */}
+      {/*   Frozen balance (if > 0) */}
+      {/*   Quick Actions grid (4 cols) */}
+      {/*   Inline Transaction History (toggleable) */}
+      
+      {/* Account Section: wallet, identity verification, security */}
+      
+      {/* System Section: language select, settings, invite, switch account */}
+      
+      {/* Sign Out button (red) */}
+      
+      {/* Transaction History */}
+      
+      {/* Security Notice */}
+    </Layout>
+  );
+}
+```
+
+### 13. `src/hooks/useProfile.tsx` - Profile Hook with Cache + Realtime
+
+```tsx
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+export interface Profile {
+  id: string; full_name: string | null; avatar_url: string | null;
+  department: string | null; position: string | null;
+  balance: number | null; total_income: number | null;
+  user_code: number | null; email: string | null; phone: string | null;
+  is_frozen: boolean | null; is_trade_frozen: boolean | null;
+  frozen_reason: string | null;
+}
+
+// Global in-memory cache with 30s TTL
+const profileCache = new Map<string, { data: Profile; timestamp: number }>();
+
+export function useProfile(userId: string | undefined) {
+  // Fetch from profiles_safe view (excludes sensitive fields)
+  // Cache results in memory
+  // Skip duplicate fetches with ref tracking
+  
+  // Realtime subscription for profile updates
+  const channel = supabase
+    .channel(`profile-updates-${userId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'profiles',
+      filter: `id=eq.${userId}`,
+    }, (payload) => {
+      setProfile(payload.new);
+      profileCache.set(userId, { data: payload.new, timestamp: Date.now() });
+    })
+    .subscribe();
+
+  return { profile, isLoading, error, refetch };
+}
+
+export function invalidateProfileCache(userId: string): void { ... }
+export function clearProfileCache(): void { ... }
+```
+
+---
+
 ## 🚧 Known Issues
 - Iframe chart only works with products that have correct slug mapping
 - Legacy Dashboard.tsx exists alongside new AdminLayout system
