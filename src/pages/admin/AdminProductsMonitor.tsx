@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +73,24 @@ function aggregateOHLC(
   return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 }
 
+// Generate a simulated tick based on the last candle's close price
+function generateSimulatedCandle(lastCandle: OHLCData, volatility: number = 0.003): OHLCData {
+  const lastClose = lastCandle.close;
+  const direction = Math.random() < 0.5 ? 1 : -1;
+  const change = lastClose * volatility * direction * (0.3 + Math.random() * 0.7);
+
+  const open = lastClose;
+  const close = open + change;
+  const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.3);
+  const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.3);
+
+  // Next candle is 60 seconds after last
+  const lastTime = new Date(lastCandle.time).getTime();
+  const nextTime = new Date(lastTime + 60 * 1000).toISOString();
+
+  return { time: nextTime, open, high, low, close };
+}
+
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('1M');
@@ -81,6 +99,7 @@ export default function AdminProductsMonitor() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [chartData, setChartData] = useState<OHLCData[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const liveTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load products from database
   useEffect(() => {
@@ -177,7 +196,48 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedProductId]);
 
-  const selectedProduct = useMemo(() => products.find(p => p.id === selectedProductId) || null, [products, selectedProductId]);
+  // Simulated live tick every 3 seconds for smooth chart animation
+  useEffect(() => {
+    if (liveTickRef.current) clearInterval(liveTickRef.current);
+
+    liveTickRef.current = setInterval(() => {
+      setChartData(prev => {
+        if (prev.length === 0) return prev;
+        const lastCandle = prev[prev.length - 1];
+        const newCandle = generateSimulatedCandle(lastCandle);
+        // Keep a sliding window of max 200 candles for performance
+        const updated = [...prev, newCandle];
+        return updated.length > 200 ? updated.slice(updated.length - 200) : updated;
+      });
+
+      // Also update the selected product's price in sidebar
+      setProducts(prevProducts => {
+        return prevProducts.map(p => {
+          if (p.id !== selectedProductId) return p;
+          // Use chart data's latest close for sidebar price
+          return p; // Will be updated via chartData
+        });
+      });
+    }, 3000);
+
+    return () => {
+      if (liveTickRef.current) clearInterval(liveTickRef.current);
+    };
+  }, [selectedProductId, isChartLoading]);
+
+  // Keep sidebar price in sync with latest chart candle
+  const latestPrice = useMemo(() => {
+    if (chartData.length === 0) return null;
+    return chartData[chartData.length - 1].close;
+  }, [chartData]);
+
+  const selectedProduct = useMemo(() => {
+    const product = products.find(p => p.id === selectedProductId) || null;
+    if (product && latestPrice !== null) {
+      return { ...product, price: latestPrice };
+    }
+    return product;
+  }, [products, selectedProductId, latestPrice]);
 
   // Convert OHLCData to Candle[] for indicators & export
   const displayCandles: Candle[] = useMemo(() => {
