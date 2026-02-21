@@ -150,11 +150,11 @@ function DragScrubber({
     <div className="space-y-2">
       {/* Time labels */}
       <div className="flex items-center justify-between text-xs text-muted-foreground select-none">
-        <span className="font-mono">00:00</span>
+        <span className="font-mono">{formatTime(startMs)}</span>
         <span className="font-mono font-semibold text-foreground text-sm tabular-nums">
           {formatTime(cursorMs)} <span className="text-muted-foreground text-xs">UTC</span>
         </span>
-        <span className="font-mono">23:59</span>
+        <span className="font-mono">{formatTime(endMs)}</span>
       </div>
 
       {/* Track */}
@@ -474,10 +474,13 @@ export default function AdminProductsMonitor() {
     const days = Array.from(daySet).sort();
     setAvailableDays(days);
 
-    // 4. Start at day 0, cursor = start of day
+    // 4. Start at day 0, cursor = first actual data point (not midnight)
     const firstDay = days[0];
-    const startMs = new Date(firstDay + 'T00:00:00Z').getTime();
-    const endMs = new Date(firstDay + 'T23:59:59Z').getTime();
+    const initDayRows = allRaw.flatMap(r => r.rows.filter(row => row.recorded_at.startsWith(firstDay)));
+    const firstDataMs = initDayRows.length > 0 ? new Date(initDayRows[0].recorded_at).getTime() : new Date(firstDay + 'T00:00:00Z').getTime();
+    const lastDataMs = initDayRows.length > 0 ? new Date(initDayRows[initDayRows.length - 1].recorded_at).getTime() : new Date(firstDay + 'T23:59:59Z').getTime();
+    const startMs = firstDataMs;
+    const endMs = lastDataMs;
     setCurrentDayIndex(0);
     setPlaybackCursorMs(startMs);
     setDayStartMs(startMs);
@@ -532,22 +535,21 @@ export default function AdminProductsMonitor() {
   }, [timeframe]);
 
   // Advance cursor by N minutes, handle day boundary
-  const advanceCursor = useCallback((currentCursor: number, currentDayIdx: number, days: string[], minutesPerTick: number): { newCursor: number; newDayIdx: number; newStart: number; newEnd: number } => {
+  const advanceCursor = useCallback((currentCursor: number, currentDayIdx: number, days: string[], minutesPerTick: number, currentStart: number, currentEnd: number): { newCursor: number; newDayIdx: number; newStart: number; newEnd: number } => {
     const newCursor = currentCursor + minutesPerTick * 60 * 1000;
-    const currentDayEnd = new Date(days[currentDayIdx] + 'T23:59:59Z').getTime();
 
-    if (newCursor > currentDayEnd) {
+    if (newCursor > currentEnd) {
       // Advance to next day (loop if at end)
       const nextDayIdx = (currentDayIdx + 1) % days.length;
       const nextDay = days[nextDayIdx];
-      const newStart = new Date(nextDay + 'T00:00:00Z').getTime();
-      const newEnd = new Date(nextDay + 'T23:59:59Z').getTime();
+      const raw = rawDataRef.current;
+      const nextDayRows = raw.flatMap(r => r.rows.filter(row => row.recorded_at.startsWith(nextDay)));
+      const newStart = nextDayRows.length > 0 ? new Date(nextDayRows[0].recorded_at).getTime() : new Date(nextDay + 'T00:00:00Z').getTime();
+      const newEnd = nextDayRows.length > 0 ? new Date(nextDayRows[nextDayRows.length - 1].recorded_at).getTime() : new Date(nextDay + 'T23:59:59Z').getTime();
       return { newCursor: newStart, newDayIdx: nextDayIdx, newStart, newEnd };
     }
 
-    const start = new Date(days[currentDayIdx] + 'T00:00:00Z').getTime();
-    const end = currentDayEnd;
-    return { newCursor, newDayIdx: currentDayIdx, newStart: start, newEnd: end };
+    return { newCursor, newDayIdx: currentDayIdx, newStart: currentStart, newEnd: currentEnd };
   }, []);
 
   // Playback tick
@@ -563,7 +565,7 @@ export default function AdminProductsMonitor() {
     let endMs = dayEndMs;
 
     playbackTimerRef.current = setInterval(() => {
-      const { newCursor, newDayIdx, newStart, newEnd } = advanceCursor(cursor, dayIdx, availableDays, speed.minutesPerTick);
+      const { newCursor, newDayIdx, newStart, newEnd } = advanceCursor(cursor, dayIdx, availableDays, speed.minutesPerTick, startMs, endMs);
       cursor = newCursor;
       dayIdx = newDayIdx;
       startMs = newStart;
@@ -605,8 +607,11 @@ export default function AdminProductsMonitor() {
   const goToDay = useCallback((dayIdx: number) => {
     if (availableDays.length === 0) return;
     const day = availableDays[dayIdx];
-    const newStart = new Date(day + 'T00:00:00Z').getTime();
-    const newEnd = new Date(day + 'T23:59:59Z').getTime();
+    // Find actual data bounds for this day
+    const raw = rawDataRef.current;
+    const dayRows = raw.flatMap(r => r.rows.filter(row => row.recorded_at.startsWith(day)));
+    const newStart = dayRows.length > 0 ? new Date(dayRows[0].recorded_at).getTime() : new Date(day + 'T00:00:00Z').getTime();
+    const newEnd = dayRows.length > 0 ? new Date(dayRows[dayRows.length - 1].recorded_at).getTime() : new Date(day + 'T23:59:59Z').getTime();
     setCurrentDayIndex(dayIdx);
     setPlaybackCursorMs(newStart);
     setDayStartMs(newStart);
