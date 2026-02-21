@@ -22,6 +22,7 @@ import { ShareButton } from '@/components/charts/ShareButton';
 
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, Candle, TechnicalIndicators } from '@/types/trading';
+import { PriceVolatilityControl } from '@/components/admin/PriceVolatilityControl';
 
 interface DBProduct {
   id: string;
@@ -381,12 +382,17 @@ export default function AdminProductsMonitor() {
                 )}
               </div>
 
-              {/* Technical Indicators */}
-              {technicalIndicators && (
-                <div className="px-3 pb-3">
-                  <TechnicalIndicatorsPanel indicators={technicalIndicators} />
+              {/* Technical Indicators + Price Control */}
+              <div className="px-3 pb-3 flex gap-3 flex-wrap">
+                {technicalIndicators && (
+                  <div className="flex-1 min-w-[200px]">
+                    <TechnicalIndicatorsPanel indicators={technicalIndicators} />
+                  </div>
+                )}
+                <div className="w-64 flex-shrink-0">
+                  <PriceVolatilityControl productId={selectedProduct.id} productName={selectedProduct.name} />
                 </div>
-              )}
+              </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">

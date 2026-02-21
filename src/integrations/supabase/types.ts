@@ -663,6 +663,8 @@ export type Database = {
         Row: {
           created_at: string
           direction: string
+          expires_at: string | null
+          is_active: boolean
           product_id: string
           strength: number
           updated_at: string
@@ -670,6 +672,8 @@ export type Database = {
         Insert: {
           created_at?: string
           direction?: string
+          expires_at?: string | null
+          is_active?: boolean
           product_id: string
           strength?: number
           updated_at?: string
@@ -677,6 +681,8 @@ export type Database = {
         Update: {
           created_at?: string
           direction?: string
+          expires_at?: string | null
+          is_active?: boolean
           product_id?: string
           strength?: number
           updated_at?: string
