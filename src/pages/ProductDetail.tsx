@@ -577,65 +577,11 @@ const ProductDetail = () => {
         </div>
 
         {/* Chart Type and Timeframe Controls - Mobile optimized with larger touch targets */}
-        <div className="flex items-center gap-1.5 px-1 overflow-x-auto scrollbar-hide">
-          <Button
-            variant={chartType === 'line' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setChartType('line')}
-            className="min-h-[36px] h-9 min-w-[44px] px-3 text-xs font-medium touch-action-manipulation"
-          >
-            {t('product.line')}
-          </Button>
-          {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => {
-            const displayLabel = tf.toUpperCase();
-            return (
-              <Button
-                key={tf}
-                variant={timeframe === tf && chartType === 'candle' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => {
-                  setChartType('candle');
-                  setTimeframe(tf);
-                }}
-                className="min-h-[36px] h-9 min-w-[40px] px-2.5 text-xs font-medium touch-action-manipulation"
-              >
-                {displayLabel}
-              </Button>
-            );
-          })}
-          
-          {/* Indicators button */}
-          {chartType === 'candle' && (
-            <div className="ml-auto flex-shrink-0">
-              <ChartIndicators
-                config={indicatorConfig}
-                onChange={setIndicatorConfig}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* MA Indicators Display */}
-        {chartType === 'candle' && (indicatorConfig.ma.enabled || indicatorConfig.ema.enabled) && (
-          <div className="flex gap-4 text-xs px-1">
-            {indicatorConfig.ma.enabled && (
-              <span style={{ color: indicatorConfig.ma.color }}>
-                MA{indicatorConfig.ma.period}: {candleData.length > 0 ? formatPrice(candleData[candleData.length - 1]?.close) : "--"}
-              </span>
-            )}
-            {indicatorConfig.ema.enabled && (
-              <span style={{ color: indicatorConfig.ema.color }}>
-                MA{indicatorConfig.ema.period}: {candleData.length > 0 ? formatPrice(candleData[candleData.length - 1]?.close) : "--"}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Chart - Embedded from external chart service */}
-        <Card className={`bg-card border-border transition-shadow duration-300 ${candleFlash ? 'animate-candle-flash' : ''}`}>
+        {/* Chart - Embedded from external chart service (controls managed by iframe) */}
+        <Card className="bg-card border-border">
           <CardContent className="p-0 overflow-hidden">
             <iframe
-              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=${timeframe.toUpperCase()}&indicators=${chartType === 'candle' && (indicatorConfig.ma.enabled || indicatorConfig.ema.enabled)}`}
+              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
               className="w-full border-0"
               style={{ height: '320px' }}
               title={`${product.name} Chart`}
