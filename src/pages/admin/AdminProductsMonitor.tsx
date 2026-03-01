@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
+import { useState, useMemo, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import {
   Activity,
   Eye,
   Maximize2,
+  Zap,
 } from 'lucide-react';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
@@ -18,93 +18,52 @@ import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicator
 import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
 import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
+import { ShockEventPanel } from '@/components/admin/ShockEventPanel';
 
-import {
-  generateBase1MCandles,
-  aggregateCandles,
-  calculateSMA,
-  calculateRSI,
-  calculateMACD,
-} from '@/lib/chartUtils';
-
-import { TimeInterval, Candle, Product, TechnicalIndicators } from '@/types/trading';
-import { PRODUCTS } from '@/data/products';
+import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
+import { TimeInterval, TechnicalIndicators } from '@/types/trading';
+import { useMarketEngine } from '@/hooks/useMarketEngine';
 
 export default function AdminProductsMonitor() {
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [timeInterval, setTimeInterval] = useState<TimeInterval>('1M');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
+    return localStorage.getItem('admin_monitor_product') || null;
+  });
+  const [timeInterval, setTimeInterval] = useState<TimeInterval>(() => {
+    return (localStorage.getItem('admin_monitor_timeframe') as TimeInterval) || '1M';
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [candleData, setCandleData] = useState<Map<string, Candle[]>>(new Map());
 
-  // Load products
-  useEffect(() => {
-    const chartProducts = PRODUCTS;
-    setProducts(chartProducts);
-    if (chartProducts.length > 0) {
-      const saved = localStorage.getItem('admin_monitor_product');
-      setSelectedProductId(saved && chartProducts.find(p => p.id === saved) ? saved : chartProducts[0].id);
+  const {
+    products,
+    isReady,
+    getCandles,
+    getCurrentPrice,
+    getActiveShock,
+    scenarios,
+    addShockEvent,
+    cancelShockEvent,
+    updateScenario,
+    shockEvents,
+  } = useMarketEngine();
+
+  // Auto-select first product
+  const effectiveProductId = useMemo(() => {
+    if (selectedProductId && products.find(p => p.id === selectedProductId)) {
+      return selectedProductId;
     }
-    const newCandleData = new Map<string, Candle[]>();
-    chartProducts.forEach(product => {
-      newCandleData.set(product.id, generateBase1MCandles(product, 1440));
-    });
-    setCandleData(newCandleData);
-    setIsLoading(false);
-
-    const savedTf = localStorage.getItem('admin_monitor_timeframe') as TimeInterval;
-    if (savedTf) setTimeInterval(savedTf);
-  }, []);
-
-  // Real-time price updates (every 3 seconds)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCandleData(prevData => {
-        const newData = new Map(prevData);
-        products.forEach(product => {
-          const candles = newData.get(product.id) || [];
-          if (candles.length > 0) {
-            const lastCandle = candles[candles.length - 1];
-            const newCandle = generateNextCandle(lastCandle, product);
-            newData.set(product.id, [...candles.slice(1), newCandle]);
-          }
-        });
-        return newData;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [products]);
-
-  const generateNextCandle = (lastCandle: Candle, product: Product): Candle => {
-    const volatility = product.volatility;
-    let trendBias = 0;
-    if (product.trend === 'bullish') trendBias = 0.6;
-    else if (product.trend === 'bearish') trendBias = -0.6;
-    else if (product.trend === 'volatile') trendBias = (Math.random() - 0.5) * 2;
-
-    const direction = Math.random() < 0.5 + trendBias * 0.1 ? 1 : -1;
-    const change = lastCandle.close * volatility * direction * (0.5 + Math.random() * 0.5);
-    const open = lastCandle.close;
-    const close = open + change;
-    const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5);
-    const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5);
-    const volume = 1000000 * (0.8 + Math.random() * 0.4) / 1440;
-
-    return { time: lastCandle.time + 60, open, high, low, close, volume };
-  };
+    return products.length > 0 ? products[0].id : null;
+  }, [selectedProductId, products]);
 
   const selectedProduct = useMemo(() => {
-    return products.find(p => p.id === selectedProductId) || null;
-  }, [products, selectedProductId]);
+    return products.find(p => p.id === effectiveProductId) || null;
+  }, [products, effectiveProductId]);
 
-  // Convert Candle[] to OHLCData[] for the chart component
   const displayCandles = useMemo(() => {
-    if (!selectedProductId) return [] as Candle[];
-    const baseCandles = candleData.get(selectedProductId) || [];
+    if (!effectiveProductId) return [];
+    const baseCandles = getCandles(effectiveProductId);
     if (timeInterval === '1M') return baseCandles;
     return aggregateCandles(baseCandles, timeInterval);
-  }, [candleData, selectedProductId, timeInterval]);
+  }, [getCandles, effectiveProductId, timeInterval]);
 
   const chartOHLCData: OHLCData[] = useMemo(() => {
     return displayCandles.map(c => ({
@@ -127,10 +86,9 @@ export default function AdminProductsMonitor() {
     };
   }, [displayCandles]);
 
-  const currentPrice = useMemo(() => {
-    const candles = candleData.get(selectedProductId || '') || [];
-    return candles.length > 0 ? candles[candles.length - 1].close : 0;
-  }, [candleData, selectedProductId]);
+  const currentPrice = effectiveProductId ? getCurrentPrice(effectiveProductId) : 0;
+  const activeShock = effectiveProductId ? getActiveShock(effectiveProductId) : null;
+  const activeShockCount = shockEvents.filter(e => !e.isComplete).length;
 
   const handleProductSelect = useCallback((productId: string) => {
     setSelectedProductId(productId);
@@ -142,17 +100,13 @@ export default function AdminProductsMonitor() {
     localStorage.setItem('admin_monitor_timeframe', interval);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
-  }, []);
-
-  if (isLoading) {
+  if (!isReady) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-[60vh]">
           <div className="flex flex-col items-center gap-3">
             <Activity className="w-8 h-8 animate-pulse text-primary" />
-            <p className="text-muted-foreground">Loading products...</p>
+            <p className="text-muted-foreground">Loading market engine...</p>
           </div>
         </div>
       </Layout>
@@ -169,15 +123,26 @@ export default function AdminProductsMonitor() {
             <h1 className="text-xl font-bold text-foreground">Product Chart Monitor</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time candlestick charts with technical analysis
+            4-layer engine: Scenario → Engine → Persistence → Shock Events
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {activeShockCount > 0 && (
+            <Badge variant="outline" className="gap-1.5 text-amber-500 border-amber-500/40">
+              <Zap className="w-3 h-3" />
+              {activeShockCount} shock{activeShockCount > 1 ? 's' : ''}
+            </Badge>
+          )}
           <Badge variant="outline" className="gap-1.5 text-green-500 border-green-500/40">
             <Activity className="w-3 h-3" />
             Live
           </Badge>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={toggleFullscreen}>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => setIsFullscreen(prev => !prev)}
+          >
             {isFullscreen ? <Eye className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
@@ -195,13 +160,14 @@ export default function AdminProductsMonitor() {
           <ScrollArea className="h-[calc(100%-48px)]">
             <div className="p-2 space-y-1">
               {products.map((product) => {
-                const latestCandles = candleData.get(product.id);
-                const latestCandle = latestCandles?.[latestCandles.length - 1];
-                const price = latestCandle?.close || product.basePrice;
-                const change = latestCandle
-                  ? ((latestCandle.close - latestCandle.open) / latestCandle.open) * 100
+                const price = getCurrentPrice(product.id) || product.basePrice;
+                const candles = getCandles(product.id);
+                const lastCandle = candles[candles.length - 1];
+                const change = lastCandle
+                  ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100
                   : 0;
-                const isSelected = selectedProductId === product.id;
+                const isSelected = effectiveProductId === product.id;
+                const hasShock = !!getActiveShock(product.id);
 
                 return (
                   <button
@@ -214,7 +180,10 @@ export default function AdminProductsMonitor() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <Activity className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Activity className="w-4 h-4 text-primary" />
+                        {hasShock && <Zap className="w-3 h-3 text-amber-500 animate-pulse" />}
+                      </div>
                       <div className="flex-1 ml-2 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
                         <p className="text-xs text-muted-foreground font-mono">{product.symbol}</p>
@@ -240,7 +209,7 @@ export default function AdminProductsMonitor() {
 
         {/* Chart Area */}
         <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
-          {selectedProduct ? (
+          {selectedProduct && effectiveProductId ? (
             <>
               {/* Chart Header */}
               <div className="p-3 border-b">
@@ -286,12 +255,22 @@ export default function AdminProductsMonitor() {
                 />
               </div>
 
-              {/* Technical Indicators */}
-              {technicalIndicators && (
-                <div className="px-3 pb-3">
+              {/* Shock Event + Indicators */}
+              <div className="px-3 pb-3 space-y-3">
+                <ShockEventPanel
+                  productId={effectiveProductId}
+                  productName={selectedProduct.name}
+                  currentPrice={currentPrice}
+                  activeShock={activeShock}
+                  scenario={scenarios[effectiveProductId] || null}
+                  onAddShock={addShockEvent}
+                  onCancelShock={cancelShockEvent}
+                  onUpdateScenario={updateScenario}
+                />
+                {technicalIndicators && (
                   <TechnicalIndicatorsPanel indicators={technicalIndicators} />
-                </div>
-              )}
+                )}
+              </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
