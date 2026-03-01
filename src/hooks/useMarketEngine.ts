@@ -9,7 +9,7 @@ import {
 } from '@/lib/market-engine/types';
 import { createScenariosFromProducts } from '@/lib/market-engine/scenarios';
 import { createEngineState, applyTick } from '@/lib/market-engine/engine';
-import { saveSnapshot, loadSnapshot } from '@/lib/market-engine/persistence';
+import { saveSnapshot, loadSnapshot, clearSnapshot } from '@/lib/market-engine/persistence';
 import { createShockEvent, findActiveShock } from '@/lib/market-engine/shockEvents';
 
 /**
@@ -170,6 +170,19 @@ export function useMarketEngine() {
     return findActiveShock(shockEvents, productId);
   }, [shockEvents]);
 
+  const resetEngine = useCallback(() => {
+    clearSnapshot();
+    const products = PRODUCTS;
+    const defaultScenarios = createScenariosFromProducts(products);
+    const freshEngines: Record<string, EngineState> = {};
+    products.forEach(p => {
+      freshEngines[p.id] = createEngineState(defaultScenarios[p.id]);
+    });
+    setEngines(freshEngines);
+    setScenarios(defaultScenarios);
+    setShockEvents([]);
+  }, []);
+
   return {
     products: PRODUCTS,
     engines,
@@ -182,5 +195,6 @@ export function useMarketEngine() {
     addShockEvent,
     cancelShockEvent,
     updateScenario,
+    resetEngine,
   };
 }

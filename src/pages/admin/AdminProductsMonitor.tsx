@@ -11,6 +11,7 @@ import {
   Eye,
   Maximize2,
   Zap,
+  RotateCcw,
 } from 'lucide-react';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
@@ -44,6 +45,7 @@ export default function AdminProductsMonitor() {
     cancelShockEvent,
     updateScenario,
     shockEvents,
+    resetEngine,
   } = useMarketEngine();
 
   // Auto-select first product
@@ -137,6 +139,19 @@ export default function AdminProductsMonitor() {
             <Activity className="w-3 h-3" />
             Live
           </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+            onClick={() => {
+              if (confirm('Reset toàn bộ market engine? Dữ liệu chart sẽ được tạo mới.')) {
+                resetEngine();
+              }
+            }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </Button>
           <Button
             size="icon"
             variant="outline"
