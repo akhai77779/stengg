@@ -82,13 +82,8 @@ export default function AdminProductsMonitor() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isChartLoading, setIsChartLoading] = useState(false);
 
-  // Replay state
-  const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
-  const [displayIndex, setDisplayIndex] = useState(0);
-  const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const WINDOW_SIZE = 120;
-  const REPLAY_SPEED = 2000; // 2s per candle
+  // All candles displayed immediately
+  const [chartData, setChartData] = useState<OHLCData[]>([]);
 
   // Load products
   useEffect(() => {
@@ -117,7 +112,7 @@ export default function AdminProductsMonitor() {
     if (savedTf) setTimeInterval(savedTf);
   }, []);
 
-  // Fetch ALL OHLC data for replay
+  // Fetch ALL OHLC data and display immediately
   const fetchAllOHLC = useCallback(async (productId: string, tf: TimeInterval) => {
     setIsChartLoading(true);
     const { data: rows } = await supabase
@@ -129,11 +124,9 @@ export default function AdminProductsMonitor() {
 
     if (rows && rows.length > 0) {
       const aggregated = aggregateOHLC(rows, tf);
-      setAllCandles(aggregated);
-      setDisplayIndex(Math.min(WINDOW_SIZE, aggregated.length));
+      setChartData(aggregated);
     } else {
-      setAllCandles([]);
-      setDisplayIndex(0);
+      setChartData([]);
     }
     setIsChartLoading(false);
   }, []);
@@ -153,30 +146,69 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Replay: advance index every 2s, loop when done
+  // Realtime candle updates - append/update the latest candle
   useEffect(() => {
-    if (replayRef.current) clearInterval(replayRef.current);
-    if (allCandles.length === 0 || isChartLoading) return;
+    if (!selectedProductId) return;
 
-    replayRef.current = setInterval(() => {
-      setDisplayIndex(prev => {
-        if (prev >= allCandles.length) {
-          return Math.min(WINDOW_SIZE, allCandles.length); // loop back
+    const channel = supabase
+      .channel(`monitor-candles-${selectedProductId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'price_history',
+          filter: `product_id=eq.${selectedProductId}`,
+        },
+        (payload) => {
+          const record = payload.new as {
+            product_id: string;
+            recorded_at: string;
+            open_price: number;
+            high_price: number;
+            low_price: number;
+            close_price: number;
+          };
+          if (!record || record.product_id !== selectedProductId) return;
+
+          const newCandle: OHLCData = {
+            time: record.recorded_at,
+            open: record.open_price,
+            high: record.high_price,
+            low: record.low_price,
+            close: record.close_price,
+          };
+
+          setChartData(prev => {
+            if (prev.length === 0) return [newCandle];
+
+            const lastCandle = prev[prev.length - 1];
+            const lastTime = new Date(lastCandle.time).getTime();
+            const newTime = new Date(newCandle.time).getTime();
+
+            // Same candle time → update in place
+            if (Math.abs(newTime - lastTime) < 30000) {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...lastCandle,
+                high: Math.max(lastCandle.high, newCandle.high),
+                low: Math.min(lastCandle.low, newCandle.low),
+                close: newCandle.close,
+              };
+              return updated;
+            }
+
+            // New candle → append (keep max 1000)
+            const next = [...prev, newCandle];
+            if (next.length > 1000) next.shift();
+            return next;
+          });
         }
-        return prev + 1;
-      });
-    }, REPLAY_SPEED);
+      )
+      .subscribe();
 
-    return () => { if (replayRef.current) clearInterval(replayRef.current); };
-  }, [allCandles, isChartLoading]);
-
-  // Visible chart = sliding window
-  const chartData = useMemo(() => {
-    if (allCandles.length === 0) return [];
-    const end = displayIndex;
-    const start = Math.max(0, end - WINDOW_SIZE);
-    return allCandles.slice(start, end);
-  }, [allCandles, displayIndex]);
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedProductId]);
 
   const latestPrice = useMemo(() => {
     if (chartData.length === 0) return null;
