@@ -2,12 +2,30 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// Allowed origins for CORS - restrict to known domains
+const ALLOWED_ORIGINS = [
+  "https://stengg.it.com",
+  "https://www.stengg.it.com",
+  "https://stengg-it-com.lovable.app",
+  "https://id-preview--f9a00261-b7fb-4428-ad85-88f8d5788c27.lovable.app",
+  "https://f9a00261-b7fb-4428-ad85-88f8d5788c27.lovableproject.com",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
 
-// In-memory cache
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+const EXTERNAL_CANDLES_API_URL = "https://admin.stenggg.com/api/candles";
+
+// In-memory cache for kline data
 interface CacheEntry {
   data: { candles: unknown[]; nextCursor: string | null; symbol: string };
   timestamp: number;
@@ -15,148 +33,156 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
+// Cache TTL based on timeframe (in milliseconds)
 function getCacheTTL(timeframe: string): number {
   switch (timeframe) {
-    case "1m": return 10 * 1000;
-    case "5m": return 15 * 1000;
-    case "15m": return 20 * 1000;
-    case "30m": return 30 * 1000;
-    case "1h": return 60 * 1000;
-    case "1d": return 5 * 60 * 1000;
+    case "1m": return 10 * 1000;      // 10 seconds for 1-minute chart
+    case "5m": return 15 * 1000;      // 15 seconds for 5-minute chart
+    case "15m": return 20 * 1000;     // 20 seconds for 15-minute chart
+    case "30m": return 30 * 1000;     // 30 seconds for 30-minute chart
+    case "1h": return 60 * 1000;      // 1 minute for 1-hour chart
+    case "1d": return 5 * 60 * 1000;  // 5 minutes for daily chart
     default: return 30 * 1000;
   }
 }
 
+// Generate cache key from request parameters
 function getCacheKey(productId: string, timeframe: string, limit: number, cursor: string | null): string {
   return `${productId}:${timeframe}:${limit}:${cursor || "latest"}`;
 }
 
+// Get cached data if valid
 function getCachedData(key: string, ttl: number): CacheEntry["data"] | null {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.timestamp > ttl) { cache.delete(key); return null; }
+  
+  const now = Date.now();
+  if (now - entry.timestamp > ttl) {
+    cache.delete(key);
+    return null;
+  }
+  
   return entry.data;
 }
 
+// Set cache data
 function setCacheData(key: string, data: CacheEntry["data"]): void {
   cache.set(key, { data, timestamp: Date.now() });
+  
+  // Clean up old entries (keep cache size reasonable)
   if (cache.size > 100) {
     const now = Date.now();
     for (const [k, v] of cache.entries()) {
-      if (now - v.timestamp > 5 * 60 * 1000) cache.delete(k);
+      if (now - v.timestamp > 5 * 60 * 1000) { // Remove entries older than 5 minutes
+        cache.delete(k);
+      }
     }
   }
 }
 
 type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 
+interface CandleItem {
+  time?: number;
+  ts?: number;
+  open?: number | string;
+  high?: number | string;
+  low?: number | string;
+  close?: number | string;
+  vol?: number | string;
+  volume?: number | string;
+  // Alternative short field names
+  t?: number;
+  o?: number | string;
+  h?: number | string;
+  l?: number | string;
+  c?: number | string;
+  v?: number | string;
+}
+
+interface CandlesApiResponse {
+  code?: number;
+  message?: string;
+  data?: CandleItem[] | {
+    list?: CandleItem[];
+    data?: CandleItem[];
+  };
+}
+
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function getMinutesForTimeframe(tf: Timeframe): number {
-  switch (tf) {
-    case "1m": return 1;
-    case "5m": return 5;
-    case "15m": return 15;
-    case "30m": return 30;
-    case "1h": return 60;
-    case "1d": return 1440;
-    default: return 1;
-  }
-}
-
-/**
- * Apply price control bias to candle data
- */
-function applyPriceControlToCandles(
-  candles: { time: string; open: number; high: number; low: number; close: number }[],
-  direction: string,
-  strength: number
-): { time: string; open: number; high: number; low: number; close: number }[] {
-  if (candles.length === 0) return candles;
-
-  const bias = direction === 'up' ? 1 : -1;
-
-  return candles.map((c, i) => {
-    const progress = (i + 1) / candles.length;
-    const factor = 1 + bias * (strength * 0.001) * progress * (0.5 + Math.random() * 0.5);
-
-    return {
-      time: c.time,
-      open: c.open * factor,
-      high: c.high * (direction === 'up' ? factor * (1 + Math.random() * 0.0005) : factor),
-      low: c.low * (direction === 'down' ? factor * (1 - Math.random() * 0.0005) : factor),
-      close: c.close * factor,
-    };
-  });
-}
-
-/**
- * Aggregate 1m rows into larger timeframes
- */
-function aggregateOHLC(
-  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[],
-  minutes: number
-): { time: string; open: number; high: number; low: number; close: number }[] {
-  if (minutes === 1) {
-    return rows.map(r => ({
-      time: r.recorded_at,
-      open: r.open_price,
-      high: r.high_price,
-      low: r.low_price,
-      close: r.close_price,
-    }));
-  }
-
-  const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
-  const bucketMs = minutes * 60 * 1000;
-
-  for (const r of rows) {
-    const ts = new Date(r.recorded_at).getTime();
-    const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
-    const existing = buckets.get(bucketKey);
-    if (!existing) {
-      buckets.set(bucketKey, {
-        time: new Date(bucketKey).toISOString(),
-        open: r.open_price,
-        high: r.high_price,
-        low: r.low_price,
-        close: r.close_price,
-      });
-    } else {
-      existing.high = Math.max(existing.high, r.high_price);
-      existing.low = Math.min(existing.low, r.low_price);
-      existing.close = r.close_price;
+// Retry fetch with exponential backoff for transient network errors
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  retries = 3, 
+  delayMs = 500
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`Fetch attempt ${i + 1}/${retries} failed:`, lastError.message);
+      
+      if (i < retries - 1) {
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, i)));
+      }
     }
   }
-
-  return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  
+  throw lastError || new Error("Fetch failed after retries");
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate origin for actual requests (not just preflight)
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    console.warn(`Rejected request from unauthorized origin: ${origin}`);
+    return new Response(
+      JSON.stringify({ error: "Origin not allowed" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {
     if (req.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY");
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Create Supabase client with optional auth header (for RLS if needed)
     const authHeader = req.headers.get("Authorization");
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: authHeader ? { Authorization: authHeader } : {} },
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {},
+      },
     });
 
     const body = await req.json().catch(() => ({}));
@@ -167,58 +193,39 @@ Deno.serve(async (req) => {
 
     if (!productId) {
       return new Response(JSON.stringify({ error: "productId is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(productId)) {
+      console.error("Invalid productId format:", productId);
       return new Response(JSON.stringify({ error: "Invalid productId format" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const limit = clamp(Math.floor(limitRaw), 10, 500);
+    const limit = clamp(Math.floor(limitRaw), 50, 500);
 
-    // Check price controls
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    let activeControl: { direction: string; strength: number } | null = null;
-
-    if (SUPABASE_SERVICE_ROLE_KEY) {
-      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: ctrl } = await adminClient
-        .from("product_price_controls")
-        .select("direction, strength, is_active, expires_at")
-        .eq("product_id", productId)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (ctrl && ctrl.is_active) {
-        if (ctrl.expires_at && new Date(ctrl.expires_at) <= new Date()) {
-          await adminClient
-            .from("product_price_controls")
-            .update({ is_active: false, direction: 'neutral', strength: 1, expires_at: null })
-            .eq("product_id", productId);
-        } else {
-          activeControl = { direction: ctrl.direction, strength: ctrl.strength };
-        }
-      }
+    // Check cache first (before fetching product info for "latest" requests only)
+    const cacheKey = getCacheKey(productId, timeframe, limit, cursor);
+    const cacheTTL = getCacheTTL(timeframe);
+    const cachedData = getCachedData(cacheKey, cacheTTL);
+    
+    if (cachedData) {
+      console.log(`Cache HIT for key: ${cacheKey}`);
+      return new Response(JSON.stringify(cachedData), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    
+    console.log(`Cache MISS for key: ${cacheKey}`);
 
-    // Only use cache if no active control
-    if (!activeControl) {
-      const cacheKey = getCacheKey(productId, timeframe, limit, cursor);
-      const cacheTTL = getCacheTTL(timeframe);
-      const cachedData = getCachedData(cacheKey, cacheTTL);
-      
-      if (cachedData) {
-        return new Response(JSON.stringify(cachedData), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // Fetch product symbol
+    // Fetch product to get symbol
     const { data: product, error: productError } = await supabase
       .from("products")
       .select("name, symbol")
@@ -226,63 +233,123 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (productError || !product) {
+      console.error("Product not found:", productError);
       return new Response(JSON.stringify({ error: "Product not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const symbol = product.symbol || product.name || "";
-
-    // Read from price_history table (local DB only)
-    let query = supabase
-      .from("price_history")
-      .select("recorded_at, open_price, high_price, low_price, close_price")
-      .eq("product_id", productId)
-      .order("recorded_at", { ascending: true });
-
-    if (cursor) {
-      query = query.lt("recorded_at", cursor);
+    // Use symbol if available, otherwise try to derive from name
+    let symbol = product.symbol;
+    if (!symbol) {
+      // Try common patterns: "Bitcoin" -> "BTC/USDT", "Wing-in-Ground" -> "WIG/USDT"
+      const name = product.name || "";
+      if (name.toLowerCase().includes("wing") || name.toLowerCase().includes("wig")) {
+        symbol = "WIG/USDT";
+      } else {
+        // Default fallback - use first 3-4 chars of name
+        symbol = name.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase() + "/USDT";
+      }
     }
 
-    // Fetch more raw rows for aggregation
-    const minutesPerBucket = getMinutesForTimeframe(timeframe);
-    const fetchLimit = Math.min(limit * minutesPerBucket, 1000);
+    // Build external API URL using new /api/candles endpoint
 
-    const { data: rows, error: dbError } = await query.limit(fetchLimit);
+    // Build external API URL using new /api/candles endpoint
+    const encodedSymbol = encodeURIComponent(symbol);
+    const apiUrl = `${EXTERNAL_CANDLES_API_URL}?symbol=${encodedSymbol}&interval=${timeframe}`;
 
-    if (dbError) {
-      console.error("DB error:", dbError.message);
+    console.log(`Fetching candle data from: ${apiUrl}`);
+
+    // Use fetchWithRetry for resilience against transient network errors
+    let response: Response;
+    try {
+      response = await fetchWithRetry(apiUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "ST-Engineering-Chart/1.0",
+        },
+      }, 3, 300);
+    } catch (fetchError) {
+      console.error(`External API fetch failed after retries:`, fetchError);
+      // Return empty candles instead of error to prevent UI breaking
       return new Response(JSON.stringify({ candles: [], nextCursor: null, symbol }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Aggregate into requested timeframe
-    let candles = aggregateOHLC(rows || [], minutesPerBucket);
-
-    // Apply price control bias if active
-    if (activeControl) {
-      console.log(`[PriceControl] Applying ${activeControl.direction} x${activeControl.strength} to ${candles.length} candles`);
-      candles = applyPriceControlToCandles(candles, activeControl.direction, activeControl.strength);
+    if (!response.ok) {
+      console.error(`External API error: ${response.status}`);
+      return new Response(JSON.stringify({ error: "Failed to fetch chart data", status: response.status }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const nextCursor = candles.length > 0 ? candles[0].time : null;
+    const apiData: CandlesApiResponse = await response.json();
+    console.log("API response code:", apiData.code);
 
+    // Extract candle data - handle different response formats
+    let candleList: CandleItem[] = [];
+    if (Array.isArray(apiData.data)) {
+      candleList = apiData.data;
+    } else if (apiData.data && typeof apiData.data === 'object') {
+      if ('data' in apiData.data && Array.isArray((apiData.data as { data?: CandleItem[] }).data)) {
+        candleList = (apiData.data as { data: CandleItem[] }).data;
+      } else if (apiData.data?.list && Array.isArray(apiData.data.list)) {
+        candleList = apiData.data.list;
+      }
+    }
+
+    console.log(`Received ${candleList.length} candle items`);
+    if (candleList.length > 0) {
+      console.log('Sample candle item:', JSON.stringify(candleList[0]));
+    }
+
+    // Convert to candle format - handle multiple field naming conventions
+    const candles = candleList.map((item) => {
+      const time = item.ts ?? item.time ?? item.t ?? 0;
+      const open = Number(item.open ?? item.o ?? 0);
+      const high = Number(item.high ?? item.h ?? 0);
+      const low = Number(item.low ?? item.l ?? 0);
+      const close = Number(item.close ?? item.c ?? 0);
+
+      // Handle both seconds and milliseconds timestamps
+      const timeMs = time > 1e12 ? time : time * 1000;
+
+      return {
+        time: new Date(timeMs).toISOString(),
+        open,
+        high,
+        low,
+        close,
+      };
+    }).filter(c => c.open > 0 || c.close > 0)
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    // Calculate next cursor for pagination (use earliest candle time)
+    const nextCursor = candles.length > 0 
+      ? candles[0].time
+      : null;
+
+    // Cache the result
     const responseData = { candles, nextCursor, symbol };
-
-    // Only cache if no active control
-    if (!activeControl) {
-      const cacheKey = getCacheKey(productId, timeframe, limit, cursor);
-      setCacheData(cacheKey, responseData);
-    }
+    setCacheData(cacheKey, responseData);
+    console.log(`Cached data for key: ${cacheKey}, TTL: ${cacheTTL}ms`);
 
     return new Response(JSON.stringify(responseData), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("ohlc function error", e);
+    const origin = req.headers.get("Origin");
+    const corsHeaders = getCorsHeaders(origin);
     return new Response(JSON.stringify({ error: "Unexpected error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

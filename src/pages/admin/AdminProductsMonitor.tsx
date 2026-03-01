@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { Layout } from '@/components/layout/Layout';
 import {
   BarChart3,
   TrendingUp,
@@ -11,11 +11,7 @@ import {
   Activity,
   Eye,
   Maximize2,
-  RefreshCw,
-  Play,
-  Radio,
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
 import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicatorsPanel';
@@ -23,227 +19,102 @@ import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
 import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
 
-import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
-import { TimeInterval, Candle, TechnicalIndicators } from '@/types/trading';
-import { PriceVolatilityControl } from '@/components/admin/PriceVolatilityControl';
-import { ReplayScrubber } from '@/components/admin/ReplayScrubber';
+import {
+  generateBase1MCandles,
+  aggregateCandles,
+  calculateSMA,
+  calculateRSI,
+  calculateMACD,
+} from '@/lib/chartUtils';
 
-interface DBProduct {
-  id: string;
-  name: string;
-  symbol: string | null;
-  price: number | null;
-  price_change: number | null;
-  high_24h: number | null;
-  low_24h: number | null;
-  volume: string | null;
-  image_url: string | null;
-}
-
-type Timeframe = '1M' | '5M' | '15M' | '30M' | '1H' | '1D';
-
-function formatPrice(price: number | null) {
-  if (price === null || price === undefined) return '$0.00';
-  if (price >= 1000) return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  if (price >= 1) return '$' + price.toFixed(2);
-  return '$' + price.toFixed(4);
-}
-
-// Aggregate raw 1m rows into OHLC based on timeframe
-function aggregateOHLC(
-  rows: { recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }[],
-  tf: Timeframe
-): OHLCData[] {
-  const minutesMap: Record<Timeframe, number> = { '1M': 1, '5M': 5, '15M': 15, '30M': 30, '1H': 60, '1D': 1440 };
-  const minutesPerBucket = minutesMap[tf];
-
-  if (minutesPerBucket === 1) {
-    return rows.map(r => ({ time: r.recorded_at, open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price }));
-  }
-
-  const buckets = new Map<number, { open: number; high: number; low: number; close: number; time: string }>();
-  for (const r of rows) {
-    const ts = new Date(r.recorded_at).getTime();
-    const bucketMs = minutesPerBucket * 60 * 1000;
-    const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
-    const existing = buckets.get(bucketKey);
-    if (!existing) {
-      buckets.set(bucketKey, { time: new Date(bucketKey).toISOString(), open: r.open_price, high: r.high_price, low: r.low_price, close: r.close_price });
-    } else {
-      existing.high = Math.max(existing.high, r.high_price);
-      existing.low = Math.min(existing.low, r.low_price);
-      existing.close = r.close_price;
-    }
-  }
-  return Array.from(buckets.values()).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-}
+import { TimeInterval, Candle, Product, TechnicalIndicators } from '@/types/trading';
+import { PRODUCTS } from '@/data/products';
 
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('1M');
-  const [products, setProducts] = useState<DBProduct[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isChartLoading, setIsChartLoading] = useState(false);
-  const [isLiveMode, setIsLiveMode] = useState(() => {
-    return localStorage.getItem('admin_monitor_mode') === 'live';
-  });
-
-  // Replay state
-  const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
-  const [displayIndex, setDisplayIndex] = useState(0);
-  const [isReplayPlaying, setIsReplayPlaying] = useState(true);
-  const [replaySpeed, setReplaySpeed] = useState(1);
-  const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const WINDOW_SIZE = 120;
+  const [candleData, setCandleData] = useState<Map<string, Candle[]>>(new Map());
 
   // Load products
   useEffect(() => {
-    const loadProducts = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, symbol, price, price_change, high_24h, low_24h, volume, image_url')
-        .eq('status', 'available')
-        .order('created_at', { ascending: false })
-        .limit(20);
+    const chartProducts = PRODUCTS;
+    setProducts(chartProducts);
+    if (chartProducts.length > 0) {
+      const saved = localStorage.getItem('admin_monitor_product');
+      setSelectedProductId(saved && chartProducts.find(p => p.id === saved) ? saved : chartProducts[0].id);
+    }
+    const newCandleData = new Map<string, Candle[]>();
+    chartProducts.forEach(product => {
+      newCandleData.set(product.id, generateBase1MCandles(product, 1440));
+    });
+    setCandleData(newCandleData);
+    setIsLoading(false);
 
-      if (!error && data) {
-        setProducts(data);
-        const saved = localStorage.getItem('admin_monitor_product');
-        if (saved && data.find(p => p.id === saved)) {
-          setSelectedProductId(saved);
-        } else if (data.length > 0) {
-          setSelectedProductId(data[0].id);
-        }
-      }
-      setIsLoading(false);
-    };
-    loadProducts();
     const savedTf = localStorage.getItem('admin_monitor_timeframe') as TimeInterval;
     if (savedTf) setTimeInterval(savedTf);
   }, []);
 
-  // Fetch ALL OHLC data for replay
-  const fetchAllOHLC = useCallback(async (productId: string, tf: TimeInterval) => {
-    setIsChartLoading(true);
-    const { data: rows } = await supabase
-      .from('price_history')
-      .select('open_price, high_price, low_price, close_price, recorded_at')
-      .eq('product_id', productId)
-      .order('recorded_at', { ascending: true })
-      .limit(1000);
-
-    if (rows && rows.length > 0) {
-      const aggregated = aggregateOHLC(rows, tf);
-      setAllCandles(aggregated);
-      setDisplayIndex(isLiveMode ? aggregated.length : Math.min(WINDOW_SIZE, aggregated.length));
-    } else {
-      setAllCandles([]);
-      setDisplayIndex(0);
-    }
-    setIsChartLoading(false);
-  }, [isLiveMode]);
-
+  // Real-time price updates (every 3 seconds)
   useEffect(() => {
-    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
-  }, [selectedProductId, timeInterval, fetchAllOHLC]);
-
-  // Realtime product price updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('products-monitor')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
-        setProducts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } as DBProduct : p));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  // Replay: advance index based on speed (only in replay mode & playing)
-  useEffect(() => {
-    if (replayRef.current) clearInterval(replayRef.current);
-    if (isLiveMode || allCandles.length === 0 || isChartLoading || !isReplayPlaying) return;
-
-    const interval = Math.max(100, 2000 / replaySpeed);
-    replayRef.current = setInterval(() => {
-      setDisplayIndex(prev => {
-        if (prev >= allCandles.length) {
-          setIsReplayPlaying(false);
-          return allCandles.length;
-        }
-        return prev + 1;
+    const interval = setInterval(() => {
+      setCandleData(prevData => {
+        const newData = new Map(prevData);
+        products.forEach(product => {
+          const candles = newData.get(product.id) || [];
+          if (candles.length > 0) {
+            const lastCandle = candles[candles.length - 1];
+            const newCandle = generateNextCandle(lastCandle, product);
+            newData.set(product.id, [...candles.slice(1), newCandle]);
+          }
+        });
+        return newData;
       });
-    }, interval);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [products]);
 
-    return () => { if (replayRef.current) clearInterval(replayRef.current); };
-  }, [allCandles, isChartLoading, isLiveMode, isReplayPlaying, replaySpeed]);
+  const generateNextCandle = (lastCandle: Candle, product: Product): Candle => {
+    const volatility = product.volatility;
+    let trendBias = 0;
+    if (product.trend === 'bullish') trendBias = 0.6;
+    else if (product.trend === 'bearish') trendBias = -0.6;
+    else if (product.trend === 'volatile') trendBias = (Math.random() - 0.5) * 2;
 
-  // Realtime price_history subscription for live mode
-  useEffect(() => {
-    if (!isLiveMode || !selectedProductId) return;
+    const direction = Math.random() < 0.5 + trendBias * 0.1 ? 1 : -1;
+    const change = lastCandle.close * volatility * direction * (0.5 + Math.random() * 0.5);
+    const open = lastCandle.close;
+    const close = open + change;
+    const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5);
+    const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5);
+    const volume = 1000000 * (0.8 + Math.random() * 0.4) / 1440;
 
-    const channel = supabase
-      .channel('price-history-live-' + selectedProductId)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'price_history',
-        filter: `product_id=eq.${selectedProductId}`,
-      }, (payload) => {
-        const r = payload.new as any;
-        const newCandle: OHLCData = {
-          time: r.recorded_at,
-          open: r.open_price,
-          high: r.high_price,
-          low: r.low_price,
-          close: r.close_price,
-        };
-        setAllCandles(prev => [...prev, newCandle]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [isLiveMode, selectedProductId]);
-
-  // Visible chart = sliding window (replay) or latest N candles (live)
-  const chartData = useMemo(() => {
-    if (allCandles.length === 0) return [];
-    if (isLiveMode) {
-      // Show latest WINDOW_SIZE candles
-      const start = Math.max(0, allCandles.length - WINDOW_SIZE);
-      return allCandles.slice(start);
-    }
-    const end = displayIndex;
-    const start = Math.max(0, end - WINDOW_SIZE);
-    return allCandles.slice(start, end);
-  }, [allCandles, displayIndex, isLiveMode]);
-
-  const latestPrice = useMemo(() => {
-    if (chartData.length === 0) return null;
-    return chartData[chartData.length - 1].close;
-  }, [chartData]);
+    return { time: lastCandle.time + 60, open, high, low, close, volume };
+  };
 
   const selectedProduct = useMemo(() => {
-    const product = products.find(p => p.id === selectedProductId) || null;
-    if (product && latestPrice !== null) {
-      return { ...product, price: latestPrice };
-    }
-    return product;
-  }, [products, selectedProductId, latestPrice]);
+    return products.find(p => p.id === selectedProductId) || null;
+  }, [products, selectedProductId]);
 
-  // Convert OHLCData to Candle[] for indicators & export
-  const displayCandles: Candle[] = useMemo(() => {
-    return chartData.map(c => ({
-      time: Math.floor(new Date(c.time).getTime() / 1000),
+  // Convert Candle[] to OHLCData[] for the chart component
+  const displayCandles = useMemo(() => {
+    if (!selectedProductId) return [] as Candle[];
+    const baseCandles = candleData.get(selectedProductId) || [];
+    if (timeInterval === '1M') return baseCandles;
+    return aggregateCandles(baseCandles, timeInterval);
+  }, [candleData, selectedProductId, timeInterval]);
+
+  const chartOHLCData: OHLCData[] = useMemo(() => {
+    return displayCandles.map(c => ({
+      time: new Date(c.time * 1000).toISOString(),
       open: c.open,
       high: c.high,
       low: c.low,
       close: c.close,
-      volume: 0,
     }));
-  }, [chartData]);
+  }, [displayCandles]);
 
   const technicalIndicators = useMemo((): TechnicalIndicators | null => {
     if (displayCandles.length < 50) return null;
@@ -256,6 +127,11 @@ export default function AdminProductsMonitor() {
     };
   }, [displayCandles]);
 
+  const currentPrice = useMemo(() => {
+    const candles = candleData.get(selectedProductId || '') || [];
+    return candles.length > 0 ? candles[candles.length - 1].close : 0;
+  }, [candleData, selectedProductId]);
+
   const handleProductSelect = useCallback((productId: string) => {
     setSelectedProductId(productId);
     localStorage.setItem('admin_monitor_product', productId);
@@ -266,44 +142,24 @@ export default function AdminProductsMonitor() {
     localStorage.setItem('admin_monitor_timeframe', interval);
   }, []);
 
-  const handleModeToggle = useCallback((live: boolean) => {
-    setIsLiveMode(live);
-    setIsReplayPlaying(true);
-    localStorage.setItem('admin_monitor_mode', live ? 'live' : 'replay');
-    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
-  }, [selectedProductId, timeInterval, fetchAllOHLC]);
-
-  const handleReplayPlayPause = useCallback(() => {
-    if (displayIndex >= allCandles.length) {
-      // Reset to start if at end
-      setDisplayIndex(Math.min(WINDOW_SIZE, allCandles.length));
-      setIsReplayPlaying(true);
-    } else {
-      setIsReplayPlaying(prev => !prev);
-    }
-  }, [displayIndex, allCandles.length]);
-
-  const handleReplayIndexChange = useCallback((index: number) => {
-    setDisplayIndex(index);
-    setIsReplayPlaying(false);
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
   }, []);
-
-  const handleRefresh = useCallback(() => {
-    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
-  }, [selectedProductId, timeInterval, fetchAllOHLC]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Activity className="w-8 h-8 animate-pulse text-primary" />
-          <p className="text-muted-foreground">Đang tải sản phẩm...</p>
+      <Layout>
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="flex flex-col items-center gap-3">
+            <Activity className="w-8 h-8 animate-pulse text-primary" />
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
-  return (
+  const content = (
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -316,26 +172,12 @@ export default function AdminProductsMonitor() {
             Real-time candlestick charts with technical analysis
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-muted/50">
-            <Play className={`w-3.5 h-3.5 ${!isLiveMode ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className={`text-xs font-medium ${!isLiveMode ? 'text-foreground' : 'text-muted-foreground'}`}>Replay</span>
-            <Switch
-              checked={isLiveMode}
-              onCheckedChange={handleModeToggle}
-              className="data-[state=checked]:bg-green-600"
-            />
-            <Radio className={`w-3.5 h-3.5 ${isLiveMode ? 'text-green-500' : 'text-muted-foreground'}`} />
-            <span className={`text-xs font-medium ${isLiveMode ? 'text-foreground' : 'text-muted-foreground'}`}>Live</span>
-          </div>
-          <Badge variant="outline" className={`gap-1.5 ${isLiveMode ? 'text-green-500 border-green-500/40' : 'text-muted-foreground border-border'}`}>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 text-green-500 border-green-500/40">
             <Activity className="w-3 h-3" />
-            {isLiveMode ? 'Live' : 'Replay'}
+            Live
           </Badge>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setIsFullscreen(f => !f)}>
+          <Button size="icon" variant="outline" className="h-8 w-8" onClick={toggleFullscreen}>
             {isFullscreen ? <Eye className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
@@ -347,14 +189,19 @@ export default function AdminProductsMonitor() {
         <div className="w-72 flex-shrink-0 border rounded-lg bg-card">
           <div className="p-3 border-b">
             <h2 className="text-sm font-semibold text-foreground">
-              Sản phẩm ({products.length})
+              Products ({products.length})
             </h2>
           </div>
           <ScrollArea className="h-[calc(100%-48px)]">
             <div className="p-2 space-y-1">
               {products.map((product) => {
+                const latestCandles = candleData.get(product.id);
+                const latestCandle = latestCandles?.[latestCandles.length - 1];
+                const price = latestCandle?.close || product.basePrice;
+                const change = latestCandle
+                  ? ((latestCandle.close - latestCandle.open) / latestCandle.open) * 100
+                  : 0;
                 const isSelected = selectedProductId === product.id;
-                const change = product.price_change || 0;
 
                 return (
                   <button
@@ -367,18 +214,14 @@ export default function AdminProductsMonitor() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
-                      ) : (
-                        <Activity className="w-4 h-4 text-primary flex-shrink-0" />
-                      )}
+                      <Activity className="w-4 h-4 text-primary flex-shrink-0" />
                       <div className="flex-1 ml-2 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{product.symbol || '-'}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{product.symbol}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-sm font-bold text-foreground font-mono">
-                          {formatPrice(product.price)}
+                          ${price.toFixed(2)}
                         </p>
                         <p className={`text-xs font-mono flex items-center gap-0.5 justify-end ${
                           change >= 0 ? 'text-green-500' : 'text-red-500'
@@ -403,18 +246,14 @@ export default function AdminProductsMonitor() {
               <div className="p-3 border-b">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3">
-                    {selectedProduct.image_url ? (
-                      <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-8 h-8 rounded object-cover" />
-                    ) : (
-                      <Activity className="w-5 h-5 text-primary" />
-                    )}
+                    <Activity className="w-5 h-5 text-primary" />
                     <div>
                       <h2 className="text-base font-bold text-foreground">{selectedProduct.name}</h2>
-                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol || '-'}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol}</p>
                     </div>
                     <div className="ml-4">
                       <p className="text-lg font-bold text-foreground font-mono tabular-nums">
-                        {formatPrice(selectedProduct.price)}
+                        ${currentPrice.toFixed(2)}
                       </p>
                       {technicalIndicators && (
                         <p className="text-xs text-muted-foreground font-mono">
@@ -437,61 +276,34 @@ export default function AdminProductsMonitor() {
 
               {/* Candlestick Chart */}
               <div className="flex-1 p-2 min-h-0">
-                {isChartLoading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : chartData.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                    Chưa có dữ liệu OHLC cho sản phẩm này
-                  </div>
-                ) : (
-                  <CandlestickChart
-                    data={chartData}
-                    height={isFullscreen ? 500 : 380}
-                    indicatorConfig={{
-                      ma: { enabled: true, period: 20, color: '#3b82f6' },
-                      ema: { enabled: true, period: 12, color: '#f59e0b' },
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Replay Scrubber */}
-              {!isLiveMode && allCandles.length > WINDOW_SIZE && (
-                <ReplayScrubber
-                  totalCandles={allCandles.length}
-                  displayIndex={displayIndex}
-                  windowSize={WINDOW_SIZE}
-                  isPlaying={isReplayPlaying}
-                  speed={replaySpeed}
-                  onIndexChange={handleReplayIndexChange}
-                  onPlayPause={handleReplayPlayPause}
-                  onSpeedChange={setReplaySpeed}
+                <CandlestickChart
+                  data={chartOHLCData}
+                  height={isFullscreen ? 500 : 380}
+                  indicatorConfig={{
+                    ma: { enabled: true, period: 20, color: '#3b82f6' },
+                    ema: { enabled: true, period: 12, color: '#f59e0b' },
+                  }}
                 />
-              )}
-
-              {/* Technical Indicators + Price Control */}
-              <div className="px-3 pb-3 flex gap-3 flex-wrap">
-                {technicalIndicators && (
-                  <div className="flex-1 min-w-[200px]">
-                    <TechnicalIndicatorsPanel indicators={technicalIndicators} />
-                  </div>
-                )}
-                <div className="w-64 flex-shrink-0">
-                  <PriceVolatilityControl productId={selectedProduct.id} productName={selectedProduct.name} />
-                </div>
               </div>
+
+              {/* Technical Indicators */}
+              {technicalIndicators && (
+                <div className="px-3 pb-3">
+                  <TechnicalIndicatorsPanel indicators={technicalIndicators} />
+                </div>
+              )}
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
               <BarChart3 className="w-12 h-12 opacity-30" />
-              <h3 className="text-lg font-medium">Chọn sản phẩm</h3>
-              <p className="text-sm">Chọn một sản phẩm từ sidebar để xem biểu đồ</p>
+              <h3 className="text-lg font-medium">Select a Product</h3>
+              <p className="text-sm">Choose a product from the sidebar to view its chart</p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
+
+  return isFullscreen ? content : <Layout>{content}</Layout>;
 }

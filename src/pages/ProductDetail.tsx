@@ -11,7 +11,7 @@ import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
 import { AnimatedPrice, AnimatedStat } from "@/components/product/AnimatedPrice";
 import { MiniPriceChart } from "@/components/product/MiniPriceChart";
 import { useAuth } from "@/hooks/useAuth";
-
+import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
@@ -43,6 +43,17 @@ const THROTTLE_MS: Record<string, number> = {
   "1d": 1000,  // 1s for 1d
 };
 
+// Generate embed slug from product name
+const generateProductSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+};
+
+const EMBED_BASE_URL = "https://preview-fdn8qxbfr8qo.devv.app/embed";
 
 interface Product {
   id: string;
@@ -214,6 +225,12 @@ const ProductDetail = () => {
     debounceMs: 300,
   });
 
+  // Auto-sync external data every 15 seconds (reduced since realtime handles price updates)
+  useAutoSync({ 
+    enabled: !!user && isValidUUID(id),
+    interval: 15000,
+    onSuccess: () => {}
+  });
 
   useEffect(() => {
     if (isValidUUID(id)) {
@@ -559,77 +576,18 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Chart - Local candlestick from price_history */}
+        {/* Chart Type and Timeframe Controls - Mobile optimized with larger touch targets */}
+        {/* Chart - Embedded from external chart service (controls managed by iframe) */}
         <Card className="bg-card border-border">
-          <CardContent className="p-2">
-            {priceHistoryLoading ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : candleData.length > 0 ? (
-              <>
-                {/* Timeframe selector */}
-                <div className="flex items-center gap-1 mb-2 overflow-x-auto pb-1">
-                  {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => (
-                    <Button
-                      key={tf}
-                      variant={timeframe === tf ? "default" : "ghost"}
-                      size="sm"
-                      className="h-7 px-2 text-xs min-w-[36px]"
-                      onClick={() => setTimeframe(tf)}
-                    >
-                      {tf.toUpperCase()}
-                    </Button>
-                  ))}
-                </div>
-                {chartType === 'candle' ? (
-                  <MemoizedCandlestickChart
-                    data={candleData}
-                    height={280}
-                    indicatorConfig={indicatorConfig}
-                  />
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={chartData}>
-                      <XAxis dataKey="time" hide />
-                      <YAxis domain={['auto', 'auto']} hide />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" dot={false} strokeWidth={1.5} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-                {/* Chart type toggle */}
-                <div className="flex items-center gap-2 mt-2">
-                  <Button
-                    variant={chartType === 'candle' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setChartType('candle')}
-                  >
-                    Candle
-                  </Button>
-                  <Button
-                    variant={chartType === 'line' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setChartType('line')}
-                  >
-                    Line
-                  </Button>
-                  <ChartIndicators config={indicatorConfig} onChange={setIndicatorConfig} />
-                  {candleData.length > 0 && (
-                    <CandleCountdown
-                      lastCandleTime={candleData[candleData.length - 1]?.time}
-                      timeframe={timeframe}
-                    />
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="h-[320px] flex items-center justify-center text-muted-foreground text-sm">
-                Chưa có dữ liệu biểu đồ
-              </div>
-            )}
+          <CardContent className="p-0 overflow-hidden">
+            <iframe
+              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
+              className="w-full border-0"
+              style={{ height: '320px' }}
+              title={`${product.name} Chart`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+              loading="lazy"
+            />
           </CardContent>
         </Card>
 
