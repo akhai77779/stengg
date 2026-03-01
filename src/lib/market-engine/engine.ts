@@ -78,23 +78,60 @@ export function generateNextTick(
   return { candle, updatedShock };
 }
 
-/** Apply a tick to engine state, returns new state */
+/** Apply a tick to engine state, returns new state.
+ * Uses real wall-clock time: updates the current candle within its minute,
+ * only creates a new candle when a new minute boundary is crossed. */
 export function applyTick(
   state: EngineState,
   scenario: ProductScenario,
   activeShock: ShockEvent | null
 ): { newState: EngineState; updatedShock: ShockEvent | null } {
-  const { candle, updatedShock } = generateNextTick(state, scenario, activeShock);
-  
-  const newCandles = [...state.candles.slice(-(MAX_CANDLES - 1)), candle];
-  
+  const nowSec = Math.floor(Date.now() / 1000);
+  const currentMinute = Math.floor(nowSec / 60) * 60;
+  const lastCandle = state.candles[state.candles.length - 1];
+
+  if (!lastCandle) {
+    // No candles yet — create the first one
+    const { candle, updatedShock: us } = generateNextTick(state, scenario, activeShock);
+    candle.time = currentMinute;
+    return {
+      newState: { ...state, candles: [candle], lastUpdatedAt: Date.now(), tickCount: state.tickCount + 1 },
+      updatedShock: us,
+    };
+  }
+
+  // Generate a new price point
+  const { candle: tickCandle, updatedShock } = generateNextTick(state, scenario, activeShock);
+
+  if (currentMinute === lastCandle.time) {
+    // Still within the same minute — update the existing candle in-place
+    const updated: Candle = {
+      ...lastCandle,
+      high: Math.max(lastCandle.high, tickCandle.close),
+      low: Math.min(lastCandle.low, tickCandle.close),
+      close: tickCandle.close,
+      volume: lastCandle.volume + tickCandle.volume,
+    };
+    const newCandles = [...state.candles.slice(0, -1), updated];
+    return {
+      newState: { ...state, candles: newCandles, lastUpdatedAt: Date.now(), tickCount: state.tickCount + 1 },
+      updatedShock,
+    };
+  }
+
+  // New minute boundary — create a new candle
+  const newCandle: Candle = {
+    time: currentMinute,
+    open: lastCandle.close,
+    high: Math.max(lastCandle.close, tickCandle.close),
+    low: Math.min(lastCandle.close, tickCandle.close),
+    close: tickCandle.close,
+    volume: tickCandle.volume,
+  };
+  const newCandles = [...state.candles.slice(-(MAX_CANDLES - 1)), newCandle];
+
   return {
-    newState: {
-      ...state,
-      candles: newCandles,
-      lastUpdatedAt: Date.now(),
-      tickCount: state.tickCount + 1,
-    },
+    newState: { ...state, candles: newCandles, lastUpdatedAt: Date.now(), tickCount: state.tickCount + 1 },
     updatedShock,
   };
 }
