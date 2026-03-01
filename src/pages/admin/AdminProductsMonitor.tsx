@@ -86,9 +86,17 @@ export default function AdminProductsMonitor() {
   const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
   const [displayIndex, setDisplayIndex] = useState(0);
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const displayIndexKey = `monitor_idx_${selectedProductId}_${timeInterval}`;
 
   const WINDOW_SIZE = 120;
   const REPLAY_SPEED = 2000; // 2s per candle
+
+  // Persist displayIndex to localStorage on change
+  useEffect(() => {
+    if (displayIndex > 0 && selectedProductId) {
+      localStorage.setItem(displayIndexKey, String(displayIndex));
+    }
+  }, [displayIndex, displayIndexKey, selectedProductId]);
 
   // Load products
   useEffect(() => {
@@ -130,7 +138,11 @@ export default function AdminProductsMonitor() {
     if (rows && rows.length > 0) {
       const aggregated = aggregateOHLC(rows, tf);
       setAllCandles(aggregated);
-      setDisplayIndex(Math.min(WINDOW_SIZE, aggregated.length));
+      // Restore saved position or start from WINDOW_SIZE
+      const key = `monitor_idx_${productId}_${tf}`;
+      const saved = parseInt(localStorage.getItem(key) || '0', 10);
+      const restored = saved > 0 && saved <= aggregated.length ? saved : Math.min(WINDOW_SIZE, aggregated.length);
+      setDisplayIndex(restored);
     } else {
       setAllCandles([]);
       setDisplayIndex(0);
