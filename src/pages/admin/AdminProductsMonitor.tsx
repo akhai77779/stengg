@@ -26,6 +26,7 @@ import { ShareButton } from '@/components/charts/ShareButton';
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, Candle, TechnicalIndicators } from '@/types/trading';
 import { PriceVolatilityControl } from '@/components/admin/PriceVolatilityControl';
+import { ReplayScrubber } from '@/components/admin/ReplayScrubber';
 
 interface DBProduct {
   id: string;
@@ -91,10 +92,11 @@ export default function AdminProductsMonitor() {
   // Replay state
   const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
   const [displayIndex, setDisplayIndex] = useState(0);
+  const [isReplayPlaying, setIsReplayPlaying] = useState(true);
+  const [replaySpeed, setReplaySpeed] = useState(1);
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const WINDOW_SIZE = 120;
-  const REPLAY_SPEED = 2000;
 
   // Load products
   useEffect(() => {
@@ -159,22 +161,24 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Replay: advance index every 2s, loop when done (only in replay mode)
+  // Replay: advance index based on speed (only in replay mode & playing)
   useEffect(() => {
     if (replayRef.current) clearInterval(replayRef.current);
-    if (isLiveMode || allCandles.length === 0 || isChartLoading) return;
+    if (isLiveMode || allCandles.length === 0 || isChartLoading || !isReplayPlaying) return;
 
+    const interval = Math.max(100, 2000 / replaySpeed);
     replayRef.current = setInterval(() => {
       setDisplayIndex(prev => {
         if (prev >= allCandles.length) {
-          return Math.min(WINDOW_SIZE, allCandles.length); // loop back
+          setIsReplayPlaying(false);
+          return allCandles.length;
         }
         return prev + 1;
       });
-    }, REPLAY_SPEED);
+    }, interval);
 
     return () => { if (replayRef.current) clearInterval(replayRef.current); };
-  }, [allCandles, isChartLoading, isLiveMode]);
+  }, [allCandles, isChartLoading, isLiveMode, isReplayPlaying, replaySpeed]);
 
   // Realtime price_history subscription for live mode
   useEffect(() => {
@@ -264,9 +268,25 @@ export default function AdminProductsMonitor() {
 
   const handleModeToggle = useCallback((live: boolean) => {
     setIsLiveMode(live);
+    setIsReplayPlaying(true);
     localStorage.setItem('admin_monitor_mode', live ? 'live' : 'replay');
     if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
   }, [selectedProductId, timeInterval, fetchAllOHLC]);
+
+  const handleReplayPlayPause = useCallback(() => {
+    if (displayIndex >= allCandles.length) {
+      // Reset to start if at end
+      setDisplayIndex(Math.min(WINDOW_SIZE, allCandles.length));
+      setIsReplayPlaying(true);
+    } else {
+      setIsReplayPlaying(prev => !prev);
+    }
+  }, [displayIndex, allCandles.length]);
+
+  const handleReplayIndexChange = useCallback((index: number) => {
+    setDisplayIndex(index);
+    setIsReplayPlaying(false);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
@@ -436,6 +456,20 @@ export default function AdminProductsMonitor() {
                   />
                 )}
               </div>
+
+              {/* Replay Scrubber */}
+              {!isLiveMode && allCandles.length > WINDOW_SIZE && (
+                <ReplayScrubber
+                  totalCandles={allCandles.length}
+                  displayIndex={displayIndex}
+                  windowSize={WINDOW_SIZE}
+                  isPlaying={isReplayPlaying}
+                  speed={replaySpeed}
+                  onIndexChange={handleReplayIndexChange}
+                  onPlayPause={handleReplayPlayPause}
+                  onSpeedChange={setReplaySpeed}
+                />
+              )}
 
               {/* Technical Indicators + Price Control */}
               <div className="px-3 pb-3 flex gap-3 flex-wrap">
