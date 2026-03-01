@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
     // Prevent "Invalid hook call" by forcing a single React instance.
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "@tanstack/react-query"],
+  },
+  optimizeDeps: {
+    include: ["@tanstack/react-query"],
   },
 }));
