@@ -12,7 +12,10 @@ import {
   Eye,
   Maximize2,
   RefreshCw,
+  Play,
+  Radio,
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
 import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicatorsPanel';
@@ -81,6 +84,9 @@ export default function AdminProductsMonitor() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const [isLiveMode, setIsLiveMode] = useState(() => {
+    return localStorage.getItem('admin_monitor_mode') === 'live';
+  });
 
   // Replay state
   const [allCandles, setAllCandles] = useState<OHLCData[]>([]);
@@ -88,7 +94,7 @@ export default function AdminProductsMonitor() {
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const WINDOW_SIZE = 120;
-  const REPLAY_SPEED = 2000; // 2s per candle
+  const REPLAY_SPEED = 2000;
 
   // Load products
   useEffect(() => {
@@ -130,13 +136,13 @@ export default function AdminProductsMonitor() {
     if (rows && rows.length > 0) {
       const aggregated = aggregateOHLC(rows, tf);
       setAllCandles(aggregated);
-      setDisplayIndex(Math.min(WINDOW_SIZE, aggregated.length));
+      setDisplayIndex(isLiveMode ? aggregated.length : Math.min(WINDOW_SIZE, aggregated.length));
     } else {
       setAllCandles([]);
       setDisplayIndex(0);
     }
     setIsChartLoading(false);
-  }, []);
+  }, [isLiveMode]);
 
   useEffect(() => {
     if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
@@ -153,10 +159,10 @@ export default function AdminProductsMonitor() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Replay: advance index every 2s, loop when done
+  // Replay: advance index every 2s, loop when done (only in replay mode)
   useEffect(() => {
     if (replayRef.current) clearInterval(replayRef.current);
-    if (allCandles.length === 0 || isChartLoading) return;
+    if (isLiveMode || allCandles.length === 0 || isChartLoading) return;
 
     replayRef.current = setInterval(() => {
       setDisplayIndex(prev => {
@@ -168,15 +174,47 @@ export default function AdminProductsMonitor() {
     }, REPLAY_SPEED);
 
     return () => { if (replayRef.current) clearInterval(replayRef.current); };
-  }, [allCandles, isChartLoading]);
+  }, [allCandles, isChartLoading, isLiveMode]);
 
-  // Visible chart = sliding window
+  // Realtime price_history subscription for live mode
+  useEffect(() => {
+    if (!isLiveMode || !selectedProductId) return;
+
+    const channel = supabase
+      .channel('price-history-live-' + selectedProductId)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'price_history',
+        filter: `product_id=eq.${selectedProductId}`,
+      }, (payload) => {
+        const r = payload.new as any;
+        const newCandle: OHLCData = {
+          time: r.recorded_at,
+          open: r.open_price,
+          high: r.high_price,
+          low: r.low_price,
+          close: r.close_price,
+        };
+        setAllCandles(prev => [...prev, newCandle]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isLiveMode, selectedProductId]);
+
+  // Visible chart = sliding window (replay) or latest N candles (live)
   const chartData = useMemo(() => {
     if (allCandles.length === 0) return [];
+    if (isLiveMode) {
+      // Show latest WINDOW_SIZE candles
+      const start = Math.max(0, allCandles.length - WINDOW_SIZE);
+      return allCandles.slice(start);
+    }
     const end = displayIndex;
     const start = Math.max(0, end - WINDOW_SIZE);
     return allCandles.slice(start, end);
-  }, [allCandles, displayIndex]);
+  }, [allCandles, displayIndex, isLiveMode]);
 
   const latestPrice = useMemo(() => {
     if (chartData.length === 0) return null;
@@ -224,6 +262,12 @@ export default function AdminProductsMonitor() {
     localStorage.setItem('admin_monitor_timeframe', interval);
   }, []);
 
+  const handleModeToggle = useCallback((live: boolean) => {
+    setIsLiveMode(live);
+    localStorage.setItem('admin_monitor_mode', live ? 'live' : 'replay');
+    if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
+  }, [selectedProductId, timeInterval, fetchAllOHLC]);
+
   const handleRefresh = useCallback(() => {
     if (selectedProductId) fetchAllOHLC(selectedProductId, timeInterval);
   }, [selectedProductId, timeInterval, fetchAllOHLC]);
@@ -252,10 +296,21 @@ export default function AdminProductsMonitor() {
             Real-time candlestick charts with technical analysis
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 text-green-500 border-green-500/40">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-muted/50">
+            <Play className={`w-3.5 h-3.5 ${!isLiveMode ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className={`text-xs font-medium ${!isLiveMode ? 'text-foreground' : 'text-muted-foreground'}`}>Replay</span>
+            <Switch
+              checked={isLiveMode}
+              onCheckedChange={handleModeToggle}
+              className="data-[state=checked]:bg-green-600"
+            />
+            <Radio className={`w-3.5 h-3.5 ${isLiveMode ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <span className={`text-xs font-medium ${isLiveMode ? 'text-foreground' : 'text-muted-foreground'}`}>Live</span>
+          </div>
+          <Badge variant="outline" className={`gap-1.5 ${isLiveMode ? 'text-green-500 border-green-500/40' : 'text-muted-foreground border-border'}`}>
             <Activity className="w-3 h-3" />
-            Live
+            {isLiveMode ? 'Live' : 'Replay'}
           </Badge>
           <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />
