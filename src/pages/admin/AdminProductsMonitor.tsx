@@ -20,6 +20,7 @@ import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
 import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
 import { ShockEventPanel } from '@/components/admin/ShockEventPanel';
+import { SnapshotManager } from '@/components/admin/SnapshotManager';
 
 import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
@@ -46,6 +47,11 @@ export default function AdminProductsMonitor() {
     updateScenario,
     shockEvents,
     resetEngine,
+    namedSnapshots,
+    saveNewSnapshot,
+    restoreSnapshot,
+    removeSnapshot,
+    renameSnapshot,
   } = useMarketEngine();
 
   // Auto-select first product
@@ -281,6 +287,13 @@ export default function AdminProductsMonitor() {
                   onAddShock={addShockEvent}
                   onCancelShock={cancelShockEvent}
                   onUpdateScenario={updateScenario}
+                />
+                <SnapshotManager
+                  namedSnapshots={namedSnapshots}
+                  onSave={saveNewSnapshot}
+                  onRestore={restoreSnapshot}
+                  onDelete={removeSnapshot}
+                  onRename={renameSnapshot}
                 />
                 {technicalIndicators && (
                   <TechnicalIndicatorsPanel indicators={technicalIndicators} />
