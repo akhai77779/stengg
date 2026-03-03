@@ -9,7 +9,12 @@ import {
 } from '@/lib/market-engine/types';
 import { createScenariosFromProducts } from '@/lib/market-engine/scenarios';
 import { createEngineState, applyTick } from '@/lib/market-engine/engine';
-import { saveSnapshot, loadSnapshot, clearSnapshot } from '@/lib/market-engine/persistence';
+import {
+  saveSnapshot, loadSnapshot, clearSnapshot,
+  listNamedSnapshots, saveNamedSnapshot, loadNamedSnapshot,
+  deleteNamedSnapshot, renameNamedSnapshot,
+} from '@/lib/market-engine/persistence';
+import { NamedSnapshot } from '@/lib/market-engine/types';
 import { createShockEvent, findActiveShock } from '@/lib/market-engine/shockEvents';
 
 /**
@@ -20,6 +25,7 @@ export function useMarketEngine() {
   const [engines, setEngines] = useState<Record<string, EngineState>>({});
   const [scenarios, setScenarios] = useState<Record<string, ProductScenario>>({});
   const [shockEvents, setShockEvents] = useState<ShockEvent[]>([]);
+  const [namedSnapshots, setNamedSnapshots] = useState<NamedSnapshot[]>([]);
   const [isReady, setIsReady] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -57,6 +63,7 @@ export function useMarketEngine() {
       setScenarios(defaultScenarios);
     }
 
+    setNamedSnapshots(listNamedSnapshots());
     setIsReady(true);
   }, []);
 
@@ -183,11 +190,56 @@ export function useMarketEngine() {
     setShockEvents([]);
   }, []);
 
+  // ─── Named Snapshot Actions ─────────────────────────────────
+
+  const saveNewSnapshot = useCallback((name: string) => {
+    const result = saveNamedSnapshot(name, engines, shockEvents, scenarios);
+    if (result) {
+      setNamedSnapshots(listNamedSnapshots());
+    }
+    return result;
+  }, [engines, shockEvents, scenarios]);
+
+  const restoreSnapshot = useCallback((id: string) => {
+    const snapshot = loadNamedSnapshot(id);
+    if (!snapshot) return false;
+
+    const products = PRODUCTS;
+    const defaultScenarios = createScenariosFromProducts(products);
+    const restoredEngines: Record<string, EngineState> = {};
+    const restoredScenarios: Record<string, ProductScenario> = {};
+
+    products.forEach(p => {
+      if (snapshot.engines[p.id] && snapshot.engines[p.id].candles.length > 0) {
+        restoredEngines[p.id] = snapshot.engines[p.id];
+      } else {
+        restoredEngines[p.id] = createEngineState(defaultScenarios[p.id]);
+      }
+      restoredScenarios[p.id] = snapshot.scenarios[p.id] || defaultScenarios[p.id];
+    });
+
+    setEngines(restoredEngines);
+    setScenarios(restoredScenarios);
+    setShockEvents(snapshot.shockEvents || []);
+    return true;
+  }, []);
+
+  const removeSnapshot = useCallback((id: string) => {
+    deleteNamedSnapshot(id);
+    setNamedSnapshots(listNamedSnapshots());
+  }, []);
+
+  const renameSnapshot = useCallback((id: string, newName: string) => {
+    renameNamedSnapshot(id, newName);
+    setNamedSnapshots(listNamedSnapshots());
+  }, []);
+
   return {
     products: PRODUCTS,
     engines,
     scenarios,
     shockEvents,
+    namedSnapshots,
     isReady,
     getCandles,
     getCurrentPrice,
@@ -196,5 +248,9 @@ export function useMarketEngine() {
     cancelShockEvent,
     updateScenario,
     resetEngine,
+    saveNewSnapshot,
+    restoreSnapshot,
+    removeSnapshot,
+    renameSnapshot,
   };
 }

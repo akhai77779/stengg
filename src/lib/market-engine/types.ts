@@ -43,6 +43,16 @@ export interface MarketEngineSnapshot {
   scenarios: Record<string, ProductScenario>;
 }
 
+/** Named snapshot for multi-snapshot manager */
+export interface NamedSnapshot {
+  id: string;
+  name: string;
+  createdAt: number;
+  snapshot: MarketEngineSnapshot;
+}
+
 export const TICK_INTERVAL_MS = 3000; // 3 seconds per tick
 export const MAX_CANDLES = 1440; // 24h of 1M candles
 export const SNAPSHOT_KEY = 'admin_market_engine_v2';
+export const NAMED_SNAPSHOTS_KEY = 'admin_market_engine_named_snapshots';
+export const MAX_NAMED_SNAPSHOTS = 10;
