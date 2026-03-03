@@ -155,7 +155,22 @@ export default function AdminProductsMonitor() {
             4-layer engine: Scenario → Engine → Persistence → Shock Events
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* DB Sync Toggle */}
+          <Button
+            size="sm"
+            variant={dbSyncEnabled ? "default" : "outline"}
+            className={`h-8 gap-1.5 ${dbSyncEnabled ? '' : 'text-muted-foreground'}`}
+            onClick={toggleDbSync}
+          >
+            <CloudUpload className={`h-3.5 w-3.5 ${isSyncing ? 'animate-pulse' : ''}`} />
+            {dbSyncEnabled ? `Sync ON (${syncMappings.length})` : 'DB Sync'}
+          </Button>
+          {dbSyncEnabled && syncStats.lastSyncAt && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              {syncStats.candlesSynced} candles · {syncStats.pricesUpdated} prices
+            </Badge>
+          )}
           {activeShockCount > 0 && (
             <Badge variant="outline" className="gap-1.5 text-amber-500 border-amber-500/40">
               <Zap className="w-3 h-3" />
