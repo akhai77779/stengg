@@ -36,6 +36,9 @@ export default function AdminProductsMonitor() {
     return (localStorage.getItem('admin_monitor_timeframe') as TimeInterval) || '1M';
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dbSyncEnabled, setDbSyncEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('admin_db_sync_enabled') === 'true';
+  });
 
   const {
     products,
