@@ -7,12 +7,20 @@ import { ProductScenario } from './types';
  * Scenarios can be customized per-product and persisted.
  */
 export function createDefaultScenario(product: Product): ProductScenario {
+  // Assign stronger trendStrength for clearer visual differentiation
+  let trendStrength = 0.5;
+  if (product.trend === 'bullish' && product.volatility <= 0.006) trendStrength = 0.8; // strong bullish
+  if (product.trend === 'bullish' && product.volatility > 0.015) trendStrength = 0.7; // bullish + volatile
+  if (product.trend === 'bearish') trendStrength = 0.75;
+  if (product.trend === 'volatile') trendStrength = 0.9;
+  if (product.trend === 'neutral') trendStrength = 0.1; // very flat sideway
+
   return {
     productId: product.id,
     trend: product.trend,
     volatility: product.volatility,
     basePrice: product.basePrice,
-    trendStrength: 0.5,
+    trendStrength,
   };
 }
 
