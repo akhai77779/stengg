@@ -1,24 +1,24 @@
 import { Product } from '@/types/trading';
 
 export const PRODUCTS: Product[] = [
-  // 🟢 Bullish mạnh - tăng rõ ràng, volatility vừa
-  { id: 'btc', name: 'Bitcoin', symbol: 'BTC/USDT', basePrice: 67500, volatility: 0.006, trend: 'bullish', category: 'Crypto' },
+  // 🟢 Bullish mạnh - sản phẩm chủ lực, tăng ổn định
+  { id: 'agil', name: 'AGIL 5G-in-a-Box', symbol: 'AGIL/USDT', basePrice: 601.94, volatility: 0.006, trend: 'bullish', category: 'Defense' },
   // 🟢 Bullish nhẹ - tăng chậm, ổn định
-  { id: 'eth', name: 'Ethereum', symbol: 'ETH/USDT', basePrice: 3450, volatility: 0.005, trend: 'bullish', category: 'Crypto' },
+  { id: '360sa', name: '360 Situational Awareness System', symbol: '360SA/USDT', basePrice: 40.75, volatility: 0.005, trend: 'bullish', category: 'Defense' },
   // ⚪ Sideway - đi ngang, volatility rất thấp
-  { id: 'bnb', name: 'BNB', symbol: 'BNB/USDT', basePrice: 580, volatility: 0.003, trend: 'neutral', category: 'Crypto' },
+  { id: 'mcs', name: 'Modular Computing Server', symbol: 'MCS/USDT', basePrice: 14.51, volatility: 0.003, trend: 'neutral', category: 'Technology' },
   // 🟢 Bullish mạnh + volatility cao - tăng nhưng rung lắc nhiều
-  { id: 'sol', name: 'Solana', symbol: 'SOL/USDT', basePrice: 145, volatility: 0.022, trend: 'bullish', category: 'Crypto' },
+  { id: 'sim', name: 'SATCOM Integrated Module', symbol: 'SIM/USDT', basePrice: 9.06, volatility: 0.022, trend: 'bullish', category: 'Communications' },
   // ⚪ Sideway chặt - gần như không đổi
-  { id: 'xrp', name: 'XRP', symbol: 'XRP/USDT', basePrice: 0.62, volatility: 0.002, trend: 'neutral', category: 'Crypto' },
+  { id: 'cotm', name: 'Communications-on-the-Move', symbol: 'COTM/USDT', basePrice: 9.12, volatility: 0.002, trend: 'neutral', category: 'Communications' },
   // 🔴 Bearish mạnh - giảm rõ ràng
-  { id: 'ada', name: 'Cardano', symbol: 'ADA/USDT', basePrice: 0.45, volatility: 0.012, trend: 'bearish', category: 'Crypto' },
+  { id: 'ibms', name: 'Integrated Battlefield Management System', symbol: 'IBMS/USDT', basePrice: 2.69, volatility: 0.012, trend: 'bearish', category: 'Defense' },
   // 🟡 Volatile cực cao - bật lên bật xuống liên tục
-  { id: 'doge', name: 'Dogecoin', symbol: 'DOGE/USDT', basePrice: 0.12, volatility: 0.035, trend: 'volatile', category: 'Crypto' },
+  { id: 'vics', name: 'Vehicular Integrated Communications System', symbol: 'VICS/USDT', basePrice: 0.01, volatility: 0.035, trend: 'volatile', category: 'Defense' },
   // 🔴 Bearish nhẹ + volatility vừa
-  { id: 'avax', name: 'Avalanche', symbol: 'AVAX/USDT', basePrice: 35, volatility: 0.015, trend: 'bearish', category: 'Crypto' },
-  // ⚪ Sideway ổn định - commodity ít biến động
-  { id: 'gold', name: 'Gold', symbol: 'XAU/USD', basePrice: 2350, volatility: 0.002, trend: 'neutral', category: 'Commodity' },
-  // 🟡 Volatile vừa - giá dầu dao động mạnh
-  { id: 'oil', name: 'Crude Oil', symbol: 'WTI/USD', basePrice: 78.5, volatility: 0.018, trend: 'volatile', category: 'Commodity' },
+  { id: 'hed', name: 'Hybrid Electric Drive', symbol: 'HED/USDT', basePrice: 6.49, volatility: 0.015, trend: 'bearish', category: 'Technology' },
+  // ⚪ Sideway ổn định
+  { id: 'c5isr', name: 'C5ISR', symbol: 'C5ISR/USDT', basePrice: 1.00, volatility: 0.002, trend: 'neutral', category: 'Defense' },
+  // 🟡 Volatile vừa - dao động mạnh
+  { id: 'wig', name: 'Wing-in-Ground', symbol: 'WIG/USDT', basePrice: 0.23, volatility: 0.018, trend: 'volatile', category: 'Aerospace' },
 ];
