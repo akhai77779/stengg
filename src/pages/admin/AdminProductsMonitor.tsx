@@ -59,6 +59,21 @@ export default function AdminProductsMonitor() {
     renameSnapshot,
   } = useMarketEngine();
 
+  // Sync engine data to DB for user-facing charts
+  const { mappings: syncMappings, isSyncing, stats: syncStats } = useEngineSyncToDb(
+    engines,
+    dbSyncEnabled,
+    5000
+  );
+
+  const toggleDbSync = useCallback(() => {
+    setDbSyncEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('admin_db_sync_enabled', String(next));
+      return next;
+    });
+  }, []);
+
   // Auto-select first product
   const effectiveProductId = useMemo(() => {
     if (selectedProductId && products.find(p => p.id === selectedProductId)) {
