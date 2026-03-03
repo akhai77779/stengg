@@ -12,6 +12,7 @@ import {
   Maximize2,
   Zap,
   RotateCcw,
+  CloudUpload,
 } from 'lucide-react';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
@@ -25,6 +26,7 @@ import { SnapshotManager } from '@/components/admin/SnapshotManager';
 import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { useMarketEngine } from '@/hooks/useMarketEngine';
+import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
 
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
