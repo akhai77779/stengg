@@ -12,6 +12,7 @@ import {
   Maximize2,
   Zap,
   RotateCcw,
+  CloudUpload,
 } from 'lucide-react';
 
 import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
@@ -25,6 +26,7 @@ import { SnapshotManager } from '@/components/admin/SnapshotManager';
 import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { useMarketEngine } from '@/hooks/useMarketEngine';
+import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
 
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
@@ -34,9 +36,13 @@ export default function AdminProductsMonitor() {
     return (localStorage.getItem('admin_monitor_timeframe') as TimeInterval) || '1M';
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dbSyncEnabled, setDbSyncEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('admin_db_sync_enabled') === 'true';
+  });
 
   const {
     products,
+    engines,
     isReady,
     getCandles,
     getCurrentPrice,
@@ -53,6 +59,21 @@ export default function AdminProductsMonitor() {
     removeSnapshot,
     renameSnapshot,
   } = useMarketEngine();
+
+  // Sync engine data to DB for user-facing charts
+  const { mappings: syncMappings, isSyncing, stats: syncStats } = useEngineSyncToDb(
+    engines,
+    dbSyncEnabled,
+    5000
+  );
+
+  const toggleDbSync = useCallback(() => {
+    setDbSyncEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('admin_db_sync_enabled', String(next));
+      return next;
+    });
+  }, []);
 
   // Auto-select first product
   const effectiveProductId = useMemo(() => {
@@ -134,7 +155,22 @@ export default function AdminProductsMonitor() {
             4-layer engine: Scenario → Engine → Persistence → Shock Events
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* DB Sync Toggle */}
+          <Button
+            size="sm"
+            variant={dbSyncEnabled ? "default" : "outline"}
+            className={`h-8 gap-1.5 ${dbSyncEnabled ? '' : 'text-muted-foreground'}`}
+            onClick={toggleDbSync}
+          >
+            <CloudUpload className={`h-3.5 w-3.5 ${isSyncing ? 'animate-pulse' : ''}`} />
+            {dbSyncEnabled ? `Sync ON (${syncMappings.length})` : 'DB Sync'}
+          </Button>
+          {dbSyncEnabled && syncStats.lastSyncAt && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              {syncStats.candlesSynced} candles · {syncStats.pricesUpdated} prices
+            </Badge>
+          )}
           {activeShockCount > 0 && (
             <Badge variant="outline" className="gap-1.5 text-amber-500 border-amber-500/40">
               <Zap className="w-3 h-3" />
