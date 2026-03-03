@@ -48,8 +48,8 @@ export function loadSnapshot(): MarketEngineSnapshot | null {
       return null;
     }
     
-    const ONE_HOUR = 60 * 60 * 1000;
-    if (Date.now() - snapshot.savedAt > ONE_HOUR) {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - snapshot.savedAt > THIRTY_DAYS) {
       localStorage.removeItem(SNAPSHOT_KEY);
       return null;
     }
