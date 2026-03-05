@@ -294,8 +294,99 @@ const ProductDetail = () => {
     setLoading(false);
   };
 
+  // Fetch candle data from local price_history table for LOCAL_CHART_PRODUCTS
+  const fetchLocalPriceHistory = async (tf: "1m" | "5m" | "15m" | "30m" | "1h" | "1d") => {
+    if (!id || !product) return;
+    setPriceHistoryLoading(true);
+    setNextCursor(null);
+
+    try {
+      // Determine how far back to look based on timeframe
+      const now = new Date();
+      const lookbackMs: Record<string, number> = {
+        "1m": 4 * 60 * 60 * 1000,      // 4 hours
+        "5m": 12 * 60 * 60 * 1000,     // 12 hours
+        "15m": 24 * 60 * 60 * 1000,    // 24 hours
+        "30m": 48 * 60 * 60 * 1000,    // 48 hours
+        "1h": 7 * 24 * 60 * 60 * 1000, // 7 days
+        "1d": 90 * 24 * 60 * 60 * 1000, // 90 days
+      };
+      const since = new Date(now.getTime() - (lookbackMs[tf] || lookbackMs["1h"])).toISOString();
+
+      const { data: rows, error } = await supabase
+        .from("price_history")
+        .select("recorded_at, open_price, high_price, low_price, close_price")
+        .eq("product_id", id)
+        .gte("recorded_at", since)
+        .order("recorded_at", { ascending: true })
+        .limit(500);
+
+      if (error) {
+        console.error("Local price_history fetch error", error);
+        setCandleData([]);
+        setChartData([]);
+        setPriceHistoryLoading(false);
+        return;
+      }
+
+      if (!rows || rows.length === 0) {
+        // Fallback: get latest 200 records regardless of time
+        const { data: fallbackRows } = await supabase
+          .from("price_history")
+          .select("recorded_at, open_price, high_price, low_price, close_price")
+          .eq("product_id", id)
+          .order("recorded_at", { ascending: false })
+          .limit(200);
+
+        if (fallbackRows && fallbackRows.length > 0) {
+          const sorted = fallbackRows.reverse();
+          processLocalCandles(sorted, tf);
+        } else {
+          setCandleData([]);
+          setChartData([]);
+          setHighPrice(null);
+          setLowPrice(null);
+        }
+        setPriceHistoryLoading(false);
+        return;
+      }
+
+      processLocalCandles(rows, tf);
+    } catch (err) {
+      console.error("fetchLocalPriceHistory error", err);
+      setCandleData([]);
+      setChartData([]);
+    }
+    setPriceHistoryLoading(false);
+  };
+
+  const processLocalCandles = (rows: Array<{ recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }>, tf: string) => {
+    const timeFmt = tf === "1m" || tf === "5m" || tf === "15m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
+
+    const candles: OHLCData[] = rows.map(r => ({
+      time: format(new Date(r.recorded_at), timeFmt),
+      open: r.open_price,
+      high: r.high_price,
+      low: r.low_price,
+      close: r.close_price,
+    }));
+
+    setCandleData(candles);
+    const high = Math.max(...candles.map(c => c.high));
+    const low = Math.min(...candles.map(c => c.low));
+    setHighPrice(high);
+    setLowPrice(low);
+    setChartData(candles.map(d => ({ time: d.time, price: Number(d.close) })));
+  };
+
   const fetchPriceHistory = async (tf: "1m" | "5m" | "15m" | "30m" | "1h" | "1d") => {
     if (!id) return;
+
+    // Use local DB for products not available in external API
+    if (product && LOCAL_CHART_PRODUCTS.has(product.name)) {
+      return fetchLocalPriceHistory(tf);
+    }
+
     setPriceHistoryLoading(true);
     setNextCursor(null);
 
@@ -320,7 +411,6 @@ const ProductDetail = () => {
     if (candles.length > 0) {
       setCandleData(candles);
 
-      // Calculate 24h high/low from candle data
       const high = Math.max(...candles.map(c => c.high));
       const low = Math.min(...candles.map(c => c.low));
       setHighPrice(high);
