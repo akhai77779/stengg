@@ -43,8 +43,17 @@ const THROTTLE_MS: Record<string, number> = {
   "1d": 1000,  // 1s for 1d
 };
 
+// Manual slug mapping for products where auto-generated slug doesn't match external chart tool
+const PRODUCT_SLUG_MAP: Record<string, string> = {
+  'C5ISR': 'c5-isr',
+  'Communications-on-the-Move': 'comm-move',
+};
+
 // Generate embed slug from product name
 const generateProductSlug = (name: string): string => {
+  // Check manual mapping first
+  if (PRODUCT_SLUG_MAP[name]) return PRODUCT_SLUG_MAP[name];
+  
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
