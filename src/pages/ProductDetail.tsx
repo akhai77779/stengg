@@ -45,13 +45,14 @@ const THROTTLE_MS: Record<string, number> = {
 
 // Manual slug mapping for products where auto-generated slug doesn't match external chart tool
 const PRODUCT_SLUG_MAP: Record<string, string> = {
-  'C5ISR': 'c5-isr',
   'Communications-on-the-Move': 'comm-move',
 };
 
+// Products NOT available in the external chart tool — use local CandlestickChart instead
+const LOCAL_CHART_PRODUCTS = new Set(['C5ISR']);
+
 // Generate embed slug from product name
 const generateProductSlug = (name: string): string => {
-  // Check manual mapping first
   if (PRODUCT_SLUG_MAP[name]) return PRODUCT_SLUG_MAP[name];
   
   return name
