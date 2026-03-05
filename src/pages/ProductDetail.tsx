@@ -43,8 +43,18 @@ const THROTTLE_MS: Record<string, number> = {
   "1d": 1000,  // 1s for 1d
 };
 
+// Manual slug mapping for products where auto-generated slug doesn't match external chart tool
+const PRODUCT_SLUG_MAP: Record<string, string> = {
+  'Communications-on-the-Move': 'comm-move',
+};
+
+// Products NOT available in the external chart tool — use local CandlestickChart instead
+const LOCAL_CHART_PRODUCTS = new Set(['C5ISR']);
+
 // Generate embed slug from product name
 const generateProductSlug = (name: string): string => {
+  if (PRODUCT_SLUG_MAP[name]) return PRODUCT_SLUG_MAP[name];
+  
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
@@ -580,14 +590,29 @@ const ProductDetail = () => {
         {/* Chart - Embedded from external chart service (controls managed by iframe) */}
         <Card className="bg-card border-border">
           <CardContent className="p-0 overflow-hidden">
-            <iframe
-              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
-              className="w-full border-0"
-              style={{ height: '320px' }}
-              title={`${product.name} Chart`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-              loading="lazy"
-            />
+            {LOCAL_CHART_PRODUCTS.has(product.name) ? (
+              <div style={{ height: '320px' }} className="w-full">
+                {candleData.length > 0 ? (
+                  <MemoizedCandlestickChart
+                    data={candleData}
+                    height={320}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                    {priceHistoryLoading ? 'Loading chart...' : 'No chart data available'}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <iframe
+                src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
+                className="w-full border-0"
+                style={{ height: '320px' }}
+                title={`${product.name} Chart`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                loading="lazy"
+              />
+            )}
           </CardContent>
         </Card>
 
