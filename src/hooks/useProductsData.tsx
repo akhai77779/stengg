@@ -47,12 +47,17 @@ export function useProductsData(userId: string | undefined) {
     const productIds = data.map(p => p.id);
     if (productIds.length === 0) return;
 
-    const { data: allCandles } = await supabase
-      .from('price_history')
-      .select('product_id, open_price, high_price, low_price, close_price, recorded_at')
-      .in('product_id', productIds)
-      .order('recorded_at', { ascending: false })
-      .limit(30 * productIds.length);
+    // Fetch 30 most recent candles per product in parallel to ensure even coverage
+    const candlePromises = productIds.map(pid =>
+      supabase
+        .from('price_history')
+        .select('product_id, open_price, high_price, low_price, close_price, recorded_at')
+        .eq('product_id', pid)
+        .order('recorded_at', { ascending: false })
+        .limit(30)
+    );
+    const candleResults = await Promise.all(candlePromises);
+    const allCandles = candleResults.flatMap(r => r.data || []);
 
     if (!allCandles) return;
 
