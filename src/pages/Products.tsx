@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, TrendingDown, Activity, Loader2, Plane, Cpu, Car, Ship, Shield, Building2, GraduationCap, Briefcase, Satellite, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MiniCandleChart } from '@/components/product/MiniCandleChart';
-import { AnimatedPrice } from '@/components/product/AnimatedPrice';
+import { AnimatedPrice, AnimatedStat } from '@/components/product/AnimatedPrice';
 
 const getCategoryIcon = (name: string, category: string | null) => {
   const iconClass = "w-10 h-10 p-2 rounded-lg";
@@ -281,7 +281,11 @@ export default function Products() {
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                             )}>
                               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              <span>{formatChange(product.price_change)}%</span>
+                              <AnimatedStat
+                                value={formatChange(product.price_change)}
+                                className="text-xs font-medium"
+                              />
+                              <span>%</span>
                             </div>
                           </div>
                         </div>
@@ -316,7 +320,11 @@ export default function Products() {
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                             )}>
                               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              <span>{formatChange(product.price_change)}%</span>
+                              <AnimatedStat
+                                value={formatChange(product.price_change)}
+                                className="text-xs font-medium"
+                              />
+                              <span>%</span>
                             </div>
                           </div>
                         </div>
