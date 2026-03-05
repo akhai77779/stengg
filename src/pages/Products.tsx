@@ -271,9 +271,11 @@ export default function Products() {
                           </div>
                           {/* Price row (mobile) */}
                           <div className="flex items-center gap-2 mt-1 md:hidden">
-                            <span className="text-base font-bold text-foreground tabular-nums">
-                              {formatPrice(product.price)}
-                            </span>
+                            <AnimatedPrice
+                              value={product.price}
+                              formatter={formatPrice}
+                              className="text-base font-bold tabular-nums"
+                            />
                             <div className={cn(
                               'flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium',
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
@@ -304,9 +306,11 @@ export default function Products() {
 
                           {/* Price + change (desktop only) */}
                           <div className="hidden md:flex flex-col items-end gap-1 min-w-[90px]">
-                            <span className="text-base md:text-lg font-bold text-foreground tabular-nums">
-                              {formatPrice(product.price)}
-                            </span>
+                            <AnimatedPrice
+                              value={product.price}
+                              formatter={formatPrice}
+                              className="text-base md:text-lg font-bold tabular-nums"
+                            />
                             <div className={cn(
                               'flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
