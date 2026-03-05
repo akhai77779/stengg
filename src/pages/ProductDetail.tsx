@@ -253,9 +253,15 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (isValidUUID(id)) {
-      fetchPriceHistory(timeframe);
+      // For local chart products, wait until product is loaded
+      if (product && LOCAL_CHART_PRODUCTS.has(product.name)) {
+        fetchPriceHistory(timeframe);
+      } else if (product && !LOCAL_CHART_PRODUCTS.has(product.name)) {
+        fetchPriceHistory(timeframe);
+      }
+      // If product is null, skip - will re-run when product loads
     }
-  }, [id, timeframe, isValidUUID]);
+  }, [id, timeframe, isValidUUID, product?.name]);
 
   // Fallback polling when realtime is not connected
   useEffect(() => {
