@@ -19,6 +19,7 @@ interface SyncStats {
 /**
  * Syncs market engine candle data to the database (price_history + products tables).
  * Maps local product IDs to DB UUIDs by matching symbols.
+ * Auto-seeds 60 historical candles on first enable so mini-charts display immediately.
  * Runs every `intervalMs` when enabled.
  */
 export function useEngineSyncToDb(
@@ -28,6 +29,7 @@ export function useEngineSyncToDb(
 ) {
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [stats, setStats] = useState<SyncStats>({
     lastSyncAt: null,
     candlesSynced: 0,
@@ -36,6 +38,7 @@ export function useEngineSyncToDb(
   });
   const mappingsRef = useRef<ProductMapping[]>([]);
   const isSyncingRef = useRef(false);
+  const hasSeededRef = useRef(false);
 
   // Fetch DB products and build mappings
   useEffect(() => {
@@ -76,6 +79,82 @@ export function useEngineSyncToDb(
 
     fetchMappings();
   }, [enabled]);
+
+  // Auto-seed: write 60 historical candles from engine on first sync enable
+  const seedHistoricalCandles = useCallback(async () => {
+    if (hasSeededRef.current || mappingsRef.current.length === 0) return;
+    hasSeededRef.current = true;
+    setIsSeeding(true);
+
+    const SEED_COUNT = 60;
+    let totalSeeded = 0;
+
+    try {
+      for (const mapping of mappingsRef.current) {
+        const engine = engines[mapping.localId];
+        if (!engine || engine.candles.length < 2) continue;
+
+        // Check if this product already has sufficient history
+        const { count, error: countError } = await supabase
+          .from('price_history')
+          .select('id', { count: 'exact', head: true })
+          .eq('product_id', mapping.dbId);
+
+        if (countError) {
+          console.error(`[EngineSync:Seed] Count error for ${mapping.symbol}:`, countError.message);
+          continue;
+        }
+
+        // Skip if already has >= 30 candles (enough for mini-chart)
+        if ((count ?? 0) >= 30) {
+          console.log(`[EngineSync:Seed] ${mapping.symbol} already has ${count} candles, skipping`);
+          continue;
+        }
+
+        // Take last SEED_COUNT candles from engine, create historical records
+        const candlesToSeed = engine.candles.slice(-SEED_COUNT);
+        const now = new Date();
+        const records = candlesToSeed.map((c, i) => {
+          // Create timestamps going back from now, 1 minute apart
+          const minutesAgo = candlesToSeed.length - 1 - i;
+          const recordedAt = new Date(now.getTime() - minutesAgo * 60000);
+          // Align to minute boundary
+          recordedAt.setSeconds(0, 0);
+          return {
+            product_id: mapping.dbId,
+            recorded_at: recordedAt.toISOString(),
+            open_price: c.open,
+            high_price: c.high,
+            low_price: c.low,
+            close_price: c.close,
+            volume: c.volume,
+          };
+        });
+
+        const { error: insertError } = await supabase
+          .from('price_history')
+          .upsert(records, {
+            onConflict: 'product_id,recorded_at',
+            ignoreDuplicates: true,
+          });
+
+        if (insertError) {
+          console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol}:`, insertError.message);
+        } else {
+          totalSeeded += records.length;
+          console.log(`[EngineSync:Seed] Seeded ${records.length} candles for ${mapping.symbol}`);
+        }
+      }
+
+      if (totalSeeded > 0) {
+        console.log(`[EngineSync:Seed] ✅ Auto-seeded ${totalSeeded} total candles`);
+      }
+    } catch (err) {
+      console.error('[EngineSync:Seed] Error:', err);
+    } finally {
+      setIsSeeding(false);
+    }
+  }, [engines]);
 
   // Sync function
   const syncToDb = useCallback(async () => {
@@ -202,16 +281,27 @@ export function useEngineSyncToDb(
     }
   }, [engines]);
 
-  // Periodic sync
+  // Auto-seed when mappings are ready, then start periodic sync
   useEffect(() => {
     if (!enabled || mappings.length === 0) return;
 
-    // Initial sync
-    syncToDb();
+    // Seed first, then sync
+    const initSync = async () => {
+      await seedHistoricalCandles();
+      syncToDb();
+    };
+    initSync();
 
     const interval = setInterval(syncToDb, intervalMs);
     return () => clearInterval(interval);
-  }, [enabled, mappings.length, intervalMs, syncToDb]);
+  }, [enabled, mappings.length, intervalMs, syncToDb, seedHistoricalCandles]);
 
-  return { mappings, isSyncing, stats, syncNow: syncToDb };
+  // Reset seed flag when sync is disabled
+  useEffect(() => {
+    if (!enabled) {
+      hasSeededRef.current = false;
+    }
+  }, [enabled]);
+
+  return { mappings, isSyncing, isSeeding, stats, syncNow: syncToDb };
 }
