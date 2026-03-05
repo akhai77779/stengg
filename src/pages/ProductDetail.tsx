@@ -370,7 +370,7 @@ const ProductDetail = () => {
     const timeFmt = tf === "1m" || tf === "5m" || tf === "15m" || tf === "30m" ? "HH:mm" : tf === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
     const candles: OHLCData[] = rows.map(r => ({
-      time: format(new Date(r.recorded_at), timeFmt),
+      time: new Date(r.recorded_at).toISOString(),
       open: r.open_price,
       high: r.high_price,
       low: r.low_price,
@@ -382,7 +382,7 @@ const ProductDetail = () => {
     const low = Math.min(...candles.map(c => c.low));
     setHighPrice(high);
     setLowPrice(low);
-    setChartData(candles.map(d => ({ time: d.time, price: Number(d.close) })));
+    setChartData(candles.map(d => ({ time: format(new Date(d.time), timeFmt), price: Number(d.close) })));
   };
 
   const fetchPriceHistory = async (tf: "1m" | "5m" | "15m" | "30m" | "1h" | "1d") => {
