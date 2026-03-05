@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_price_history_product_recorded ON public.price_history (product_id, recorded_at DESC);
