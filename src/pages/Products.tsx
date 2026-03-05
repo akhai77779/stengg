@@ -281,7 +281,11 @@ export default function Products() {
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                             )}>
                               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              <span>{formatChange(product.price_change)}%</span>
+                              <AnimatedStat
+                                value={formatChange(product.price_change)}
+                                className="text-xs font-medium"
+                              />
+                              <span>%</span>
                             </div>
                           </div>
                         </div>
@@ -316,7 +320,11 @@ export default function Products() {
                               isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                             )}>
                               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              <span>{formatChange(product.price_change)}%</span>
+                              <AnimatedStat
+                                value={formatChange(product.price_change)}
+                                className="text-xs font-medium"
+                              />
+                              <span>%</span>
                             </div>
                           </div>
                         </div>
