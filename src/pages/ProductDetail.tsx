@@ -595,7 +595,6 @@ const ProductDetail = () => {
                 {candleData.length > 0 ? (
                   <MemoizedCandlestickChart
                     data={candleData}
-                    indicators={indicatorConfig}
                     height={320}
                   />
                 ) : (
