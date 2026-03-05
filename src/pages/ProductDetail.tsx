@@ -590,14 +590,30 @@ const ProductDetail = () => {
         {/* Chart - Embedded from external chart service (controls managed by iframe) */}
         <Card className="bg-card border-border">
           <CardContent className="p-0 overflow-hidden">
-            <iframe
-              src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
-              className="w-full border-0"
-              style={{ height: '320px' }}
-              title={`${product.name} Chart`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-              loading="lazy"
-            />
+            {LOCAL_CHART_PRODUCTS.has(product.name) ? (
+              <div style={{ height: '320px' }} className="w-full">
+                {candleData.length > 0 ? (
+                  <MemoizedCandlestickChart
+                    data={candleData}
+                    indicators={indicatorConfig}
+                    height={320}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                    {priceHistoryLoading ? 'Loading chart...' : 'No chart data available'}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <iframe
+                src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
+                className="w-full border-0"
+                style={{ height: '320px' }}
+                title={`${product.name} Chart`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                loading="lazy"
+              />
+            )}
           </CardContent>
         </Card>
 
