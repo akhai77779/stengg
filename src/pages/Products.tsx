@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, TrendingDown, Activity, Loader2, Plane, Cpu, Car, Ship, Shield, Building2, GraduationCap, Briefcase, Satellite, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MiniCandleChart } from '@/components/product/MiniCandleChart';
-import { AnimatedPrice } from '@/components/product/AnimatedPrice';
+import { AnimatedPrice, AnimatedStat } from '@/components/product/AnimatedPrice';
 
 const getCategoryIcon = (name: string, category: string | null) => {
   const iconClass = "w-10 h-10 p-2 rounded-lg";
