@@ -48,8 +48,8 @@ const PRODUCT_SLUG_MAP: Record<string, string> = {
   'Communications-on-the-Move': 'comm-move',
 };
 
-// Products NOT available in the external chart tool — use local CandlestickChart instead
-const LOCAL_CHART_PRODUCTS = new Set(['C5ISR']);
+// All products now use local CandlestickChart (external embed service is no longer available)
+const USE_LOCAL_CHART = true;
 
 // Generate embed slug from product name
 const generateProductSlug = (name: string): string => {
@@ -253,13 +253,9 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (isValidUUID(id)) {
-      // For local chart products, wait until product is loaded
-      if (product && LOCAL_CHART_PRODUCTS.has(product.name)) {
-        fetchPriceHistory(timeframe);
-      } else if (product && !LOCAL_CHART_PRODUCTS.has(product.name)) {
+      if (product) {
         fetchPriceHistory(timeframe);
       }
-      // If product is null, skip - will re-run when product loads
     }
   }, [id, timeframe, isValidUUID, product?.name]);
 
@@ -388,8 +384,8 @@ const ProductDetail = () => {
   const fetchPriceHistory = async (tf: "1m" | "5m" | "15m" | "30m" | "1h" | "1d") => {
     if (!id) return;
 
-    // Use local DB for products not available in external API
-    if (product && LOCAL_CHART_PRODUCTS.has(product.name)) {
+    // All products use local DB
+    if (USE_LOCAL_CHART) {
       return fetchLocalPriceHistory(tf);
     }
 
@@ -686,29 +682,18 @@ const ProductDetail = () => {
         {/* Chart - Embedded from external chart service (controls managed by iframe) */}
         <Card className="bg-card border-border">
           <CardContent className="p-0 overflow-hidden">
-            {LOCAL_CHART_PRODUCTS.has(product.name) ? (
-              <div style={{ height: '320px' }} className="w-full">
-                {candleData.length > 0 ? (
-                  <MemoizedCandlestickChart
-                    data={candleData}
-                    height={320}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    {priceHistoryLoading ? 'Loading chart...' : 'No chart data available'}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <iframe
-                src={`${EMBED_BASE_URL}?product=${generateProductSlug(product.name)}&timeframe=1M&indicators=true`}
-                className="w-full border-0"
-                style={{ height: '320px' }}
-                title={`${product.name} Chart`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                loading="lazy"
-              />
-            )}
+            <div style={{ height: '320px' }} className="w-full">
+              {candleData.length > 0 ? (
+                <MemoizedCandlestickChart
+                  data={candleData}
+                  height={320}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  {priceHistoryLoading ? 'Loading chart...' : 'No chart data available'}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
