@@ -102,7 +102,7 @@ const ProductDetail = () => {
   const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "30m" | "1h" | "1d">(() => {
     const saved = localStorage.getItem('chart_timeframe');
     const validTimeframes = ["1m", "5m", "15m", "30m", "1h", "1d"];
-    return saved && validTimeframes.includes(saved) ? saved as "1m" | "5m" | "15m" | "30m" | "1h" | "1d" : "1m";
+    return saved && validTimeframes.includes(saved) ? saved as "1m" | "5m" | "15m" | "30m" | "1h" | "1d" : "30m";
   });
 
   // Persist timeframe to localStorage
