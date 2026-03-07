@@ -48,8 +48,8 @@ const PRODUCT_SLUG_MAP: Record<string, string> = {
   'Communications-on-the-Move': 'comm-move',
 };
 
-// Products NOT available in the external chart tool — use local CandlestickChart instead
-const LOCAL_CHART_PRODUCTS = new Set(['C5ISR']);
+// All products now use local CandlestickChart (external embed service is no longer available)
+const USE_LOCAL_CHART = true;
 
 // Generate embed slug from product name
 const generateProductSlug = (name: string): string => {
