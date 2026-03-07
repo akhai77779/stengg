@@ -364,56 +364,57 @@ const ProductDetail = () => {
   };
 
   // Aggregate raw price records into OHLC candles based on timeframe
+  // Uses same bucketing logic as admin's chartUtils.aggregateCandles for consistency
   const aggregateCandles = (rows: Array<{ recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }>, tf: string): OHLCData[] => {
     if (rows.length === 0) return [];
 
-    // Timeframe in milliseconds
-    const tfMs: Record<string, number> = {
-      "1m": 60 * 1000,
-      "5m": 5 * 60 * 1000,
-      "15m": 15 * 60 * 1000,
-      "30m": 30 * 60 * 1000,
-      "1h": 60 * 60 * 1000,
-      "1d": 24 * 60 * 60 * 1000,
+    // Timeframe in seconds (matching admin's chartUtils)
+    const secondsMap: Record<string, number> = {
+      "1m": 60,
+      "5m": 300,
+      "15m": 900,
+      "30m": 1800,
+      "1h": 3600,
+      "1d": 86400,
     };
-    const interval = tfMs[tf] || tfMs["30m"];
+    const bucketSize = secondsMap[tf] || 1800;
 
-    // Group records into timeframe buckets
-    const buckets = new Map<number, Array<{ recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }>>();
+    // Group records into timeframe buckets using unix seconds (same as admin)
+    const buckets = new Map<number, { open: number; high: number; low: number; close: number; firstTs: number }>();
 
     for (const row of rows) {
-      const ts = new Date(row.recorded_at).getTime();
-      const bucketKey = Math.floor(ts / interval) * interval;
-      if (!buckets.has(bucketKey)) {
-        buckets.set(bucketKey, []);
+      const tsSec = Math.floor(new Date(row.recorded_at).getTime() / 1000);
+      const key = Math.floor(tsSec / bucketSize) * bucketSize;
+      const existing = buckets.get(key);
+      
+      if (!existing) {
+        buckets.set(key, {
+          open: row.open_price,
+          high: row.high_price,
+          low: row.low_price,
+          close: row.close_price,
+          firstTs: tsSec,
+        });
+      } else {
+        existing.high = Math.max(existing.high, row.high_price);
+        existing.low = Math.min(existing.low, row.low_price);
+        // Update close to latest record in bucket
+        if (tsSec >= existing.firstTs) {
+          existing.close = row.close_price;
+        }
       }
-      buckets.get(bucketKey)!.push(row);
     }
 
-    // Convert buckets to OHLC candles
-    const candles: OHLCData[] = [];
-    const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
-
-    for (const key of sortedKeys) {
-      const records = buckets.get(key)!;
-      // Sort records within bucket by time
-      records.sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
-
-      const open = records[0].open_price;
-      const close = records[records.length - 1].close_price;
-      const high = Math.max(...records.map(r => r.high_price));
-      const low = Math.min(...records.map(r => r.low_price));
-
-      candles.push({
-        time: new Date(key).toISOString(),
-        open,
-        high,
-        low,
-        close,
-      });
-    }
-
-    return candles;
+    // Convert to OHLCData sorted by time
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([key, bucket]) => ({
+        time: new Date(key * 1000).toISOString(),
+        open: bucket.open,
+        high: bucket.high,
+        low: bucket.low,
+        close: bucket.close,
+      }));
   };
 
   const processLocalCandles = (rows: Array<{ recorded_at: string; open_price: number; high_price: number; low_price: number; close_price: number }>, tf: string) => {
