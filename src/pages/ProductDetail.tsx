@@ -321,7 +321,7 @@ const ProductDetail = () => {
         .eq("product_id", id)
         .gte("recorded_at", since)
         .order("recorded_at", { ascending: true })
-        .limit(500);
+        .limit(1000);
 
       if (error) {
         console.error("Local price_history fetch error", error);
