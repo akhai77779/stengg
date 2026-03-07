@@ -304,16 +304,17 @@ const ProductDetail = () => {
 
     try {
       // Determine how far back to look based on timeframe
+      // Aim for ~60-100 aggregated candles per view to match admin chart density
       const now = new Date();
       const lookbackMs: Record<string, number> = {
-        "1m": 4 * 60 * 60 * 1000,      // 4 hours
-        "5m": 12 * 60 * 60 * 1000,     // 12 hours
-        "15m": 24 * 60 * 60 * 1000,    // 24 hours
-        "30m": 48 * 60 * 60 * 1000,    // 48 hours
-        "1h": 7 * 24 * 60 * 60 * 1000, // 7 days
-        "1d": 90 * 24 * 60 * 60 * 1000, // 90 days
+        "1m": 2 * 60 * 60 * 1000,         // 2 hours → ~120 candles
+        "5m": 6 * 60 * 60 * 1000,         // 6 hours → ~72 candles
+        "15m": 18 * 60 * 60 * 1000,       // 18 hours → ~72 candles
+        "30m": 24 * 60 * 60 * 1000,       // 24 hours → ~48 candles
+        "1h": 3 * 24 * 60 * 60 * 1000,    // 3 days → ~72 candles
+        "1d": 60 * 24 * 60 * 60 * 1000,   // 60 days → ~60 candles
       };
-      const since = new Date(now.getTime() - (lookbackMs[tf] || lookbackMs["1h"])).toISOString();
+      const since = new Date(now.getTime() - (lookbackMs[tf] || lookbackMs["30m"])).toISOString();
 
       const { data: rows, error } = await supabase
         .from("price_history")
