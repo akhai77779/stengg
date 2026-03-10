@@ -304,7 +304,7 @@ export function useUserTradesRealtime({
   debounceMs = 300,
 }: UseUserRealtimeOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
 
   const debouncedUpdate = useCallback(() => {

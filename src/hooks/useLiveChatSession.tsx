@@ -22,7 +22,7 @@ export function useLiveChatSession({
 }: UseLiveChatSessionOptions) {
   const [isSessionActive, setIsSessionActive] = useState(true);
   const [lastActivityTime, setLastActivityTime] = useState<Date>(new Date());
-  const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstOpen = useRef<boolean>(true);
 
   // Record activity
