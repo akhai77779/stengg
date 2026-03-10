@@ -22,7 +22,7 @@ export function useAutoSync(options: UseAutoSyncOptions = {}) {
     onError 
   } = options;
   
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isSyncingRef = useRef(false);
 
   const sync = useCallback(async () => {

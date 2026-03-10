@@ -122,7 +122,7 @@ const ProductDetail = () => {
   const [activePositionCount, setActivePositionCount] = useState(0);
   const [candleFlash, setCandleFlash] = useState(false);
   const lastCandleTimeRef = useRef<string | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {
@@ -158,6 +158,78 @@ const ProductDetail = () => {
 
   // Handle candle updates from realtime - memoized to prevent hook re-subscription
   const handleCandleUpdate = useCallback((newCandle: OHLCData) => {
+    const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+
+    if (timeframe !== "1m") {
+      const secondsMap: Record<string, number> = {
+        "5m": 300,
+        "15m": 900,
+        "30m": 1800,
+        "1h": 3600,
+        "1d": 86400,
+      };
+      const bucketSize = secondsMap[timeframe] || 1800;
+      const tsSec = Math.floor(new Date(newCandle.time).getTime() / 1000);
+      const bucketTime = new Date(Math.floor(tsSec / bucketSize) * bucketSize * 1000).toISOString();
+
+      if (lastCandleTimeRef.current !== bucketTime) {
+        lastCandleTimeRef.current = bucketTime;
+        setCandleFlash(true);
+        setTimeout(() => setCandleFlash(false), 600);
+      }
+
+      setCandleData((prev) => {
+        const nextCandles = [...prev];
+        const existingIndex = nextCandles.findIndex((c) => c.time === bucketTime);
+
+        if (existingIndex >= 0) {
+          const existing = nextCandles[existingIndex];
+          const updated = {
+            ...existing,
+            high: Math.max(existing.high, newCandle.high),
+            low: Math.min(existing.low, newCandle.low),
+            close: newCandle.close,
+          };
+
+          if (
+            updated.high === existing.high &&
+            updated.low === existing.low &&
+            updated.close === existing.close
+          ) {
+            return prev;
+          }
+
+          nextCandles[existingIndex] = updated;
+        } else {
+          nextCandles.push({
+            time: bucketTime,
+            open: newCandle.open,
+            high: newCandle.high,
+            low: newCandle.low,
+            close: newCandle.close,
+          });
+        }
+
+        const merged = nextCandles.sort(
+          (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+        );
+
+        const high = Math.max(...merged.map((c) => c.high));
+        const low = Math.min(...merged.map((c) => c.low));
+        setHighPrice(high);
+        setLowPrice(low);
+        setChartData(
+          merged.map((d) => ({
+            time: format(new Date(d.time), timeFmt),
+            price: Number(d.close),
+          })),
+        );
+
+        return merged;
+      });
+      return;
+    }
+
     if (lastCandleTimeRef.current !== newCandle.time) {
       lastCandleTimeRef.current = newCandle.time;
       setCandleFlash(true);
@@ -189,7 +261,6 @@ const ProductDetail = () => {
       setHighPrice(high);
       setLowPrice(low);
 
-      const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
       setChartData(merged.map(d => {
         const dateObj = new Date(d.time);
         const timeStr = isNaN(dateObj.getTime()) ? d.time : format(dateObj, timeFmt);
@@ -493,36 +564,33 @@ const ProductDetail = () => {
   const refreshLatestCandles = async () => {
     if (!id || candleData.length === 0) return;
 
-    // Check cache TTL - skip if recently fetched
     const now = Date.now();
     const ttl = CACHE_TTL[timeframe] || 1000;
     if (now - lastRefreshRef.current < ttl) {
-      return; // Skip - too soon since last refresh
+      return;
     }
     lastRefreshRef.current = now;
 
     const cacheKey = `refresh_${id}_${timeframe}`;
     const cached = candleCache.get(cacheKey);
-    
-    // Return cached data if still valid
     if (cached && (now - cached.timestamp) < ttl) {
       return;
     }
 
-    const { data, error } = await supabase.functions.invoke("ohlc", {
-      body: {
-        productId: id,
-        timeframe,
-        limit: 2, // Only fetch last 2 candles (current + previous for accuracy)
-      },
-    });
+    const latestSince = new Date(now - 3 * 60 * 60 * 1000).toISOString();
+    const { data: rows, error } = await supabase
+      .from("price_history")
+      .select("recorded_at, open_price, high_price, low_price, close_price")
+      .eq("product_id", id)
+      .gte("recorded_at", latestSince)
+      .order("recorded_at", { ascending: true })
+      .limit(240);
 
-    if (error || !data?.candles) return;
+    if (error || !rows || rows.length === 0) return;
 
-    const latestCandles = (data.candles ?? []) as OHLCData[];
+    const latestCandles = aggregateCandles(rows, timeframe);
     if (latestCandles.length === 0) return;
 
-    // Update cache
     candleCache.set(cacheKey, {
       data: latestCandles,
       timestamp: now,
@@ -532,28 +600,24 @@ const ProductDetail = () => {
     const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
 
     setCandleData((prev) => {
-      // Only update/add the latest candles, don't rebuild the entire array
       const map = new Map<string, OHLCData>();
       for (const c of prev) map.set(c.time, c);
-      
+
       let hasChanges = false;
-      for (const c of latestCandles) {
+      for (const c of latestCandles.slice(-3)) {
         const existing = map.get(c.time);
-        // Only update if candle is new or has changed
-        if (!existing || existing.close !== c.close || existing.high !== c.high || existing.low !== c.low) {
+        if (!existing || existing.open !== c.open || existing.high !== c.high || existing.low !== c.low || existing.close !== c.close) {
           map.set(c.time, c);
           hasChanges = true;
         }
       }
-      
-      // If no changes, return previous state to prevent unnecessary re-renders
+
       if (!hasChanges) return prev;
-      
+
       const merged = Array.from(map.values()).sort(
         (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
       );
 
-      // Update line chart data
       setChartData(
         merged.map((d) => ({
           time: format(new Date(d.time), timeFmt),
@@ -561,9 +625,8 @@ const ProductDetail = () => {
         })),
       );
 
-      // Update high/low from merged data
-      const high = Math.max(...merged.map(c => c.high));
-      const low = Math.min(...merged.map(c => c.low));
+      const high = Math.max(...merged.map((c) => c.high));
+      const low = Math.min(...merged.map((c) => c.low));
       setHighPrice(high);
       setLowPrice(low);
 

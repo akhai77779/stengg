@@ -55,8 +55,8 @@ export function useLiveChatBot({
   enabled = true,
   isNewRoom = false,
 }: UseLiveChatBotOptions) {
-  const adminBusyTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const adminBusyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastProcessedMessageRef = useRef<string | null>(null);
   const welcomeSentRef = useRef<boolean>(false);
   const sessionClosedRef = useRef<boolean>(false);
