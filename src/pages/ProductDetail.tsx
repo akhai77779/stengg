@@ -158,6 +158,78 @@ const ProductDetail = () => {
 
   // Handle candle updates from realtime - memoized to prevent hook re-subscription
   const handleCandleUpdate = useCallback((newCandle: OHLCData) => {
+    const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
+
+    if (timeframe !== "1m") {
+      const secondsMap: Record<string, number> = {
+        "5m": 300,
+        "15m": 900,
+        "30m": 1800,
+        "1h": 3600,
+        "1d": 86400,
+      };
+      const bucketSize = secondsMap[timeframe] || 1800;
+      const tsSec = Math.floor(new Date(newCandle.time).getTime() / 1000);
+      const bucketTime = new Date(Math.floor(tsSec / bucketSize) * bucketSize * 1000).toISOString();
+
+      if (lastCandleTimeRef.current !== bucketTime) {
+        lastCandleTimeRef.current = bucketTime;
+        setCandleFlash(true);
+        setTimeout(() => setCandleFlash(false), 600);
+      }
+
+      setCandleData((prev) => {
+        const nextCandles = [...prev];
+        const existingIndex = nextCandles.findIndex((c) => c.time === bucketTime);
+
+        if (existingIndex >= 0) {
+          const existing = nextCandles[existingIndex];
+          const updated = {
+            ...existing,
+            high: Math.max(existing.high, newCandle.high),
+            low: Math.min(existing.low, newCandle.low),
+            close: newCandle.close,
+          };
+
+          if (
+            updated.high === existing.high &&
+            updated.low === existing.low &&
+            updated.close === existing.close
+          ) {
+            return prev;
+          }
+
+          nextCandles[existingIndex] = updated;
+        } else {
+          nextCandles.push({
+            time: bucketTime,
+            open: newCandle.open,
+            high: newCandle.high,
+            low: newCandle.low,
+            close: newCandle.close,
+          });
+        }
+
+        const merged = nextCandles.sort(
+          (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+        );
+
+        const high = Math.max(...merged.map((c) => c.high));
+        const low = Math.min(...merged.map((c) => c.low));
+        setHighPrice(high);
+        setLowPrice(low);
+        setChartData(
+          merged.map((d) => ({
+            time: format(new Date(d.time), timeFmt),
+            price: Number(d.close),
+          })),
+        );
+
+        return merged;
+      });
+      return;
+    }
+
     if (lastCandleTimeRef.current !== newCandle.time) {
       lastCandleTimeRef.current = newCandle.time;
       setCandleFlash(true);
@@ -189,7 +261,6 @@ const ProductDetail = () => {
       setHighPrice(high);
       setLowPrice(low);
 
-      const timeFmt = timeframe === "1m" || timeframe === "5m" || timeframe === "15m" || timeframe === "30m" ? "HH:mm" : timeframe === "1h" ? "MM/dd HH:mm" : "MM/dd";
       setChartData(merged.map(d => {
         const dateObj = new Date(d.time);
         const timeStr = isNaN(dateObj.getTime()) ? d.time : format(dateObj, timeFmt);
