@@ -122,7 +122,7 @@ const ProductDetail = () => {
   const [activePositionCount, setActivePositionCount] = useState(0);
   const [candleFlash, setCandleFlash] = useState(false);
   const lastCandleTimeRef = useRef<string | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {

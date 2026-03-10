@@ -69,11 +69,11 @@ export function useProductRealtime({
 }: UseProductRealtimeOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectAttempts = useRef(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectedAtRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(0);
   const pendingCandleRef = useRef<OHLCData | null>(null);
-  const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const throttleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [stats, setStats] = useState<RealtimeStats>({
