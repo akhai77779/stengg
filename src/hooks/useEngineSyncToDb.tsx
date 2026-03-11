@@ -144,6 +144,7 @@ export function useEngineSyncToDb(
 
       if (totalSeeded > 0) {
         console.log(`[EngineSync:Seed] ✅ Full reseed: ${totalSeeded} total candles`);
+        hasSeededRef.current = true;
       }
     } catch (err) {
       console.error('[EngineSync:Seed] Error:', err);
