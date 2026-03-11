@@ -80,13 +80,13 @@ export function useEngineSyncToDb(
     fetchMappings();
   }, [enabled]);
 
-  // Auto-seed: write 60 historical candles from engine on first sync enable
+  // Full reseed: delete old price_history and replace with ALL engine candles
+  // This ensures user charts always match admin engine data exactly
   const seedHistoricalCandles = useCallback(async () => {
     if (hasSeededRef.current || mappingsRef.current.length === 0) return;
     hasSeededRef.current = true;
     setIsSeeding(true);
 
-    const SEED_COUNT = 60;
     let totalSeeded = 0;
 
     try {
@@ -94,60 +94,57 @@ export function useEngineSyncToDb(
         const engine = engines[mapping.localId];
         if (!engine || engine.candles.length < 2) continue;
 
-        // Check if this product already has sufficient history
-        const { count, error: countError } = await supabase
+        // Delete all existing price_history for this product to avoid stale data
+        const { error: deleteError } = await supabase
           .from('price_history')
-          .select('id', { count: 'exact', head: true })
+          .delete()
           .eq('product_id', mapping.dbId);
 
-        if (countError) {
-          console.error(`[EngineSync:Seed] Count error for ${mapping.symbol}:`, countError.message);
+        if (deleteError) {
+          console.error(`[EngineSync:Seed] Delete error for ${mapping.symbol}:`, deleteError.message);
           continue;
         }
 
-        // Skip if already has >= 30 candles (enough for mini-chart)
-        if ((count ?? 0) >= 30) {
-          console.log(`[EngineSync:Seed] ${mapping.symbol} already has ${count} candles, skipping`);
-          continue;
-        }
-
-        // Take last SEED_COUNT candles from engine, create historical records
-        const candlesToSeed = engine.candles.slice(-SEED_COUNT);
+        // Seed ALL engine candles (up to last 1440 = 24h of 1M data)
+        const candlesToSeed = engine.candles.slice(-1440);
         const now = new Date();
-        const records = candlesToSeed.map((c, i) => {
-          // Create timestamps going back from now, 1 minute apart
-          const minutesAgo = candlesToSeed.length - 1 - i;
-          const recordedAt = new Date(now.getTime() - minutesAgo * 60000);
-          // Align to minute boundary
-          recordedAt.setSeconds(0, 0);
-          return {
-            product_id: mapping.dbId,
-            recorded_at: recordedAt.toISOString(),
-            open_price: c.open,
-            high_price: c.high,
-            low_price: c.low,
-            close_price: c.close,
-            volume: c.volume,
-          };
-        });
-
-        const { error: insertError } = await supabase
-          .from('price_history')
-          .upsert(records, {
-            onConflict: 'product_id,recorded_at',
-            ignoreDuplicates: true,
+        
+        // Insert in batches of 200 to avoid payload limits
+        const BATCH_SIZE = 200;
+        for (let batchStart = 0; batchStart < candlesToSeed.length; batchStart += BATCH_SIZE) {
+          const batch = candlesToSeed.slice(batchStart, batchStart + BATCH_SIZE);
+          const records = batch.map((c, i) => {
+            const absoluteIndex = batchStart + i;
+            const minutesAgo = candlesToSeed.length - 1 - absoluteIndex;
+            const recordedAt = new Date(now.getTime() - minutesAgo * 60000);
+            recordedAt.setSeconds(0, 0);
+            return {
+              product_id: mapping.dbId,
+              recorded_at: recordedAt.toISOString(),
+              open_price: c.open,
+              high_price: c.high,
+              low_price: c.low,
+              close_price: c.close,
+              volume: c.volume,
+            };
           });
 
-        if (insertError) {
-          console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol}:`, insertError.message);
-        } else {
-          totalSeeded += records.length;
-          console.log(`[EngineSync:Seed] Seeded ${records.length} candles for ${mapping.symbol}`);
+          const { error: insertError } = await supabase
+            .from('price_history')
+            .insert(records);
+
+          if (insertError) {
+            console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol} batch ${batchStart}:`, insertError.message);
+          } else {
+            totalSeeded += records.length;
+          }
         }
+
+        console.log(`[EngineSync:Seed] Seeded ${candlesToSeed.length} candles for ${mapping.symbol}`);
       }
 
       if (totalSeeded > 0) {
-        console.log(`[EngineSync:Seed] ✅ Auto-seeded ${totalSeeded} total candles`);
+        console.log(`[EngineSync:Seed] ✅ Full reseed: ${totalSeeded} total candles`);
       }
     } catch (err) {
       console.error('[EngineSync:Seed] Error:', err);
