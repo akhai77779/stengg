@@ -84,7 +84,6 @@ export function useEngineSyncToDb(
   // This ensures user charts always match admin engine data exactly
   const seedHistoricalCandles = useCallback(async () => {
     if (hasSeededRef.current || mappingsRef.current.length === 0) return;
-    hasSeededRef.current = true;
     setIsSeeding(true);
 
     let totalSeeded = 0;
