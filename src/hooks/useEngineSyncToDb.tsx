@@ -84,7 +84,6 @@ export function useEngineSyncToDb(
   // This ensures user charts always match admin engine data exactly
   const seedHistoricalCandles = useCallback(async () => {
     if (hasSeededRef.current || mappingsRef.current.length === 0) return;
-    hasSeededRef.current = true;
     setIsSeeding(true);
 
     let totalSeeded = 0;
@@ -131,7 +130,7 @@ export function useEngineSyncToDb(
 
           const { error: insertError } = await supabase
             .from('price_history')
-            .insert(records);
+            .upsert(records, { onConflict: 'product_id,recorded_at', ignoreDuplicates: true });
 
           if (insertError) {
             console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol} batch ${batchStart}:`, insertError.message);
@@ -145,6 +144,7 @@ export function useEngineSyncToDb(
 
       if (totalSeeded > 0) {
         console.log(`[EngineSync:Seed] ✅ Full reseed: ${totalSeeded} total candles`);
+        hasSeededRef.current = true;
       }
     } catch (err) {
       console.error('[EngineSync:Seed] Error:', err);
