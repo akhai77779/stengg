@@ -130,7 +130,7 @@ export function useEngineSyncToDb(
 
           const { error: insertError } = await supabase
             .from('price_history')
-            .insert(records);
+            .upsert(records, { onConflict: 'product_id,recorded_at', ignoreDuplicates: true });
 
           if (insertError) {
             console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol} batch ${batchStart}:`, insertError.message);
