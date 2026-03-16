@@ -807,7 +807,7 @@ const ProductDetail = () => {
                 >
                   {tf.toUpperCase()}
                 </Button>
-              ))}
+            </div>
             <div style={{ height: '320px' }} className="w-full">
               {candleData.length > 0 ? (
                 <MemoizedCandlestickChart
