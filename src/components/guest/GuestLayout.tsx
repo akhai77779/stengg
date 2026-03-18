@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GuestHeader } from './GuestHeader';
 import { GuestFooter } from './GuestFooter';
-import { MobileSupportButton } from '@/components/layout/MobileSupportButton';
+
 
 interface GuestLayoutProps {
   children: ReactNode;

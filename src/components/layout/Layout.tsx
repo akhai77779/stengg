@@ -3,12 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
-import { MobileSupportButton } from './MobileSupportButton';
 
 interface LayoutProps {
   children: ReactNode;
   hideFooter?: boolean;
-  hideChatWidget?: boolean;
 }
 
 export function Layout({ children, hideFooter = false, hideChatWidget = false }: LayoutProps) {
