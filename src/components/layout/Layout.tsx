@@ -9,7 +9,7 @@ interface LayoutProps {
   hideFooter?: boolean;
 }
 
-export function Layout({ children, hideFooter = false, hideChatWidget = false }: LayoutProps) {
+export function Layout({ children, hideFooter = false }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isProductDetail = location.pathname.startsWith('/products/') && location.pathname !== '/products';
