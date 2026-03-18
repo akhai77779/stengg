@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, Maximize2, Minimize2, X } from "lucide-react";
+import { MessageCircle, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -98,14 +98,6 @@ export function LiveChatAdminSheet({ trigger, showBadge = true }: LiveChatAdminS
                 ) : (
                   <Maximize2 className="h-4 w-4" />
                 )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setOpen(false)}
-                className="h-8 w-8 -mr-2"
-              >
-                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
