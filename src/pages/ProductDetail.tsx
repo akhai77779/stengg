@@ -752,6 +752,18 @@ const ProductDetail = () => {
             <span className={`text-xs font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? '+' : ''}{(product.price_change || 0).toFixed(2)}%
             </span>
+            {/* Data source badge */}
+            {hasEngineData ? (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                LIVE
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                DB
+              </span>
+            )}
             {/* Realtime connection status - using memoized component */}
             <RealtimeStatusIndicator
               status={realtimeStatus}
