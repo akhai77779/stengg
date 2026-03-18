@@ -125,24 +125,17 @@ const ProductDetail = () => {
   const lastCandleTimeRef = useRef<string | null>(null);
   const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Market Engine data bridge - matches DB product symbol to engine
-  const {
-    candleData: engineCandleData,
-    currentPrice: enginePrice,
-    hasEngineData,
-  } = useProductEngineData(product?.symbol, timeframe);
+  // Use DB candle data directly (synced by admin's DB Sync)
+  const effectiveCandleData = candleData;
 
-  // Use engine candle data when available, otherwise fallback to DB data
-  const effectiveCandleData = hasEngineData ? engineCandleData : candleData;
-
-  // Get latest price from effective candle data (synced with chart)
+  // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {
     if (effectiveCandleData.length === 0) return null;
     return effectiveCandleData[effectiveCandleData.length - 1].close;
   }, [effectiveCandleData]);
 
-  // Use engine price → candle price → product DB price (priority order)
-  const displayPrice = enginePrice ?? latestCandlePrice ?? product?.price ?? null;
+  // Use candle price → product DB price (priority order)
+  const displayPrice = latestCandlePrice ?? product?.price ?? null;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
