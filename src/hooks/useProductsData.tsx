@@ -34,7 +34,7 @@ export function useProductsData(userId: string | undefined) {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, image_url, price, volume, turnover, price_change, category')
+      .select('id, name, description, image_url, price, volume, turnover, price_change, category, symbol')
       .order('created_at', { ascending: false });
 
     if (error || !data) {
