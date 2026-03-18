@@ -191,7 +191,7 @@ export function MobileSupportButton() {
     (m) => (m.sender_type === "support" || m.sender_type === "bot") && !m.is_read
   ).length;
 
-  if (!supportEnabled) return null;
+  if (!supportEnabled || isAdminPage) return null;
 
   // Chat only opens via CSKH buttons (no floating FAB)
   if (!isOpen) return null;
