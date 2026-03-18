@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
+import { MarketEngineProvider } from "@/contexts/MarketEngineContext";
 import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -55,7 +56,8 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <AuthProvider>
+               <AuthProvider>
+                <MarketEngineProvider>
                 <MobileSupportButton />
                 <Routes>
                   <Route path="/" element={<Index />} />
@@ -96,6 +98,7 @@ const App = () => (
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </MarketEngineProvider>
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
