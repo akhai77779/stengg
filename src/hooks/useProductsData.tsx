@@ -19,6 +19,7 @@ export interface Product {
   turnover: string | null;
   price_change: number | null;
   category: string | null;
+  symbol: string | null;
 }
 
 export interface ProductWithChart extends Product {
@@ -33,7 +34,7 @@ export function useProductsData(userId: string | undefined) {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, image_url, price, volume, turnover, price_change, category')
+      .select('id, name, description, image_url, price, volume, turnover, price_change, category, symbol')
       .order('created_at', { ascending: false });
 
     if (error || !data) {
