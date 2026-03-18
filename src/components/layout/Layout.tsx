@@ -23,9 +23,6 @@ export function Layout({ children, hideFooter = false }: LayoutProps) {
       </main>
       {!hideFooter && <Footer />}
       <BottomNavigation />
-      
-      {/* Live Chat - Global support button */}
-      {!hideChatWidget && !isAdminPage && <MobileSupportButton />}
     </div>
   );
 }

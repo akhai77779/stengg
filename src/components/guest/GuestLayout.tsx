@@ -28,7 +28,6 @@ export function GuestLayout({ children, showHeaderOnMobile = true }: GuestLayout
         {children}
       </main>
       <GuestFooter />
-      <MobileSupportButton />
     </div>
   );
 }
