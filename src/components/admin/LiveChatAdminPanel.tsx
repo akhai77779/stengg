@@ -233,6 +233,17 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     [notificationEnabled, rooms]
   );
 
+  // Send Telegram notification for new customer messages
+  const sendTelegramNotification = useCallback(async (senderName: string, message: string, roomId: string) => {
+    try {
+      await supabase.functions.invoke("telegram-notify", {
+        body: { sender_name: senderName, message: message || "Tệp đính kèm", room_id: roomId },
+      });
+    } catch (err) {
+      console.warn("Telegram notification failed:", err);
+    }
+  }, []);
+
   // Global realtime subscription for ALL new customer messages (not just selected room)
   useEffect(() => {
     const channel = supabase
@@ -249,10 +260,14 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
           
           // Only notify for customer messages
           if (newMsg.sender_type === "customer") {
-            // If this room is NOT currently selected, show notification
+            // Always play sound for new customer messages
+            playNotificationSound();
+            
+            // Send Telegram notification
+            sendTelegramNotification(newMsg.sender_name, newMsg.message, newMsg.room_id);
+
+            // If this room is NOT currently selected, show desktop notification
             if (newMsg.room_id !== selectedRoom?.id) {
-              playNotificationSound();
-              
               // Find room info for notification
               const msgRoom = rooms.find(r => r.id === newMsg.room_id);
               if (msgRoom && notificationEnabled && Notification.permission === "granted") {
@@ -282,7 +297,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedRoom?.id, rooms, notificationEnabled, playNotificationSound]);
+  }, [selectedRoom?.id, rooms, notificationEnabled, playNotificationSound, sendTelegramNotification]);
 
   // Send message handler
   const handleSend = async (
