@@ -744,7 +744,7 @@ const ProductDetail = () => {
             <h1 className="text-base font-medium truncate max-w-[120px]">{product.symbol || product.name}</h1>
             {/* Mini sparkline chart */}
             <MiniPriceChart 
-              data={candleData.slice(-20).map(c => c.close)} 
+              data={effectiveCandleData.slice(-20).map(c => c.close)} 
               width={50} 
               height={20}
             />
