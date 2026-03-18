@@ -22,6 +22,8 @@ Deno.serve(async (req) => {
 
     const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID");
     if (!TELEGRAM_CHAT_ID) throw new Error("TELEGRAM_CHAT_ID is not configured");
+    
+    console.log(`[telegram-notify] Using chat_id: ${TELEGRAM_CHAT_ID}`);
 
     // Verify the caller is an admin
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
