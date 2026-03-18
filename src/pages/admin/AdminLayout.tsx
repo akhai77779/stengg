@@ -186,15 +186,17 @@ export default function AdminLayout() {
                 </Sheet>
               </div>
 
-              {/* Live Chat Admin Button */}
-              <LiveChatAdminSheet 
-                trigger={
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="hidden sm:inline">Live Chat</span>
-                  </Button>
-                }
-              />
+              {/* Live Chat Admin Button - hide on dedicated live-chat page */}
+              {!isLiveChatPage && (
+                <LiveChatAdminSheet 
+                  trigger={
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="hidden sm:inline">Live Chat</span>
+                    </Button>
+                  }
+                />
+              )}
 
               {/* Notification Bell - Now includes both user and admin notifications */}
               <NotificationBell />
