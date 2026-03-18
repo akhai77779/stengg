@@ -20,7 +20,7 @@ import { TransactionHistorySheet } from "@/components/product/TransactionHistory
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
 import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
-import { useProductEngineData } from "@/hooks/useProductEngineData";
+
 import { format } from "date-fns";
 
 // Simple in-memory cache for candle data
@@ -125,24 +125,17 @@ const ProductDetail = () => {
   const lastCandleTimeRef = useRef<string | null>(null);
   const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Market Engine data bridge - matches DB product symbol to engine
-  const {
-    candleData: engineCandleData,
-    currentPrice: enginePrice,
-    hasEngineData,
-  } = useProductEngineData(product?.symbol, timeframe);
+  // Use DB candle data directly (synced by admin's DB Sync)
+  const effectiveCandleData = candleData;
 
-  // Use engine candle data when available, otherwise fallback to DB data
-  const effectiveCandleData = hasEngineData ? engineCandleData : candleData;
-
-  // Get latest price from effective candle data (synced with chart)
+  // Get latest price from candle data (synced with chart)
   const latestCandlePrice = useMemo(() => {
     if (effectiveCandleData.length === 0) return null;
     return effectiveCandleData[effectiveCandleData.length - 1].close;
   }, [effectiveCandleData]);
 
-  // Use engine price → candle price → product DB price (priority order)
-  const displayPrice = enginePrice ?? latestCandlePrice ?? product?.price ?? null;
+  // Use candle price → product DB price (priority order)
+  const displayPrice = latestCandlePrice ?? product?.price ?? null;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
@@ -786,11 +779,11 @@ const ProductDetail = () => {
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.highest24h')}</span>
-              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.max(...effectiveCandleData.map(c => c.high))) : null))} className="font-medium" />
+              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : (effectiveCandleData.length > 0 ? formatPrice(Math.max(...effectiveCandleData.map(c => c.high))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.lowest24h')}</span>
-              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.min(...effectiveCandleData.map(c => c.low))) : null))} className="font-medium" />
+              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : (effectiveCandleData.length > 0 ? formatPrice(Math.min(...effectiveCandleData.map(c => c.low))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.volume24h')}</span>
