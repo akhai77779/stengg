@@ -19,6 +19,7 @@ export interface Product {
   turnover: string | null;
   price_change: number | null;
   category: string | null;
+  symbol: string | null;
 }
 
 export interface ProductWithChart extends Product {
