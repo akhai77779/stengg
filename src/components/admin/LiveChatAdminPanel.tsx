@@ -208,7 +208,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     } catch (error) {
       console.warn("Could not play notification sound:", error);
     }
-  }, [notificationEnabled]);
+  }, []);
 
   // Desktop notification
   const showNotification = useCallback(
