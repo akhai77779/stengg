@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,8 @@ import { useLiveChat } from "@/contexts/LiveChatContext";
  * Works on both mobile (FAB) and desktop (inline modal).
  */
 export function MobileSupportButton() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin');
   const { isOpen, openChat, closeChat } = useLiveChat();
   const [supportEnabled, setSupportEnabled] = useState(true);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -188,7 +191,7 @@ export function MobileSupportButton() {
     (m) => (m.sender_type === "support" || m.sender_type === "bot") && !m.is_read
   ).length;
 
-  if (!supportEnabled) return null;
+  if (!supportEnabled || isAdminPage) return null;
 
   // Chat only opens via CSKH buttons (no floating FAB)
   if (!isOpen) return null;
