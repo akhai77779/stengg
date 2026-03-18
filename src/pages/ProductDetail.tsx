@@ -779,7 +779,7 @@ const ProductDetail = () => {
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.highest24h')}</span>
-              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.max(...effectiveCandleData.map(c => c.high))) : null))} className="font-medium" />
+              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : (effectiveCandleData.length > 0 ? formatPrice(Math.max(...effectiveCandleData.map(c => c.high))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.lowest24h')}</span>
