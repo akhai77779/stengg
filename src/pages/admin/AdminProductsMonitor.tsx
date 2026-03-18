@@ -25,7 +25,7 @@ import { SnapshotManager } from '@/components/admin/SnapshotManager';
 
 import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
-import { useMarketEngine } from '@/hooks/useMarketEngine';
+import { useMarketEngine } from '@/contexts/MarketEngineContext';
 import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
 
 export default function AdminProductsMonitor() {
