@@ -184,9 +184,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     }
   }, [selectedRoom, messages.length, markAsRead, onClearUnread]);
 
-  // Notification sound
+  // Notification sound - always plays regardless of desktop notification setting
   const playNotificationSound = useCallback(() => {
-    if (!notificationEnabled) return;
     try {
       const audioContext = new (window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext })
