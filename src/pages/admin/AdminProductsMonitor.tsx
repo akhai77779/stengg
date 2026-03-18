@@ -66,7 +66,7 @@ export default function AdminProductsMonitor() {
   const { mappings: syncMappings, isSyncing, stats: syncStats } = useEngineSyncToDb(
     engines,
     dbSyncEnabled,
-    5000
+    3000
   );
 
   const toggleDbSync = useCallback(() => {
