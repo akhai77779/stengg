@@ -20,6 +20,7 @@ import { TransactionHistorySheet } from "@/components/product/TransactionHistory
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
 import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
+import { useProductEngineData } from "@/hooks/useProductEngineData";
 import { format } from "date-fns";
 
 // Simple in-memory cache for candle data
@@ -124,14 +125,24 @@ const ProductDetail = () => {
   const lastCandleTimeRef = useRef<string | null>(null);
   const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Get latest price from candle data (synced with chart)
-  const latestCandlePrice = useMemo(() => {
-    if (candleData.length === 0) return null;
-    return candleData[candleData.length - 1].close;
-  }, [candleData]);
+  // Market Engine data bridge - matches DB product symbol to engine
+  const {
+    candleData: engineCandleData,
+    currentPrice: enginePrice,
+    hasEngineData,
+  } = useProductEngineData(product?.symbol, timeframe);
 
-  // Use candle price if available, otherwise fallback to product price
-  const displayPrice = latestCandlePrice ?? product?.price ?? null;
+  // Use engine candle data when available, otherwise fallback to DB data
+  const effectiveCandleData = hasEngineData ? engineCandleData : candleData;
+
+  // Get latest price from effective candle data (synced with chart)
+  const latestCandlePrice = useMemo(() => {
+    if (effectiveCandleData.length === 0) return null;
+    return effectiveCandleData[effectiveCandleData.length - 1].close;
+  }, [effectiveCandleData]);
+
+  // Use engine price → candle price → product DB price (priority order)
+  const displayPrice = enginePrice ?? latestCandlePrice ?? product?.price ?? null;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
@@ -730,10 +741,10 @@ const ProductDetail = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate max-w-[120px]">{product.name}</h1>
+            <h1 className="text-base font-medium truncate max-w-[120px]">{product.symbol || product.name}</h1>
             {/* Mini sparkline chart */}
             <MiniPriceChart 
-              data={candleData.slice(-20).map(c => c.close)} 
+              data={effectiveCandleData.slice(-20).map(c => c.close)} 
               width={50} 
               height={20}
             />
@@ -775,11 +786,11 @@ const ProductDetail = () => {
           <div className="text-right text-xs space-y-0.5">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.highest24h')}</span>
-              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : null)} className="font-medium" />
+              <AnimatedStat value={product.high_24h ? formatPrice(product.high_24h) : (highPrice ? formatPrice(highPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.max(...effectiveCandleData.map(c => c.high))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.lowest24h')}</span>
-              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : null)} className="font-medium" />
+              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.min(...effectiveCandleData.map(c => c.low))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.volume24h')}</span>
@@ -810,9 +821,9 @@ const ProductDetail = () => {
               ))}
             </div>
             <div style={{ height: '320px' }} className="w-full">
-              {candleData.length > 0 ? (
+              {effectiveCandleData.length > 0 ? (
                 <MemoizedCandlestickChart
-                  data={candleData}
+                  data={effectiveCandleData}
                   height={320}
                 />
               ) : (
