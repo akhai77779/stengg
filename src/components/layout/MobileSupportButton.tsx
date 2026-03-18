@@ -17,6 +17,8 @@ import { useLiveChat } from "@/contexts/LiveChatContext";
  * Works on both mobile (FAB) and desktop (inline modal).
  */
 export function MobileSupportButton() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin');
   const { isOpen, openChat, closeChat } = useLiveChat();
   const [supportEnabled, setSupportEnabled] = useState(true);
   const [roomId, setRoomId] = useState<string | null>(null);
