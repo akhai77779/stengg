@@ -4,7 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useProductsData } from '@/hooks/useProductsData';
-import { useMarketEngine } from '@/hooks/useMarketEngine';
+import { useMarketEngine } from '@/contexts/MarketEngineContext';
 import { ProductList } from '@/components/product/ProductList';
 import { Loader2 } from 'lucide-react';
 import type { ProductWithChart } from '@/hooks/useProductsData';

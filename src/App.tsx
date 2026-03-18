@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
+import { MarketEngineProvider } from "@/contexts/MarketEngineContext";
 import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
