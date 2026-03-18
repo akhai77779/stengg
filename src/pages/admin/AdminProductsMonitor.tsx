@@ -37,7 +37,9 @@ export default function AdminProductsMonitor() {
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dbSyncEnabled, setDbSyncEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('admin_db_sync_enabled') === 'true';
+    const stored = localStorage.getItem('admin_db_sync_enabled');
+    // Default to true if never explicitly set
+    return stored === null ? true : stored === 'true';
   });
 
   const {
