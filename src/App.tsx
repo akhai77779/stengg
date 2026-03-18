@@ -57,7 +57,6 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
                <AuthProvider>
-                <MarketEngineProvider>
                 <MobileSupportButton />
                 <Routes>
                   <Route path="/" element={<Index />} />
@@ -73,7 +72,7 @@ const App = () => (
                   <Route path="/security" element={<SecuritySettings />} />
                   <Route path="/identity-verification" element={<IdentityVerification />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="/admin" element={<MarketEngineProvider><AdminLayout /></MarketEngineProvider>}>
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<AdminOverview />} />
                     <Route path="banners" element={<AdminBanners />} />
@@ -98,7 +97,6 @@ const App = () => (
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                </MarketEngineProvider>
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
