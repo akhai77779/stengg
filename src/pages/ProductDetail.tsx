@@ -821,9 +821,9 @@ const ProductDetail = () => {
               ))}
             </div>
             <div style={{ height: '320px' }} className="w-full">
-              {candleData.length > 0 ? (
+              {effectiveCandleData.length > 0 ? (
                 <MemoizedCandlestickChart
-                  data={candleData}
+                  data={effectiveCandleData}
                   height={320}
                 />
               ) : (
