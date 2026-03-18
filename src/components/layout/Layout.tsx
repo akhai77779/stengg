@@ -3,15 +3,13 @@ import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { BottomNavigation } from './BottomNavigation';
-import { MobileSupportButton } from './MobileSupportButton';
 
 interface LayoutProps {
   children: ReactNode;
   hideFooter?: boolean;
-  hideChatWidget?: boolean;
 }
 
-export function Layout({ children, hideFooter = false, hideChatWidget = false }: LayoutProps) {
+export function Layout({ children, hideFooter = false }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isProductDetail = location.pathname.startsWith('/products/') && location.pathname !== '/products';
@@ -25,9 +23,6 @@ export function Layout({ children, hideFooter = false, hideChatWidget = false }:
       </main>
       {!hideFooter && <Footer />}
       <BottomNavigation />
-      
-      {/* Live Chat - Global support button */}
-      {!hideChatWidget && !isAdminPage && <MobileSupportButton />}
     </div>
   );
 }
