@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useMarketEngine } from '@/contexts/MarketEngineContext';
+import { useMarketEngine } from '@/hooks/useMarketEngine';
 import { aggregateCandles } from '@/lib/chartUtils';
 import { OHLCData } from '@/components/charts/CandlestickChart';
 

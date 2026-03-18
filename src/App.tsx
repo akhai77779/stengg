@@ -7,7 +7,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
-import { MarketEngineProvider } from "@/contexts/MarketEngineContext";
 import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -56,7 +55,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-               <AuthProvider>
+              <AuthProvider>
                 <MobileSupportButton />
                 <Routes>
                   <Route path="/" element={<Index />} />
@@ -72,7 +71,7 @@ const App = () => (
                   <Route path="/security" element={<SecuritySettings />} />
                   <Route path="/identity-verification" element={<IdentityVerification />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<MarketEngineProvider><AdminLayout /></MarketEngineProvider>}>
+                  <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<AdminOverview />} />
                     <Route path="banners" element={<AdminBanners />} />

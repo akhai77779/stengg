@@ -106,6 +106,11 @@ export function HeroSlider() {
                       {banner.subtitle}
                     </p>
                   )}
+                  {banner.link_url && (
+                    <Button className="bg-gradient-primary hover:opacity-90 glow">
+                      Tìm hiểu thêm
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
