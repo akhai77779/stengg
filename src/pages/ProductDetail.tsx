@@ -783,7 +783,7 @@ const ProductDetail = () => {
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.lowest24h')}</span>
-              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : (hasEngineData && effectiveCandleData.length > 0 ? formatPrice(Math.min(...effectiveCandleData.map(c => c.low))) : null))} className="font-medium" />
+              <AnimatedStat value={product.low_24h ? formatPrice(product.low_24h) : (lowPrice ? formatPrice(lowPrice) : (effectiveCandleData.length > 0 ? formatPrice(Math.min(...effectiveCandleData.map(c => c.low))) : null))} className="font-medium" />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">{t('product.volume24h')}</span>
