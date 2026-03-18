@@ -20,7 +20,7 @@ import { TransactionHistorySheet } from "@/components/product/TransactionHistory
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
 import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
-import { useProductEngineData } from "@/hooks/useProductEngineData";
+
 import { format } from "date-fns";
 
 // Simple in-memory cache for candle data
