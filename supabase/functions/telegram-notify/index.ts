@@ -22,42 +22,70 @@ Deno.serve(async (req) => {
 
     const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID");
     if (!TELEGRAM_CHAT_ID) throw new Error("TELEGRAM_CHAT_ID is not configured");
-    
-    console.log(`[telegram-notify] Using chat_id: ${TELEGRAM_CHAT_ID}`);
 
-    // Verify the caller is an admin
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const body = await req.json();
+    const { type } = body;
 
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
-        const { data: hasRole } = await supabase.rpc("has_role", {
-          _user_id: user.id,
-          _role: "admin",
+    let text: string;
+
+    if (type === "notification") {
+      // System notification from DB trigger - no auth required
+      const { title, message, notification_type, user_email } = body;
+      if (!title || !message) {
+        return new Response(JSON.stringify({ error: "Missing title or message" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-        if (!hasRole) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+
+      const typeEmoji: Record<string, string> = {
+        success: "✅",
+        error: "❌",
+        info: "ℹ️",
+        warning: "⚠️",
+      };
+      const emoji = typeEmoji[notification_type] || "🔔";
+
+      text = `${emoji} <b>${title}</b>\n\n💬 ${message}`;
+      if (user_email) {
+        text += `\n👤 <b>User:</b> ${user_email}`;
+      }
+    } else {
+      // Live chat message - verify admin
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (user) {
+          const { data: hasRole } = await supabase.rpc("has_role", {
+            _user_id: user.id,
+            _role: "admin",
           });
+          if (!hasRole) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), {
+              status: 403,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
+
+      const { sender_name, message, room_id } = body;
+      if (!sender_name || !message) {
+        return new Response(JSON.stringify({ error: "Missing sender_name or message" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      text = `💬 <b>Tin nhắn mới từ Live Chat</b>\n\n👤 <b>Khách hàng:</b> ${sender_name}\n💬 <b>Nội dung:</b> ${message}\n🆔 <b>Phòng:</b> ${room_id || "N/A"}`;
     }
 
-    const { sender_name, message, room_id } = await req.json();
-
-    if (!sender_name || !message) {
-      return new Response(JSON.stringify({ error: "Missing sender_name or message" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const text = `💬 <b>Tin nhắn mới từ Live Chat</b>\n\n👤 <b>Khách hàng:</b> ${sender_name}\n💬 <b>Nội dung:</b> ${message}\n🆔 <b>Phòng:</b> ${room_id || "N/A"}`;
+    console.log(`[telegram-notify] Sending to ${TELEGRAM_CHAT_ID}, type: ${type || "chat"}`);
 
     const response = await fetch(`${GATEWAY_URL}/sendMessage`, {
       method: "POST",
