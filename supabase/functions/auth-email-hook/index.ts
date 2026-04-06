@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Xác nhận email - ST Engineering',
-  invite: 'Lời mời tham gia ST Engineering',
-  magiclink: 'Link đăng nhập - ST Engineering',
-  recovery: 'Đặt lại mật khẩu - ST Engineering',
-  email_change: 'Xác nhận thay đổi email - ST Engineering',
-  reauthentication: 'Mã xác thực - ST Engineering',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -54,7 +54,6 @@ const SAMPLE_DATA: Record<string, object> = {
     siteUrl: SAMPLE_PROJECT_URL,
     recipient: SAMPLE_EMAIL,
     confirmationUrl: SAMPLE_PROJECT_URL,
-    token: '123456',
   },
   magiclink: {
     siteName: SITE_NAME,
