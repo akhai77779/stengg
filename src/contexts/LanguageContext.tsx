@@ -109,7 +109,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': 'Xây dựng hệ sinh thái đô thị thông minh nâng cao chất lượng cuộc sống thông qua tích hợp công nghệ sáng tạo.',
     'auth.learnMore': 'Tìm hiểu thêm',
     'auth.enterName': 'Nguyễn Văn A',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': 'Sản phẩm',
@@ -572,7 +572,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': 'Building a smart urban ecosystem that enhances quality of life through innovative technology integration.',
     'auth.learnMore': 'Learn more',
     'auth.enterName': 'John Doe',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': 'Products',
@@ -1037,7 +1037,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': '通过创新技术集成构建智慧城市生态系统，提升生活品质。',
     'auth.learnMore': '了解更多',
     'auth.enterName': '张三',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': '产品',
@@ -1305,7 +1305,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': 'สร้างระบบนิเวศเมืองอัจฉริยะที่ยกระดับคุณภาพชีวิตผ่านการบูรณาการเทคโนโลยี',
     'auth.learnMore': 'เรียนรู้เพิ่มเติม',
     'auth.enterName': 'สมชาย ใจดี',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': 'สินค้า',
@@ -1553,7 +1553,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': '革新的な技術統合を通じて生活の質を向上させるスマート都市エコシステムを構築。',
     'auth.learnMore': '詳しく見る',
     'auth.enterName': '山田太郎',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': '製品',
@@ -1802,7 +1802,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': '혁신적인 기술 통합을 통해 삶의 질을 향상시키는 스마트 도시 생태계 구축.',
     'auth.learnMore': '자세히 보기',
     'auth.enterName': '홍길동',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': '제품',
@@ -2051,7 +2051,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': 'Membangun ekosistem kota pintar yang meningkatkan kualitas hidup melalui integrasi teknologi inovatif.',
     'auth.learnMore': 'Pelajari lebih lanjut',
     'auth.enterName': 'Budi Santoso',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': 'Produk',
@@ -2300,7 +2300,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.smartCityDesc': 'Membina ekosistem bandar pintar yang meningkatkan kualiti hidup melalui integrasi teknologi inovatif.',
     'auth.learnMore': 'Ketahui lebih lanjut',
     'auth.enterName': 'Ahmad bin Ali',
-    'auth.emailPlaceholder': 'email@stengg.com',
+    'auth.emailPlaceholder': 'stengg@gmail.com',
     
     // Products
     'products.title': 'Produk',
