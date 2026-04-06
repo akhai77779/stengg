@@ -7,7 +7,7 @@ import { useLiveChat } from '@/contexts/LiveChatContext';
 import { supabase } from '@/integrations/supabase/client';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Loader2, Eye, EyeOff, ChevronLeft, Headphones, Mail } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ChevronLeft, Headphones, Mail, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
@@ -44,6 +44,13 @@ export default function Register() {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const validateRegisterForm = () => {
     const newErrors: Record<string, string> = {};
@@ -104,13 +111,159 @@ export default function Register() {
       return;
     }
     
+    // Show OTP verification step
+    setShowOtpStep(true);
+    setResendCooldown(60);
+    toast({
+      title: 'Mã xác thực đã được gửi',
+      description: `Vui lòng kiểm tra email ${registerEmail} để lấy mã xác thực.`,
+    });
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Vui lòng nhập đầy đủ 6 chữ số mã xác thực.',
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: registerEmail,
+      token: otpCode,
+      type: 'signup',
+    });
+
+    setIsVerifying(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Xác thực thất bại',
+        description: 'Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.',
+      });
+      return;
+    }
+
     toast({
       title: t('auth.register') + ' thành công',
       description: t('auth.welcomeSubtitle'),
     });
-    
     navigate('/');
   };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: registerEmail,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Gửi lại thất bại',
+        description: error.message,
+      });
+      return;
+    }
+
+    setResendCooldown(60);
+    toast({
+      title: 'Đã gửi lại mã',
+      description: `Mã xác thực mới đã được gửi đến ${registerEmail}.`,
+    });
+  };
+
+  // OTP Verification Screen
+  if (showOtpStep) {
+    return (
+      <div className="min-h-screen bg-[#0b0f1d] text-white flex flex-col">
+        <div className="flex-1 relative overflow-hidden">
+          <div className="relative z-10 max-w-md mx-auto px-4 pt-10 pb-12">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setShowOtpStep(false)}
+                className="inline-flex items-center gap-2 text-gray-300 hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <h1 className="text-base font-medium">Xác thực Email</h1>
+              <LanguageSelect />
+            </div>
+
+            <div className="mt-16 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+                <Mail className="h-8 w-8 text-red-500" />
+              </div>
+              
+              <h2 className="text-xl font-semibold mb-2">Nhập mã xác thực</h2>
+              <p className="text-sm text-gray-400 mb-2">
+                Chúng tôi đã gửi mã xác thực 6 chữ số đến
+              </p>
+              <p className="text-sm text-red-400 font-medium mb-8">{registerEmail}</p>
+
+              <div className="mb-8">
+                <InputOTP
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={setOtpCode}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                    <InputOTPSlot index={1} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                    <InputOTPSlot index={2} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                    <InputOTPSlot index={3} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                    <InputOTPSlot index={4} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                    <InputOTPSlot index={5} className="w-12 h-12 text-lg bg-[#1a1f2e] border-gray-700 text-white" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <button
+                onClick={handleVerifyOtp}
+                disabled={isVerifying || otpCode.length !== 6}
+                className="w-full bg-red-500 text-white py-3 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 mb-4"
+              >
+                {isVerifying ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang xác thực...
+                  </span>
+                ) : (
+                  'Xác nhận'
+                )}
+              </button>
+
+              <div className="text-sm text-gray-400">
+                Không nhận được mã?{' '}
+                {resendCooldown > 0 ? (
+                  <span className="text-gray-500">Gửi lại sau {resendCooldown}s</span>
+                ) : (
+                  <button
+                    onClick={handleResendOtp}
+                    disabled={isLoading}
+                    className="text-red-500 hover:text-red-400"
+                  >
+                    Gửi lại mã
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        <GuestFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0f1d] text-white flex flex-col">
