@@ -4,8 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLiveChat } from '@/contexts/LiveChatContext';
+import { supabase } from '@/integrations/supabase/client';
 import { LanguageSelect } from '@/components/settings/LanguageSelect';
-import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Loader2, Eye, EyeOff, ChevronLeft, Headphones, Mail } from 'lucide-react';
 import { z } from 'zod';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
