@@ -36,12 +36,10 @@ export const RecoveryEmail = ({
         </Section>
 
         <Section style={card}>
-          <Heading style={h1}>🔒 Đặt lại mật khẩu</Heading>
+          <Heading style={h1}>🔑 Đặt lại mật khẩu</Heading>
           <Text style={text}>
             Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản {BRAND} của bạn.
-          </Text>
-          <Text style={text}>
-            Nhấn nút bên dưới để chọn mật khẩu mới. Link này có hiệu lực trong 24 giờ.
+            Nhấn nút bên dưới để tạo mật khẩu mới.
           </Text>
 
           <Section style={buttonSection}>
@@ -60,8 +58,11 @@ export const RecoveryEmail = ({
 
         <Section style={footerSection}>
           <Text style={warningText}>
-            ⚠️ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
-            Mật khẩu của bạn sẽ không bị thay đổi.
+            ⚠️ Link này sẽ hết hạn sau 10 phút.
+          </Text>
+          <Text style={footer}>
+            Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+            Mật khẩu của bạn sẽ không thay đổi.
           </Text>
           <Text style={copyright}>
             © {new Date().getFullYear()} {BRAND}. Tất cả quyền được bảo lưu.
@@ -134,5 +135,11 @@ const footerSection = {
   borderTop: 'none',
   textAlign: 'center' as const,
 }
-const warningText = { fontSize: '12px', color: '#a1a1aa', margin: '0 0 8px' }
+const warningText = {
+  fontSize: '12px',
+  color: '#ef4444',
+  margin: '0 0 8px',
+  fontWeight: '500' as const,
+}
+const footer = { fontSize: '12px', color: '#a1a1aa', margin: '0 0 8px' }
 const copyright = { fontSize: '11px', color: '#d4d4d8', margin: '0' }

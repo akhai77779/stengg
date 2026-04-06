@@ -31,7 +31,7 @@ export const InviteEmail = ({
 }: InviteEmailProps) => (
   <Html lang="vi" dir="ltr">
     <Head />
-    <Preview>Bạn được mời tham gia {BRAND}</Preview>
+    <Preview>Lời mời tham gia {BRAND}</Preview>
     <Body style={main}>
       <Container style={wrapper}>
         <Section style={header}>
@@ -39,9 +39,9 @@ export const InviteEmail = ({
         </Section>
 
         <Section style={card}>
-          <Heading style={h1}>🤝 Lời mời tham gia</Heading>
+          <Heading style={h1}>📩 Lời mời tham gia</Heading>
           <Text style={text}>
-            Bạn được mời tham gia{' '}
+            Bạn đã được mời tham gia{' '}
             <Link href={siteUrl} style={link}>
               <strong>{BRAND}</strong>
             </Link>

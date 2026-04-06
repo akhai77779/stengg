@@ -37,12 +37,10 @@ export const SignupEmail = ({
     <Preview>Mã xác thực đăng ký {BRAND}: {token}</Preview>
     <Body style={main}>
       <Container style={wrapper}>
-        {/* Branded Header */}
         <Section style={header}>
           <Text style={logoText}>{BRAND}</Text>
         </Section>
 
-        {/* Content Card */}
         <Section style={card}>
           <Heading style={h1}>Chào mừng bạn! 🎉</Heading>
           <Text style={text}>
@@ -69,7 +67,6 @@ export const SignupEmail = ({
           <Text style={urlText}>{confirmationUrl}</Text>
         </Section>
 
-        {/* Footer */}
         <Section style={footerSection}>
           <Text style={warningText}>
             ⚠️ Không chia sẻ mã này với bất kỳ ai. Nhân viên {BRAND} sẽ không bao giờ hỏi mã của bạn.

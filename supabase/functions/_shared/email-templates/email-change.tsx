@@ -10,6 +10,7 @@ import {
   Heading,
   Html,
   Hr,
+  Link,
   Preview,
   Section,
   Text,
@@ -40,17 +41,21 @@ export const EmailChangeEmail = ({
         </Section>
 
         <Section style={card}>
-          <Heading style={h1}>📧 Thay đổi email</Heading>
+          <Heading style={h1}>📧 Xác nhận thay đổi email</Heading>
           <Text style={text}>
-            Bạn đã yêu cầu thay đổi địa chỉ email cho tài khoản {BRAND}:
+            Bạn đã yêu cầu thay đổi email cho tài khoản {BRAND}.
           </Text>
 
-          <Section style={emailChangeBox}>
-            <Text style={emailLabel}>Email hiện tại:</Text>
-            <Text style={emailValue}>{email}</Text>
-            <Text style={arrowText}>↓</Text>
-            <Text style={emailLabel}>Email mới:</Text>
-            <Text style={emailValueNew}>{newEmail}</Text>
+          <Section style={compareBox}>
+            <Text style={compareLabel}>Email hiện tại:</Text>
+            <Text style={compareValue}>
+              <Link href={`mailto:${email}`} style={link}>{email}</Link>
+            </Text>
+            <Text style={compareArrow}>↓</Text>
+            <Text style={compareLabel}>Email mới:</Text>
+            <Text style={compareValue}>
+              <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>
+            </Text>
           </Section>
 
           <Section style={buttonSection}>
@@ -120,38 +125,17 @@ const text = {
   lineHeight: '1.6',
   margin: '0 0 20px',
 }
-const emailChangeBox = {
-  backgroundColor: '#f9fafb',
-  border: '1px solid #e4e4e7',
+const link = { color: '#00b8d4', textDecoration: 'none' }
+const compareBox = {
+  backgroundColor: '#f4f4f5',
   borderRadius: '8px',
   padding: '16px 20px',
   margin: '0 0 20px',
   textAlign: 'center' as const,
 }
-const emailLabel = {
-  fontSize: '11px',
-  color: '#71717a',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '1px',
-  margin: '0 0 4px',
-}
-const emailValue = {
-  fontSize: '14px',
-  color: '#3f3f46',
-  margin: '0 0 8px',
-  fontWeight: '500' as const,
-}
-const emailValueNew = {
-  fontSize: '14px',
-  color: '#00b8d4',
-  margin: '0',
-  fontWeight: 'bold' as const,
-}
-const arrowText = {
-  fontSize: '16px',
-  color: '#d4d4d8',
-  margin: '4px 0',
-}
+const compareLabel = { fontSize: '12px', color: '#71717a', margin: '0 0 4px' }
+const compareValue = { fontSize: '15px', color: '#0b0f1d', fontWeight: 'bold' as const, margin: '0 0 8px' }
+const compareArrow = { fontSize: '18px', color: '#00b8d4', margin: '4px 0' }
 const buttonSection = { textAlign: 'center' as const, margin: '28px 0' }
 const button = {
   backgroundColor: '#00b8d4',
@@ -174,5 +158,10 @@ const footerSection = {
   borderTop: 'none',
   textAlign: 'center' as const,
 }
-const warningText = { fontSize: '12px', color: '#a1a1aa', margin: '0 0 8px' }
+const warningText = {
+  fontSize: '12px',
+  color: '#ef4444',
+  margin: '0 0 8px',
+  fontWeight: '500' as const,
+}
 const copyright = { fontSize: '11px', color: '#d4d4d8', margin: '0' }
