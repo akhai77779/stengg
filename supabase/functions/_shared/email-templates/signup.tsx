@@ -4,13 +4,11 @@ import * as React from 'npm:react@18.3.1'
 
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
   Html,
   Hr,
-  Img,
   Link,
   Preview,
   Section,
@@ -22,6 +20,7 @@ interface SignupEmailProps {
   siteUrl: string
   recipient: string
   confirmationUrl: string
+  token: string
 }
 
 const BRAND = 'ST Engineering'
@@ -31,10 +30,11 @@ export const SignupEmail = ({
   siteUrl,
   recipient,
   confirmationUrl,
+  token,
 }: SignupEmailProps) => (
   <Html lang="vi" dir="ltr">
     <Head />
-    <Preview>Chào mừng bạn đến với {BRAND} — xác nhận email để bắt đầu</Preview>
+    <Preview>Mã xác thực đăng ký {BRAND}: {token}</Preview>
     <Body style={main}>
       <Container style={wrapper}>
         {/* Branded Header */}
@@ -50,30 +50,30 @@ export const SignupEmail = ({
             <Link href={siteUrl} style={link}>
               <strong>{BRAND}</strong>
             </Link>
-            . Chỉ còn một bước nữa để hoàn tất đăng ký.
-          </Text>
-          <Text style={text}>
-            Vui lòng xác nhận địa chỉ email{' '}
-            <strong style={{ color: '#0b0f1d' }}>{recipient}</strong>{' '}
-            bằng cách nhấn nút bên dưới:
+            . Vui lòng nhập mã xác thực bên dưới để hoàn tất đăng ký.
           </Text>
 
-          <Section style={buttonSection}>
-            <Button style={button} href={confirmationUrl}>
-              ✓ Xác Nhận Email
-            </Button>
+          <Section style={codeBox}>
+            <Text style={codeStyle}>{token}</Text>
           </Section>
+
+          <Text style={expireText}>
+            ⏱ Mã này sẽ hết hạn sau 10 phút.
+          </Text>
 
           <Hr style={divider} />
 
           <Text style={helpText}>
-            Nút không hoạt động? Sao chép và dán link sau vào trình duyệt:
+            Hoặc bạn có thể xác nhận bằng cách nhấn link sau:
           </Text>
           <Text style={urlText}>{confirmationUrl}</Text>
         </Section>
 
         {/* Footer */}
         <Section style={footerSection}>
+          <Text style={warningText}>
+            ⚠️ Không chia sẻ mã này với bất kỳ ai. Nhân viên {BRAND} sẽ không bao giờ hỏi mã của bạn.
+          </Text>
           <Text style={footer}>
             Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.
           </Text>
@@ -127,16 +127,26 @@ const text = {
   margin: '0 0 20px',
 }
 const link = { color: '#00b8d4', textDecoration: 'none' }
-const buttonSection = { textAlign: 'center' as const, margin: '28px 0' }
-const button = {
-  backgroundColor: '#00b8d4',
-  color: '#0b0f1d',
-  fontSize: '15px',
-  fontWeight: 'bold' as const,
+const codeBox = {
+  backgroundColor: '#0b0f1d',
   borderRadius: '8px',
-  padding: '14px 32px',
-  textDecoration: 'none',
-  display: 'inline-block' as const,
+  padding: '20px',
+  margin: '0 0 20px',
+  textAlign: 'center' as const,
+}
+const codeStyle = {
+  fontFamily: '"SF Mono", "Fira Code", "Fira Mono", Menlo, Courier, monospace',
+  fontSize: '32px',
+  fontWeight: 'bold' as const,
+  color: '#00b8d4',
+  letterSpacing: '8px',
+  margin: '0',
+}
+const expireText = {
+  fontSize: '13px',
+  color: '#71717a',
+  textAlign: 'center' as const,
+  margin: '0 0 8px',
 }
 const divider = { borderTop: '1px solid #e4e4e7', margin: '24px 0' }
 const helpText = {
@@ -157,6 +167,12 @@ const footerSection = {
   border: '1px solid #e4e4e7',
   borderTop: 'none',
   textAlign: 'center' as const,
+}
+const warningText = {
+  fontSize: '12px',
+  color: '#ef4444',
+  margin: '0 0 8px',
+  fontWeight: '500' as const,
 }
 const footer = { fontSize: '12px', color: '#a1a1aa', margin: '0 0 8px' }
 const copyright = { fontSize: '11px', color: '#d4d4d8', margin: '0' }
