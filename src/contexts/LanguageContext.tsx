@@ -30,7 +30,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.submit': 'Gửi',
     'common.status': 'Trạng thái',
     'common.details': 'Chi tiết',
-    'common.copy': 'Sao chép',
+    'common.copy': '​',
     'common.settings': 'Cài đặt',
     'common.processing': 'Đang xử lý...',
     'common.error': 'Có lỗi xảy ra',
