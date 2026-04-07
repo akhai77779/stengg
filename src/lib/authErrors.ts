@@ -1,64 +1,95 @@
-// Translate common Supabase Auth error messages to Vietnamese
-const AUTH_ERROR_MAP: Record<string, string> = {
-  // Password errors
-  'Password is known to be weak and easy to guess, please choose a different one.':
-    'Mật khẩu quá yếu và dễ đoán, vui lòng chọn mật khẩu khác.',
-  'Password should be at least 6 characters.':
-    'Mật khẩu phải có ít nhất 6 ký tự.',
-  'Password should contain at least one character of each: abcdefghijklmnopqrstuvwxyz, 0123456789.':
-    'Mật khẩu phải chứa ít nhất một chữ cái và một chữ số.',
+import type { Language } from '@/contexts/LanguageContext';
 
-  // Email/user errors
-  'User already registered':
-    'Email này đã được đăng ký.',
-  'A user with this email address has already been registered':
-    'Email này đã được đăng ký.',
-  'Unable to validate email address: invalid format':
-    'Địa chỉ email không hợp lệ.',
-  'Signup requires a valid password':
-    'Đăng ký yêu cầu mật khẩu hợp lệ.',
+type ErrorMap = Record<string, Record<string, string>>;
 
-  // Login errors
-  'Invalid login credentials':
-    'Email hoặc mật khẩu không đúng.',
-  'Email not confirmed':
-    'Email chưa được xác thực. Vui lòng kiểm tra hộp thư.',
-  'Invalid Refresh Token: Refresh Token Not Found':
-    'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-
-  // Rate limit
-  'For security purposes, you can only request this after':
-    'Vì lý do bảo mật, bạn chỉ có thể thực hiện sau một khoảng thời gian.',
-  'Email rate limit exceeded':
-    'Đã gửi quá nhiều email. Vui lòng thử lại sau.',
-
-  // OTP
-  'Token has expired or is invalid':
-    'Mã xác thực đã hết hạn hoặc không hợp lệ.',
-  'Otp has expired or is invalid':
-    'Mã OTP đã hết hạn hoặc không hợp lệ.',
+const AUTH_ERROR_MAP: ErrorMap = {
+  'Password is known to be weak and easy to guess, please choose a different one.': {
+    vi: 'Mật khẩu quá yếu và dễ đoán, vui lòng chọn mật khẩu khác.',
+    en: 'Password is too weak and easy to guess, please choose a different one.',
+  },
+  'Password should be at least 6 characters.': {
+    vi: 'Mật khẩu phải có ít nhất 6 ký tự.',
+    en: 'Password must be at least 6 characters.',
+  },
+  'Password should contain at least one character of each: abcdefghijklmnopqrstuvwxyz, 0123456789.': {
+    vi: 'Mật khẩu phải chứa ít nhất một chữ cái và một chữ số.',
+    en: 'Password must contain at least one letter and one number.',
+  },
+  'User already registered': {
+    vi: 'Email này đã được đăng ký.',
+    en: 'This email is already registered.',
+  },
+  'A user with this email address has already been registered': {
+    vi: 'Email này đã được đăng ký.',
+    en: 'This email is already registered.',
+  },
+  'Unable to validate email address: invalid format': {
+    vi: 'Địa chỉ email không hợp lệ.',
+    en: 'Invalid email address format.',
+  },
+  'Signup requires a valid password': {
+    vi: 'Đăng ký yêu cầu mật khẩu hợp lệ.',
+    en: 'Signup requires a valid password.',
+  },
+  'Invalid login credentials': {
+    vi: 'Email hoặc mật khẩu không đúng.',
+    en: 'Invalid email or password.',
+  },
+  'Email not confirmed': {
+    vi: 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư.',
+    en: 'Email not verified. Please check your inbox.',
+  },
+  'Invalid Refresh Token: Refresh Token Not Found': {
+    vi: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    en: 'Session expired. Please log in again.',
+  },
+  'For security purposes, you can only request this after': {
+    vi: 'Vì lý do bảo mật, bạn chỉ có thể thực hiện sau một khoảng thời gian.',
+    en: 'For security purposes, please try again after a moment.',
+  },
+  'Email rate limit exceeded': {
+    vi: 'Đã gửi quá nhiều email. Vui lòng thử lại sau.',
+    en: 'Too many emails sent. Please try again later.',
+  },
+  'Token has expired or is invalid': {
+    vi: 'Mã xác thực đã hết hạn hoặc không hợp lệ.',
+    en: 'Verification code has expired or is invalid.',
+  },
+  'Otp has expired or is invalid': {
+    vi: 'Mã OTP đã hết hạn hoặc không hợp lệ.',
+    en: 'OTP code has expired or is invalid.',
+  },
 };
 
-export function translateAuthError(message: string): string {
-  // Exact match first
+function resolve(translations: Record<string, string>, lang: string): string {
+  return translations[lang] || translations['en'] || translations['vi'] || '';
+}
+
+export function translateAuthError(message: string, lang: Language = 'vi'): string {
+  // Use 'en' fallback for non-vi/en languages
+  const effectiveLang = (lang === 'vi' || lang === 'en') ? lang : 'en';
+
+  // Exact match
   if (AUTH_ERROR_MAP[message]) {
-    return AUTH_ERROR_MAP[message];
+    return resolve(AUTH_ERROR_MAP[message], effectiveLang);
   }
 
-  // Partial match for messages that include dynamic parts
-  for (const [key, value] of Object.entries(AUTH_ERROR_MAP)) {
+  // Partial match
+  for (const [key, translations] of Object.entries(AUTH_ERROR_MAP)) {
     if (message.includes(key) || message.toLowerCase().includes(key.toLowerCase())) {
-      return value;
+      return resolve(translations, effectiveLang);
     }
   }
 
-  // Check for rate limit pattern with dynamic seconds
+  // Rate limit with dynamic seconds
   if (message.includes('For security purposes, you can only request this after')) {
     const seconds = message.match(/after (\d+) seconds/);
     if (seconds) {
-      return `Vì lý do bảo mật, vui lòng thử lại sau ${seconds[1]} giây.`;
+      return effectiveLang === 'vi'
+        ? `Vì lý do bảo mật, vui lòng thử lại sau ${seconds[1]} giây.`
+        : `For security purposes, please try again after ${seconds[1]} seconds.`;
     }
-    return 'Vì lý do bảo mật, vui lòng thử lại sau.';
+    return resolve(AUTH_ERROR_MAP['For security purposes, you can only request this after'], effectiveLang);
   }
 
   return message;
