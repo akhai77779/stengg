@@ -107,8 +107,7 @@ export default function Register() {
       toast({
         variant: 'destructive',
         title: t('auth.register') + ' thất bại',
-        description: error.message,
-      });
+        description: translateAuthError(error.message),
       return;
     }
     
@@ -171,7 +170,7 @@ export default function Register() {
       toast({
         variant: 'destructive',
         title: 'Gửi lại thất bại',
-        description: error.message,
+        description: translateAuthError(error.message),
       });
       return;
     }

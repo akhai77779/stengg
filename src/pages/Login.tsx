@@ -117,7 +117,7 @@ export default function Login() {
       toast({
         variant: 'destructive',
         title: t('auth.login') + ' thất bại',
-        description: error.message,
+        description: translateAuthError(error.message),
       });
       return;
     }
