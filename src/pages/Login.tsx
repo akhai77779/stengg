@@ -9,6 +9,7 @@ import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones } from 'lucide-react';
 import { Typewriter } from '@/components/ui/typewriter';
 import { z } from 'zod';
+import { translateAuthError } from '@/lib/authErrors';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
 import { QuickLoginUnlock } from '@/components/auth/QuickLoginUnlock';

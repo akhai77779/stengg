@@ -9,6 +9,7 @@ import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones, Mail, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
+import { translateAuthError } from '@/lib/authErrors';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
 export default function Register() {
