@@ -27,7 +27,7 @@ export default function Register() {
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { openChat } = useLiveChat();
 
   const [registerEmail, setRegisterEmail] = useState('');

@@ -33,7 +33,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const quickLogin = useQuickLogin();
   const { openChat } = useLiveChat();
 
