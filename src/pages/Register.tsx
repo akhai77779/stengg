@@ -382,10 +382,10 @@ export default function Register() {
                 {isVerifying ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang xác thực...
+                    {language === 'vi' ? 'Đang xác thực...' : 'Verifying...'}
                   </span>
                 ) : (
-                  'Xác nhận'
+                  language === 'vi' ? 'Xác nhận' : 'Confirm'
                 )}
               </button>
 
