@@ -9,6 +9,7 @@ import { LanguageSelect } from '@/components/settings/LanguageSelect';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Loader2, Eye, EyeOff, ChevronLeft, Headphones, Mail, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
+import { translateAuthError } from '@/lib/authErrors';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 
 export default function Register() {
@@ -106,7 +107,7 @@ export default function Register() {
       toast({
         variant: 'destructive',
         title: t('auth.register') + ' thất bại',
-        description: error.message,
+        description: translateAuthError(error.message),
       });
       return;
     }
@@ -170,7 +171,7 @@ export default function Register() {
       toast({
         variant: 'destructive',
         title: 'Gửi lại thất bại',
-        description: error.message,
+        description: translateAuthError(error.message),
       });
       return;
     }
