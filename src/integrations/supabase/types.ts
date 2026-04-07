@@ -702,6 +702,42 @@ export type Database = {
           },
         ]
       }
+      phone_otps: {
+        Row: {
+          attempts: number
+          code: string
+          created_at: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          password_hash: string | null
+          phone: string
+          verified: boolean
+        }
+        Insert: {
+          attempts?: number
+          code: string
+          created_at?: string
+          expires_at: string
+          full_name?: string | null
+          id?: string
+          password_hash?: string | null
+          phone: string
+          verified?: boolean
+        }
+        Update: {
+          attempts?: number
+          code?: string
+          created_at?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          password_hash?: string | null
+          phone?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       price_history: {
         Row: {
           close_price: number
@@ -1172,6 +1208,7 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_notifications: { Args: never; Returns: undefined }
+      cleanup_expired_phone_otps: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       create_withdrawal_request: {
         Args: {
