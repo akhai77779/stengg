@@ -316,7 +316,7 @@ export default function Profile() {
                   </h2>
                   <button onClick={copyUID} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors min-h-[44px] -my-2">
                     <span>ID: {uid}</span>
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-3 text-[#00ff08] bg-destructive-foreground h-[13px]" />
                     <span className="text-destructive">{t('common.copy')}</span>
                   </button>
                 </div>
