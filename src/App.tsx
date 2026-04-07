@@ -28,6 +28,7 @@ import Settings from "./pages/Settings";
 import SwitchAccount from "./pages/SwitchAccount";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminBanners from "./pages/admin/AdminBanners";
@@ -93,6 +94,7 @@ const App = () => (
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/switch-account" element={<SwitchAccount />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
