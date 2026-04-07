@@ -490,10 +490,15 @@ export default function Register() {
                 <div>
                   <label className="text-sm text-gray-300">{t('auth.phone')}</label>
                   <div className="flex items-center gap-3 mt-2 border-b border-gray-700 pb-2">
-                    <select className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1">
-                      <option className="bg-[#1a1f2e]">+84</option>
-                      <option className="bg-[#1a1f2e]">+65</option>
-                      <option className="bg-[#1a1f2e]">+66</option>
+                    <select 
+                      value={phoneCountryCode}
+                      onChange={(e) => setPhoneCountryCode(e.target.value)}
+                      className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1"
+                    >
+                      <option className="bg-[#1a1f2e]" value="+84">+84</option>
+                      <option className="bg-[#1a1f2e]" value="+65">+65</option>
+                      <option className="bg-[#1a1f2e]" value="+66">+66</option>
+                      <option className="bg-[#1a1f2e]" value="+1">+1</option>
                     </select>
                     <input
                       placeholder={t('auth.enterPhone')}
