@@ -66,11 +66,18 @@ export default function Register() {
       }
     }
     
-    try {
-      emailSchema.parse(registerEmail);
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        newErrors.registerEmail = e.errors[0].message;
+    if (registerMethod === 'email') {
+      try {
+        emailSchema.parse(registerEmail);
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          newErrors.registerEmail = e.errors[0].message;
+        }
+      }
+    } else {
+      // Phone validation
+      if (!registerPhone || registerPhone.length < 8) {
+        newErrors.registerPhone = language === 'vi' ? 'SĐT không hợp lệ' : 'Invalid phone number';
       }
     }
     
@@ -83,15 +90,19 @@ export default function Register() {
     }
 
     if (registerPassword !== registerConfirmPassword) {
-      newErrors.registerConfirmPassword = t('auth.confirmPassword') + ' không khớp';
+      newErrors.registerConfirmPassword = t('auth.confirmPassword') + (language === 'vi' ? ' không khớp' : ' does not match');
     }
 
     if (!agreeTerms) {
-      newErrors.agreeTerms = 'Vui lòng đồng ý với điều khoản';
+      newErrors.agreeTerms = language === 'vi' ? 'Vui lòng đồng ý với điều khoản' : 'Please agree to the terms';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const getFullPhone = () => {
+    return phoneCountryCode + registerPhone;
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -101,87 +112,209 @@ export default function Register() {
     
     setIsLoading(true);
     
-    const { error } = await signUp(registerEmail, registerPassword, registerName);
-    
-    setIsLoading(false);
-    
-    if (error) {
+    if (registerMethod === 'email') {
+      // Email registration flow
+      const { error } = await signUp(registerEmail, registerPassword, registerName);
+      setIsLoading(false);
+      
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: t('auth.register') + (language === 'vi' ? ' thất bại' : ' failed'),
+          description: translateAuthError(error.message, language),
+        });
+        return;
+      }
+      
+      setOtpTarget('email');
+      setShowOtpStep(true);
+      setResendCooldown(60);
       toast({
-        variant: 'destructive',
-        title: t('auth.register') + ' thất bại',
-        description: translateAuthError(error.message, language),
+        title: language === 'vi' ? 'Mã xác thực đã được gửi' : 'Verification code sent',
+        description: language === 'vi' 
+          ? `Vui lòng kiểm tra email ${registerEmail} để lấy mã xác thực.`
+          : `Please check your email ${registerEmail} for the verification code.`,
       });
-      return;
+    } else {
+      // Phone registration flow - send SMS OTP
+      try {
+        const fullPhone = getFullPhone();
+        const response = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone: fullPhone, fullName: registerName },
+        });
+
+        setIsLoading(false);
+
+        if (response.error || response.data?.error) {
+          const errMsg = response.data?.error || response.error?.message || 'Failed to send OTP';
+          toast({
+            variant: 'destructive',
+            title: language === 'vi' ? 'Gửi mã thất bại' : 'Failed to send code',
+            description: errMsg,
+          });
+          return;
+        }
+
+        setOtpTarget('phone');
+        setShowOtpStep(true);
+        setResendCooldown(60);
+        toast({
+          title: language === 'vi' ? 'Mã xác thực đã được gửi' : 'Verification code sent',
+          description: language === 'vi'
+            ? `Mã OTP đã được gửi đến ${fullPhone}`
+            : `OTP has been sent to ${fullPhone}`,
+        });
+      } catch (err: any) {
+        setIsLoading(false);
+        toast({
+          variant: 'destructive',
+          title: language === 'vi' ? 'Lỗi' : 'Error',
+          description: err.message || 'Something went wrong',
+        });
+      }
     }
-    
-    // Show OTP verification step
-    setShowOtpStep(true);
-    setResendCooldown(60);
-    toast({
-      title: 'Mã xác thực đã được gửi',
-      description: `Vui lòng kiểm tra email ${registerEmail} để lấy mã xác thực.`,
-    });
   };
 
   const handleVerifyOtp = async () => {
     if (otpCode.length !== 6) {
       toast({
         variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Vui lòng nhập đầy đủ 6 chữ số mã xác thực.',
+        title: language === 'vi' ? 'Lỗi' : 'Error',
+        description: language === 'vi' ? 'Vui lòng nhập đầy đủ 6 chữ số mã xác thực.' : 'Please enter the full 6-digit code.',
       });
       return;
     }
 
     setIsVerifying(true);
 
-    const { error } = await supabase.auth.verifyOtp({
-      email: registerEmail,
-      token: otpCode,
-      type: 'signup',
-    });
-
-    setIsVerifying(false);
-
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Xác thực thất bại',
-        description: 'Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.',
+    if (otpTarget === 'email') {
+      // Email OTP verification
+      const { error } = await supabase.auth.verifyOtp({
+        email: registerEmail,
+        token: otpCode,
+        type: 'signup',
       });
-      return;
-    }
 
-    toast({
-      title: t('auth.register') + ' thành công',
-      description: t('auth.welcomeSubtitle'),
-    });
-    navigate('/');
+      setIsVerifying(false);
+
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: language === 'vi' ? 'Xác thực thất bại' : 'Verification failed',
+          description: language === 'vi' ? 'Mã xác thực không đúng hoặc đã hết hạn.' : 'Invalid or expired verification code.',
+        });
+        return;
+      }
+
+      toast({
+        title: t('auth.register') + (language === 'vi' ? ' thành công' : ' successful'),
+        description: t('auth.welcomeSubtitle'),
+      });
+      navigate('/');
+    } else {
+      // Phone OTP verification
+      try {
+        const fullPhone = getFullPhone();
+        const response = await supabase.functions.invoke('verify-sms-otp', {
+          body: {
+            phone: fullPhone,
+            code: otpCode,
+            password: registerPassword,
+            fullName: registerName,
+          },
+        });
+
+        setIsVerifying(false);
+
+        if (response.error || response.data?.error) {
+          const errMsg = response.data?.error || response.error?.message || 'Verification failed';
+          toast({
+            variant: 'destructive',
+            title: language === 'vi' ? 'Xác thực thất bại' : 'Verification failed',
+            description: errMsg,
+          });
+          return;
+        }
+
+        // Sign in with the created account
+        const phoneEmail = response.data?.email;
+        if (phoneEmail) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: phoneEmail,
+            password: registerPassword,
+          });
+
+          if (signInError) {
+            toast({
+              title: language === 'vi' ? 'Tài khoản đã tạo' : 'Account created',
+              description: language === 'vi' ? 'Vui lòng đăng nhập.' : 'Please log in.',
+            });
+            navigate('/login');
+            return;
+          }
+        }
+
+        toast({
+          title: t('auth.register') + (language === 'vi' ? ' thành công' : ' successful'),
+          description: t('auth.welcomeSubtitle'),
+        });
+        navigate('/');
+      } catch (err: any) {
+        setIsVerifying(false);
+        toast({
+          variant: 'destructive',
+          title: language === 'vi' ? 'Lỗi' : 'Error',
+          description: err.message || 'Something went wrong',
+        });
+      }
+    }
   };
 
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
-
     setIsLoading(true);
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: registerEmail,
-    });
-    setIsLoading(false);
 
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Gửi lại thất bại',
-        description: translateAuthError(error.message, language),
+    if (otpTarget === 'email') {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registerEmail,
       });
-      return;
+      setIsLoading(false);
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: language === 'vi' ? 'Gửi lại thất bại' : 'Resend failed',
+          description: translateAuthError(error.message, language),
+        });
+        return;
+      }
+    } else {
+      try {
+        const fullPhone = getFullPhone();
+        const response = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone: fullPhone, fullName: registerName },
+        });
+        setIsLoading(false);
+        if (response.error || response.data?.error) {
+          toast({
+            variant: 'destructive',
+            title: language === 'vi' ? 'Gửi lại thất bại' : 'Resend failed',
+            description: response.data?.error || 'Failed to resend',
+          });
+          return;
+        }
+      } catch {
+        setIsLoading(false);
+        return;
+      }
     }
 
     setResendCooldown(60);
     toast({
-      title: 'Đã gửi lại mã',
-      description: `Mã xác thực mới đã được gửi đến ${registerEmail}.`,
+      title: language === 'vi' ? 'Đã gửi lại mã' : 'Code resent',
+      description: otpTarget === 'email'
+        ? (language === 'vi' ? `Mã mới đã gửi đến ${registerEmail}.` : `New code sent to ${registerEmail}.`)
+        : (language === 'vi' ? `Mã mới đã gửi đến ${getFullPhone()}.` : `New code sent to ${getFullPhone()}.`),
     });
   };
 
