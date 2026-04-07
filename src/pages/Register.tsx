@@ -108,6 +108,7 @@ export default function Register() {
         variant: 'destructive',
         title: t('auth.register') + ' thất bại',
         description: translateAuthError(error.message),
+      });
       return;
     }
     
