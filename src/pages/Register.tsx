@@ -23,7 +23,9 @@ export default function Register() {
   const [otpCode, setOtpCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  
+  const [otpTarget, setOtpTarget] = useState<'email' | 'phone'>('email');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
+
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
