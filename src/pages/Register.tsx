@@ -390,16 +390,18 @@ export default function Register() {
               </button>
 
               <div className="text-sm text-gray-400">
-                Không nhận được mã?{' '}
+                {language === 'vi' ? 'Không nhận được mã?' : "Didn't receive the code?"}{' '}
                 {resendCooldown > 0 ? (
-                  <span className="text-gray-500">Gửi lại sau {resendCooldown}s</span>
+                  <span className="text-gray-500">
+                    {language === 'vi' ? `Gửi lại sau ${resendCooldown}s` : `Resend in ${resendCooldown}s`}
+                  </span>
                 ) : (
                   <button
                     onClick={handleResendOtp}
                     disabled={isLoading}
                     className="text-red-500 hover:text-red-400"
                   >
-                    Gửi lại mã
+                    {language === 'vi' ? 'Gửi lại mã' : 'Resend code'}
                   </button>
                 )}
               </div>
