@@ -332,20 +332,30 @@ export default function Register() {
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
-              <h1 className="text-base font-medium">Xác thực Email</h1>
+              <h1 className="text-base font-medium">
+                {otpTarget === 'email' 
+                  ? (language === 'vi' ? 'Xác thực Email' : 'Email Verification')
+                  : (language === 'vi' ? 'Xác thực SĐT' : 'Phone Verification')}
+              </h1>
               <LanguageSelect />
             </div>
 
             <div className="mt-16 flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                <Mail className="h-8 w-8 text-red-500" />
+                {otpTarget === 'email' 
+                  ? <Mail className="h-8 w-8 text-red-500" />
+                  : <Phone className="h-8 w-8 text-red-500" />}
               </div>
               
-              <h2 className="text-xl font-semibold mb-2">Nhập mã xác thực</h2>
+              <h2 className="text-xl font-semibold mb-2">
+                {language === 'vi' ? 'Nhập mã xác thực' : 'Enter verification code'}
+              </h2>
               <p className="text-sm text-gray-400 mb-2">
-                Chúng tôi đã gửi mã xác thực 6 chữ số đến
+                {language === 'vi' ? 'Chúng tôi đã gửi mã xác thực 6 chữ số đến' : 'We sent a 6-digit verification code to'}
               </p>
-              <p className="text-sm text-red-400 font-medium mb-8">{registerEmail}</p>
+              <p className="text-sm text-red-400 font-medium mb-8">
+                {otpTarget === 'email' ? registerEmail : getFullPhone()}
+              </p>
 
               <div className="mb-8">
                 <InputOTP
