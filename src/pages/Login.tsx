@@ -70,11 +70,18 @@ export default function Login() {
   const validateLoginForm = () => {
     const newErrors: Record<string, string> = {};
     
-    try {
-      emailSchema.parse(loginEmail);
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        newErrors.loginEmail = e.errors[0].message;
+    if (loginMethod === 'email') {
+      try {
+        emailSchema.parse(loginEmail);
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          newErrors.loginEmail = e.errors[0].message;
+        }
+      }
+    } else {
+      // Phone login — still requires email internally but show phone-friendly message
+      if (!loginEmail || !loginEmail.includes('@')) {
+        newErrors.loginEmail = 'SĐT không hợp lệ';
       }
     }
     
