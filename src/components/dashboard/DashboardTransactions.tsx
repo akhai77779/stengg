@@ -125,6 +125,30 @@ export function DashboardTransactions() {
         return;
       }
 
+      // Send approval notification email
+      const userProfile = selectedTransaction.profiles;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', selectedTransaction.user_id)
+        .maybeSingle();
+
+      if (profileData?.email) {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'transaction-approved',
+            recipientEmail: profileData.email,
+            idempotencyKey: `tx-approved-${selectedTransaction.id}`,
+            templateData: {
+              name: userProfile?.full_name || '',
+              type: selectedTransaction.type,
+              amount: formatCurrency(selectedTransaction.amount),
+              txId: selectedTransaction.id,
+            },
+          },
+        });
+      }
+
       toast({
         title: 'Thành công',
         description: 'Giao dịch đã được duyệt',
@@ -166,6 +190,30 @@ export function DashboardTransactions() {
         });
         setIsProcessing(false);
         return;
+      }
+
+      // Send rejection notification email
+      const rejUserProfile = selectedTransaction.profiles;
+      const { data: rejProfileData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', selectedTransaction.user_id)
+        .maybeSingle();
+
+      if (rejProfileData?.email) {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'transaction-rejected',
+            recipientEmail: rejProfileData.email,
+            idempotencyKey: `tx-rejected-${selectedTransaction.id}`,
+            templateData: {
+              name: rejUserProfile?.full_name || '',
+              type: selectedTransaction.type,
+              amount: formatCurrency(selectedTransaction.amount),
+              reason: adminNotes || undefined,
+            },
+          },
+        });
       }
 
       toast({
