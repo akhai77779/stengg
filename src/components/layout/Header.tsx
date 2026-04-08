@@ -45,7 +45,21 @@ export function Header() {
     navigate('/auth');
   };
 
+  const isPhoneUser = (email: string) => email?.endsWith('@phone.local');
+  
+  const getDisplayName = (email: string) => {
+    if (isPhoneUser(email)) {
+      // Convert 84xxx@phone.local back to +84xxx format
+      const digits = email.replace('@phone.local', '');
+      return `+${digits}`;
+    }
+    return email;
+  };
+
   const getInitials = (email: string) => {
+    if (isPhoneUser(email)) {
+      return 'P'; // Phone user
+    }
     return email.slice(0, 2).toUpperCase();
   };
 
