@@ -38,11 +38,6 @@ interface Profile {
   frozen_reason: string | null;
 }
 
-interface UserRole {
-  user_id: string;
-  role: AppRole;
-}
-
 interface BankAccount {
   id: string;
   bank_name: string;
@@ -117,7 +112,7 @@ export function DashboardUsers() {
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
   const [userVerification, setUserVerification] = useState<IdentityVerification | null>(null);
-  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [_isLoadingVerification, _setIsLoadingVerification] = useState(false);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationUser, setVerificationUser] = useState<Profile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
