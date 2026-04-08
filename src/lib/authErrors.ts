@@ -71,6 +71,14 @@ const AUTH_ERROR_MAP: ErrorMap = {
     vi: 'Mã OTP đã hết hạn hoặc không hợp lệ.',
     en: 'OTP code has expired or is invalid.',
   },
+  'Hệ thống SMS đang quá tải. Vui lòng thử lại sau.': {
+    vi: 'Hệ thống SMS đang quá tải. Vui lòng thử lại sau.',
+    en: 'SMS system is overloaded. Please try again later.',
+  },
+  'Số điện thoại chưa được xác minh trong hệ thống.': {
+    vi: 'Số điện thoại chưa được xác minh trong hệ thống.',
+    en: 'Phone number is not verified in the system.',
+  },
 };
 
 function resolve(translations: Record<string, string>, lang: string, method?: LoginMethod): string {
