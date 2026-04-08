@@ -13,6 +13,8 @@ import { translateAuthError } from '@/lib/authErrors';
 import { GuestFooter } from '@/components/guest/GuestFooter';
 import { QuickLoginSetup } from '@/components/auth/QuickLoginSetup';
 import { QuickLoginUnlock } from '@/components/auth/QuickLoginUnlock';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface LocationState {
   prefillEmail?: string;
@@ -28,6 +30,7 @@ export default function Login() {
   const [showQuickLoginSetup, setShowQuickLoginSetup] = useState(false);
   const [showQuickLoginUnlock, setShowQuickLoginUnlock] = useState(false);
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
   
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
@@ -295,7 +298,7 @@ export default function Login() {
                 />
                 {t('auth.rememberMe')}
               </label>
-              <button type="button" className="text-red-500">{t('auth.forgotPassword')}</button>
+              <button type="button" className="text-red-500" onClick={() => setShowForgotDialog(true)}>{t('auth.forgotPassword')}</button>
             </div>
 
             <button
@@ -366,6 +369,32 @@ export default function Login() {
         onUnlock={handleQuickLoginUnlock}
         onSwitchAccount={handleSwitchToPasswordLogin}
       />
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Headphones className="w-5 h-5 text-primary" />
+              {language === 'vi' ? 'Quên mật khẩu' : 'Forgot Password'}
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {language === 'vi' 
+                ? 'Vui lòng liên hệ dịch vụ CSKH để được hỗ trợ đặt lại mật khẩu.' 
+                : 'Please contact customer support for password reset assistance.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowForgotDialog(false)}>
+              {language === 'vi' ? 'Đóng' : 'Close'}
+            </Button>
+            <Button onClick={() => { setShowForgotDialog(false); openChat(); }}>
+              <Headphones className="w-4 h-4 mr-2" />
+              {language === 'vi' ? 'Liên hệ CSKH' : 'Contact Support'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
