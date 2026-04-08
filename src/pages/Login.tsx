@@ -82,9 +82,9 @@ export default function Login() {
         }
       }
     } else {
-      // Phone login — still requires email internally but show phone-friendly message
-      if (!loginEmail || !loginEmail.includes('@')) {
-        newErrors.loginEmail = 'SĐT không hợp lệ';
+      // Phone login validation
+      if (!loginPhone || loginPhone.length < 8) {
+        newErrors.loginPhone = language === 'vi' ? 'SĐT không hợp lệ' : 'Invalid phone number';
       }
     }
     
