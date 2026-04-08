@@ -20,10 +20,18 @@ const AUTH_ERROR_MAP: ErrorMap = {
   'User already registered': {
     vi: 'Email này đã được đăng ký.',
     en: 'This email is already registered.',
+    vi_phone: 'Số điện thoại này đã được đăng ký.',
+    en_phone: 'This phone number is already registered.',
   },
   'A user with this email address has already been registered': {
     vi: 'Email này đã được đăng ký.',
     en: 'This email is already registered.',
+    vi_phone: 'Số điện thoại này đã được đăng ký.',
+    en_phone: 'This phone number is already registered.',
+  },
+  'Phone number already registered': {
+    vi: 'Số điện thoại này đã được đăng ký.',
+    en: 'This phone number is already registered.',
   },
   'Unable to validate email address: invalid format': {
     vi: 'Địa chỉ email không hợp lệ.',
