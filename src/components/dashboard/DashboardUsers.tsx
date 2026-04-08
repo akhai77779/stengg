@@ -8,11 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus } from 'lucide-react';
+import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote } from 'lucide-react';
 import { format } from 'date-fns';
- import { StickyNote } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { UserTransactionHistory } from './UserTransactionHistory';
@@ -37,11 +36,6 @@ interface Profile {
   is_frozen: boolean | null;
   is_trade_frozen: boolean | null;
   frozen_reason: string | null;
-}
-
-interface UserRole {
-  user_id: string;
-  role: AppRole;
 }
 
 interface BankAccount {
@@ -118,7 +112,7 @@ export function DashboardUsers() {
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
   const [userVerification, setUserVerification] = useState<IdentityVerification | null>(null);
-  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [_isLoadingVerification, _setIsLoadingVerification] = useState(false);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationUser, setVerificationUser] = useState<Profile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -820,68 +814,55 @@ export function DashboardUsers() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-blue-500 hover:text-blue-600"
-                            onClick={() => setTransactionHistoryUser(profile)}
-                            title="Lịch sử nạp/rút"
-                          >
-                            <History className="w-4 h-4" />
-                          </Button>
-                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className={`h-8 w-8 ${adminNotes[profile.id] ? 'text-yellow-500' : ''}`}
-                             onClick={() => setNoteUser(profile)}
-                             title={adminNotes[profile.id] ? 'Xem/Sửa ghi chú' : 'Thêm ghi chú'}
-                           >
-                             <StickyNote className="w-4 h-4" />
-                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setPasswordUser(profile);
-                              setNewPassword('');
-                              setConfirmPassword('');
-                            }}
-                            title="Đổi mật khẩu đăng nhập"
-                          >
-                            <Key className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-amber-500 hover:text-amber-600"
-                            onClick={() => {
-                              setWithdrawalPasswordUser(profile);
-                              setNewWithdrawalPassword('');
-                              setConfirmWithdrawalPassword('');
-                            }}
-                            title="Đổi mật khẩu rút tiền"
-                          >
-                            <KeyRound className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 ${profile.is_trade_frozen ? 'text-orange-500' : ''}`}
-                            onClick={() => handleToggleTradeFreeze(profile)}
-                            title={profile.is_trade_frozen ? 'Mở khóa giao dịch' : 'Đóng băng giao dịch'}
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 ${profile.is_frozen ? 'text-destructive' : ''}`}
-                            onClick={() => handleToggleAccountFreeze(profile)}
-                            title={profile.is_frozen ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                          >
-                            {profile.is_frozen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem onClick={() => setTransactionHistoryUser(profile)}>
+                                <History className="w-4 h-4 mr-2 text-blue-500" />
+                                Lịch sử nạp/rút
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setNoteUser(profile)}>
+                                <StickyNote className={`w-4 h-4 mr-2 ${adminNotes[profile.id] ? 'text-yellow-500' : ''}`} />
+                                {adminNotes[profile.id] ? 'Xem/Sửa ghi chú' : 'Thêm ghi chú'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => {
+                                setPasswordUser(profile);
+                                setNewPassword('');
+                                setConfirmPassword('');
+                              }}>
+                                <Key className="w-4 h-4 mr-2" />
+                                Đổi mật khẩu đăng nhập
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setWithdrawalPasswordUser(profile);
+                                setNewWithdrawalPassword('');
+                                setConfirmWithdrawalPassword('');
+                              }}>
+                                <KeyRound className="w-4 h-4 mr-2 text-amber-500" />
+                                Đổi mật khẩu rút tiền
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleToggleTradeFreeze(profile)}>
+                                <TrendingUp className={`w-4 h-4 mr-2 ${profile.is_trade_frozen ? 'text-orange-500' : ''}`} />
+                                {profile.is_trade_frozen ? 'Mở khóa giao dịch' : 'Đóng băng giao dịch'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleAccountFreeze(profile)}
+                                className={profile.is_frozen ? '' : 'text-destructive focus:text-destructive'}
+                              >
+                                {profile.is_frozen ? (
+                                  <><Unlock className="w-4 h-4 mr-2" />Mở khóa tài khoản</>
+                                ) : (
+                                  <><Lock className="w-4 h-4 mr-2" />Khóa tài khoản</>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -977,11 +958,6 @@ export function DashboardUsers() {
                       ? format(new Date(selectedUser.last_login_at), 'dd/MM/yyyy HH:mm')
                       : '-'}
                   </p>
-                </div>
-
-                <div className="col-span-2 space-y-1">
-                  <p className="text-muted-foreground">Đăng nhập cuối</p>
-                  <p className="font-mono text-xs">{selectedUser.last_login_at ? format(new Date(selectedUser.last_login_at), 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
                 </div>
 
                 {selectedUser.frozen_reason && (
