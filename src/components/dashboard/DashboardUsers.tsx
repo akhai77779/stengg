@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History } from 'lucide-react';
+import { Search, Loader2, Shield, User, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Globe, Ban, Lock, Unlock, TrendingUp, Landmark, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
  import { StickyNote } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserTransactionHistory } from './UserTransactionHistory';
  import { useAdminUserNotes } from '@/hooks/useAdminUserNotes';
  import { AdminUserNoteDialog } from '@/components/admin/AdminUserNoteDialog';
+import { AdminCreateUserDialog } from '@/components/admin/AdminCreateUserDialog';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -129,6 +130,9 @@ export function DashboardUsers() {
    // Admin notes
    const { notes: adminNotes, saveNote, deleteNote } = useAdminUserNotes();
    const [noteUser, setNoteUser] = useState<Profile | null>(null);
+
+  // Create user dialog
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -641,14 +645,24 @@ export function DashboardUsers() {
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <CardTitle>Quản lý Người dùng</CardTitle>
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo tên, email, ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowCreateUserDialog(true)}
+              >
+                <UserPlus className="w-4 h-4" />
+                Tạo tài khoản
+              </Button>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm theo tên, email, ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
