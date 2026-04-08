@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,7 @@ export default function Login() {
   const [showQuickLoginSetup, setShowQuickLoginSetup] = useState(false);
   const [showQuickLoginUnlock, setShowQuickLoginUnlock] = useState(false);
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
   
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
