@@ -312,7 +312,7 @@ export default function Profile() {
                 </Avatar>
                 <div className="flex-1 pb-2">
                   <h2 className="text-base md:text-lg font-bold text-foreground">
-                    {profile?.full_name || user.email?.split('@')[0] || t('profile.defaultUser')}
+                    {profile?.full_name || (user.email?.endsWith('@phone.local') ? `+${user.email.replace('@phone.local', '')}` : user.email?.split('@')[0]) || t('profile.defaultUser')}
                   </h2>
                   <button onClick={copyUID} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors min-h-[44px] -my-2">
                     <span>ID: {uid}</span>

@@ -45,7 +45,21 @@ export function Header() {
     navigate('/auth');
   };
 
+  const isPhoneUser = (email: string) => email?.endsWith('@phone.local');
+  
+  const getDisplayName = (email: string) => {
+    if (isPhoneUser(email)) {
+      // Convert 84xxx@phone.local back to +84xxx format
+      const digits = email.replace('@phone.local', '');
+      return `+${digits}`;
+    }
+    return email;
+  };
+
   const getInitials = (email: string) => {
+    if (isPhoneUser(email)) {
+      return 'P'; // Phone user
+    }
     return email.slice(0, 2).toUpperCase();
   };
 
@@ -124,7 +138,7 @@ export function Header() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">{user.email}</span>
+                        <span className="text-sm font-medium">{getDisplayName(user.email || '')}</span>
                         {isAdmin && (
                           <span className="text-xs text-primary flex items-center gap-1">
                             <Shield className="w-3 h-3" /> Admin
