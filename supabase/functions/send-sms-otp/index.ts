@@ -97,9 +97,17 @@ Deno.serve(async (req) => {
         .eq("phone", normalizedPhone)
         .eq("code", code);
       
+      // Provide user-friendly error based on Twilio error code
+      let userError = "Failed to send SMS. Please try again.";
+      if (smsData?.code === 63038 || smsData?.message?.includes("daily messages limit")) {
+        userError = "Hệ thống SMS đang quá tải. Vui lòng thử lại sau.";
+      } else if (smsData?.code === 21608 || smsData?.message?.includes("unverified")) {
+        userError = "Số điện thoại chưa được xác minh trong hệ thống.";
+      }
+
       return new Response(
-        JSON.stringify({ error: "Failed to send SMS. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: userError }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
