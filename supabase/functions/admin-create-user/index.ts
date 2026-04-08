@@ -112,8 +112,8 @@ Deno.serve(async (req) => {
       console.error("Create user error:", authError);
       if (authError.message?.includes("already") || authError.message?.includes("registered")) {
         return new Response(
-          JSON.stringify({ error: "User already exists with this email/phone" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "User already exists with this email/phone", fallback: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       return new Response(
