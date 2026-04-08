@@ -960,12 +960,6 @@ export function DashboardUsers() {
                   </p>
                 </div>
 
-                <div className="col-span-2 space-y-1">
-                  <p className="text-muted-foreground">Đăng nhập cuối</p>
-                  <p className="font-mono text-xs">{selectedUser.last_login_at ? format(new Date(selectedUser.last_login_at), 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
-                </div>
-
-                {selectedUser.frozen_reason && (
                   <div className="col-span-2 space-y-1">
                     <p className="text-muted-foreground">Lý do khóa</p>
                     <p className="text-destructive">{selectedUser.frozen_reason}</p>
