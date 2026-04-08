@@ -1,5 +1,7 @@
 import type { Language } from '@/contexts/LanguageContext';
 
+export type LoginMethod = 'email' | 'phone';
+
 type ErrorMap = Record<string, Record<string, string>>;
 
 const AUTH_ERROR_MAP: ErrorMap = {
@@ -34,6 +36,8 @@ const AUTH_ERROR_MAP: ErrorMap = {
   'Invalid login credentials': {
     vi: 'Email hoặc mật khẩu không đúng.',
     en: 'Invalid email or password.',
+    vi_phone: 'SĐT hoặc mật khẩu không đúng.',
+    en_phone: 'Invalid phone number or password.',
   },
   'Email not confirmed': {
     vi: 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư.',
@@ -61,23 +65,29 @@ const AUTH_ERROR_MAP: ErrorMap = {
   },
 };
 
-function resolve(translations: Record<string, string>, lang: string): string {
+function resolve(translations: Record<string, string>, lang: string, method?: LoginMethod): string {
+  // If phone method, try phone-specific translation first
+  if (method === 'phone') {
+    const phoneKey = `${lang}_phone`;
+    if (translations[phoneKey]) {
+      return translations[phoneKey];
+    }
+  }
   return translations[lang] || translations['en'] || translations['vi'] || '';
 }
 
-export function translateAuthError(message: string, lang: Language = 'vi'): string {
-  // Use 'en' fallback for non-vi/en languages
+export function translateAuthError(message: string, lang: Language = 'vi', method?: LoginMethod): string {
   const effectiveLang = (lang === 'vi' || lang === 'en') ? lang : 'en';
 
   // Exact match
   if (AUTH_ERROR_MAP[message]) {
-    return resolve(AUTH_ERROR_MAP[message], effectiveLang);
+    return resolve(AUTH_ERROR_MAP[message], effectiveLang, method);
   }
 
   // Partial match
   for (const [key, translations] of Object.entries(AUTH_ERROR_MAP)) {
     if (message.includes(key) || message.toLowerCase().includes(key.toLowerCase())) {
-      return resolve(translations, effectiveLang);
+      return resolve(translations, effectiveLang, method);
     }
   }
 
@@ -89,7 +99,7 @@ export function translateAuthError(message: string, lang: Language = 'vi'): stri
         ? `Vì lý do bảo mật, vui lòng thử lại sau ${seconds[1]} giây.`
         : `For security purposes, please try again after ${seconds[1]} seconds.`;
     }
-    return resolve(AUTH_ERROR_MAP['For security purposes, you can only request this after'], effectiveLang);
+    return resolve(AUTH_ERROR_MAP['For security purposes, you can only request this after'], effectiveLang, method);
   }
 
   return message;
