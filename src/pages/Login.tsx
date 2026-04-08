@@ -39,6 +39,8 @@ export default function Login() {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
@@ -80,9 +82,9 @@ export default function Login() {
         }
       }
     } else {
-      // Phone login — still requires email internally but show phone-friendly message
-      if (!loginEmail || !loginEmail.includes('@')) {
-        newErrors.loginEmail = 'SĐT không hợp lệ';
+      // Phone login validation
+      if (!loginPhone || loginPhone.length < 8) {
+        newErrors.loginPhone = language === 'vi' ? 'SĐT không hợp lệ' : 'Invalid phone number';
       }
     }
     
@@ -103,7 +105,15 @@ export default function Login() {
     
     if (!validateLoginForm()) return;
     
-    await performLogin(loginEmail, loginPassword);
+    if (loginMethod === 'phone') {
+      // Convert phone to the @phone.local email used during registration
+      const fullPhone = phoneCountryCode + loginPhone;
+      const normalizedPhone = fullPhone.startsWith('+') ? fullPhone : `+${fullPhone}`;
+      const phoneEmail = `${normalizedPhone.replace(/\+/g, '')}@phone.local`;
+      await performLogin(phoneEmail, loginPassword);
+    } else {
+      await performLogin(loginEmail, loginPassword);
+    }
   };
 
   const performLogin = async (email: string, password: string) => {
@@ -225,22 +235,32 @@ export default function Login() {
               </div>
             ) : (
               <div className="flex items-center gap-3 border-b border-gray-700 pb-3">
-                <select className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1">
-                  <option className="bg-[#1a1f2e]">+84</option>
-                  <option className="bg-[#1a1f2e]">+65</option>
-                  <option className="bg-[#1a1f2e]">+66</option>
+                <select 
+                  value={phoneCountryCode}
+                  onChange={(e) => setPhoneCountryCode(e.target.value)}
+                  className="w-[64px] shrink-0 bg-[#1a1f2e] text-sm text-gray-300 outline-none border border-gray-700 rounded px-2 py-1"
+                >
+                  <option className="bg-[#1a1f2e]" value="+84">+84</option>
+                  <option className="bg-[#1a1f2e]" value="+65">+65</option>
+                  <option className="bg-[#1a1f2e]" value="+66">+66</option>
+                  <option className="bg-[#1a1f2e]" value="+1">+1</option>
                 </select>
                 <input
                   type="tel"
                   placeholder={t('auth.enterPhone')}
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value)}
                   className="flex-1 bg-transparent text-sm placeholder:text-gray-500 outline-none"
                   disabled={isLoading}
                   autoComplete="tel"
                 />
               </div>
             )}
-            {errors.loginEmail && (
+            {errors.loginEmail && loginMethod === 'email' && (
               <p className="text-sm text-red-500">{errors.loginEmail}</p>
+            )}
+            {errors.loginPhone && loginMethod === 'phone' && (
+              <p className="text-sm text-red-500">{errors.loginPhone}</p>
             )}
 
             <div className="flex items-center gap-3 border-b border-gray-700 pb-3">
