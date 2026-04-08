@@ -256,8 +256,11 @@ export default function Login() {
                 />
               </div>
             )}
-            {errors.loginEmail && (
+            {errors.loginEmail && loginMethod === 'email' && (
               <p className="text-sm text-red-500">{errors.loginEmail}</p>
+            )}
+            {errors.loginPhone && loginMethod === 'phone' && (
+              <p className="text-sm text-red-500">{errors.loginPhone}</p>
             )}
 
             <div className="flex items-center gap-3 border-b border-gray-700 pb-3">
