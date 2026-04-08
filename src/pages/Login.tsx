@@ -39,6 +39,8 @@ export default function Login() {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
 
   const emailSchema = z.string().email(t('auth.email') + ' không hợp lệ');
   const passwordSchema = z.string().min(6, t('auth.password') + ' phải có ít nhất 6 ký tự');
