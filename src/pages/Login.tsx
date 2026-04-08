@@ -105,7 +105,15 @@ export default function Login() {
     
     if (!validateLoginForm()) return;
     
-    await performLogin(loginEmail, loginPassword);
+    if (loginMethod === 'phone') {
+      // Convert phone to the @phone.local email used during registration
+      const fullPhone = phoneCountryCode + loginPhone;
+      const normalizedPhone = fullPhone.startsWith('+') ? fullPhone : `+${fullPhone}`;
+      const phoneEmail = `${normalizedPhone.replace(/\+/g, '')}@phone.local`;
+      await performLogin(phoneEmail, loginPassword);
+    } else {
+      await performLogin(loginEmail, loginPassword);
+    }
   };
 
   const performLogin = async (email: string, password: string) => {
