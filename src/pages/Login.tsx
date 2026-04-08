@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -295,7 +295,7 @@ export default function Login() {
                 />
                 {t('auth.rememberMe')}
               </label>
-              <button type="button" className="text-red-500">{t('auth.forgotPassword')}</button>
+              <button type="button" className="text-red-500" onClick={() => setShowForgotDialog(true)}>{t('auth.forgotPassword')}</button>
             </div>
 
             <button
