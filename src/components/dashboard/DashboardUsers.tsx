@@ -960,6 +960,7 @@ export function DashboardUsers() {
                   </p>
                 </div>
 
+                {selectedUser.frozen_reason && (
                   <div className="col-span-2 space-y-1">
                     <p className="text-muted-foreground">Lý do khóa</p>
                     <p className="text-destructive">{selectedUser.frozen_reason}</p>
