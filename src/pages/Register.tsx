@@ -121,7 +121,7 @@ export default function Register() {
         toast({
           variant: 'destructive',
           title: t('auth.register') + (language === 'vi' ? ' thất bại' : ' failed'),
-          description: translateAuthError(error.message, language),
+          description: translateAuthError(error.message, language, 'email'),
         });
         return;
       }
@@ -150,7 +150,7 @@ export default function Register() {
           toast({
             variant: 'destructive',
             title: language === 'vi' ? 'Gửi mã thất bại' : 'Failed to send code',
-            description: errMsg,
+            description: translateAuthError(errMsg, language, 'phone'),
           });
           return;
         }
@@ -231,7 +231,7 @@ export default function Register() {
           toast({
             variant: 'destructive',
             title: language === 'vi' ? 'Xác thực thất bại' : 'Verification failed',
-            description: errMsg,
+            description: translateAuthError(errMsg, language, 'phone'),
           });
           return;
         }
