@@ -136,7 +136,7 @@ export default function Register() {
           : `Please check your email ${registerEmail} for the verification code.`,
       });
     } else {
-      // Phone registration flow - check if phone already exists, then send SMS OTP
+      // Phone registration flow - create account directly (SMS OTP temporarily disabled)
       try {
         const fullPhone = getFullPhone();
         const normalizedPhone = fullPhone.startsWith('+') ? fullPhone : `+${fullPhone}`;
@@ -158,31 +158,60 @@ export default function Register() {
           return;
         }
 
-        const response = await supabase.functions.invoke('send-sms-otp', {
-          body: { phone: fullPhone, fullName: registerName },
+        // Create account directly without OTP
+        const phoneEmail = `${normalizedPhone.replace(/\+/g, '')}@phone.local`;
+        
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: phoneEmail,
+          password: registerPassword,
+          options: {
+            data: {
+              full_name: registerName,
+              phone: normalizedPhone,
+            },
+          },
         });
 
-        setIsLoading(false);
-
-        if (response.error || response.data?.error) {
-          const errMsg = response.data?.error || response.error?.message || 'Failed to send OTP';
+        if (signUpError) {
+          setIsLoading(false);
           toast({
             variant: 'destructive',
-            title: language === 'vi' ? 'Gửi mã thất bại' : 'Failed to send code',
-            description: translateAuthError(errMsg, language, 'phone'),
+            title: language === 'vi' ? 'Đăng ký thất bại' : 'Registration failed',
+            description: translateAuthError(signUpError.message, language, 'phone'),
           });
           return;
         }
 
-        setOtpTarget('phone');
-        setShowOtpStep(true);
-        setResendCooldown(60);
-        toast({
-          title: language === 'vi' ? 'Mã xác thực đã được gửi' : 'Verification code sent',
-          description: language === 'vi'
-            ? `Mã OTP đã được gửi đến ${fullPhone}`
-            : `OTP has been sent to ${fullPhone}`,
+        // Update phone in profile
+        if (signUpData.user) {
+          await supabase
+            .from('profiles')
+            .update({ phone: normalizedPhone })
+            .eq('id', signUpData.user.id);
+        }
+
+        // Auto sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: phoneEmail,
+          password: registerPassword,
         });
+
+        setIsLoading(false);
+
+        if (signInError) {
+          toast({
+            title: language === 'vi' ? 'Tài khoản đã tạo' : 'Account created',
+            description: language === 'vi' ? 'Vui lòng đăng nhập.' : 'Please log in.',
+          });
+          navigate('/login');
+          return;
+        }
+
+        toast({
+          title: t('auth.register') + (language === 'vi' ? ' thành công' : ' successful'),
+          description: t('auth.welcomeSubtitle'),
+        });
+        navigate('/');
       } catch (err: any) {
         setIsLoading(false);
         toast({
