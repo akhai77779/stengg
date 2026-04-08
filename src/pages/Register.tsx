@@ -136,9 +136,28 @@ export default function Register() {
           : `Please check your email ${registerEmail} for the verification code.`,
       });
     } else {
-      // Phone registration flow - send SMS OTP
+      // Phone registration flow - check if phone already exists, then send SMS OTP
       try {
         const fullPhone = getFullPhone();
+        const normalizedPhone = fullPhone.startsWith('+') ? fullPhone : `+${fullPhone}`;
+        
+        // Check if phone number already registered
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('phone', normalizedPhone)
+          .maybeSingle();
+        
+        if (existingProfile) {
+          setIsLoading(false);
+          toast({
+            variant: 'destructive',
+            title: language === 'vi' ? 'Đăng ký thất bại' : 'Registration failed',
+            description: language === 'vi' ? 'Số điện thoại này đã được đăng ký.' : 'This phone number is already registered.',
+          });
+          return;
+        }
+
         const response = await supabase.functions.invoke('send-sms-otp', {
           body: { phone: fullPhone, fullName: registerName },
         });
