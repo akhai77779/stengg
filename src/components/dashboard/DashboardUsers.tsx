@@ -1544,6 +1544,13 @@ export function DashboardUsers() {
          onSave={saveNote}
          onDelete={deleteNote}
        />
+
+      {/* Admin Create User Dialog */}
+      <AdminCreateUserDialog
+        open={showCreateUserDialog}
+        onOpenChange={setShowCreateUserDialog}
+        onUserCreated={fetchData}
+      />
     </>
   );
 }
