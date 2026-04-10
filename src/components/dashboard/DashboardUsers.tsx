@@ -778,7 +778,7 @@ export function DashboardUsers() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
-                          {profile.email && (
+                          {profile.email && !profile.email.endsWith('@phone.local') && (
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Mail className="w-3 h-3" />
                               <span className="truncate max-w-[150px]">{profile.email}</span>
@@ -790,7 +790,7 @@ export function DashboardUsers() {
                               <span>{profile.phone}</span>
                             </div>
                           )}
-                          {!profile.email && !profile.phone && '-'}
+                          {(!profile.email || profile.email.endsWith('@phone.local')) && !profile.phone && '-'}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1003,7 +1003,7 @@ export function DashboardUsers() {
 
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Email</p>
-                  <p>{selectedUser.email || '-'}</p>
+                  <p>{selectedUser.email && !selectedUser.email.endsWith('@phone.local') ? selectedUser.email : '-'}</p>
                 </div>
 
                 <div className="space-y-1">

@@ -47,9 +47,10 @@ export function Header() {
 
   const isPhoneUser = (email: string) => email?.endsWith('@phone.local');
   
-  const getDisplayName = (email: string) => {
+  const getDisplayName = (email: string, phone?: string | null) => {
     if (isPhoneUser(email)) {
-      // Convert 84xxx@phone.local back to +84xxx format
+      // Show actual phone number from profile if available
+      if (phone) return phone;
       const digits = email.replace('@phone.local', '');
       return `+${digits}`;
     }
@@ -138,7 +139,7 @@ export function Header() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">{getDisplayName(user.email || '')}</span>
+                        <span className="text-sm font-medium">{getDisplayName(user.email || '', user.phone)}</span>
                         {isAdmin && (
                           <span className="text-xs text-primary flex items-center gap-1">
                             <Shield className="w-3 h-3" /> Admin
