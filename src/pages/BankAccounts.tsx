@@ -42,6 +42,8 @@ export default function BankAccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasWithdrawalPassword, setHasWithdrawalPassword] = useState<boolean | null>(null);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   
   // Form states
   const [bankName, setBankName] = useState("");
