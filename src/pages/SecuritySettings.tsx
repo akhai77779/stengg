@@ -35,9 +35,10 @@ export default function SecuritySettings() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Check if user has verified phone/email
-  const isPhoneVerified = !!user?.phone;
-  const isEmailVerified = !!user?.email_confirmed_at;
+  // Check if user registered via phone (email pattern: [phone]@phone.local)
+  const isPhoneUser = !!user?.email && user.email.endsWith('@phone.local');
+  const isPhoneVerified = !!user?.phone || isPhoneUser;
+  const isEmailVerified = !!user?.email_confirmed_at && !isPhoneUser;
 
   // Fetch withdrawal password status using secure RPC (never exposes hash)
   useEffect(() => {
