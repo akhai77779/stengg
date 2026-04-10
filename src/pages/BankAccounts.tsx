@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface BankAccount {
   id: string;
@@ -35,6 +42,8 @@ export default function BankAccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasWithdrawalPassword, setHasWithdrawalPassword] = useState<boolean | null>(null);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   
   // Form states
   const [bankName, setBankName] = useState("");
@@ -55,6 +64,9 @@ export default function BankAccountsPage() {
     
     if (user) {
       fetchBankAccounts();
+      // Check withdrawal password status
+      supabase.rpc('has_withdrawal_password', { _user_id: user.id })
+        .then(({ data }) => setHasWithdrawalPassword(data === true));
     }
   }, [user, authLoading, navigate]);
 
@@ -244,7 +256,13 @@ export default function BankAccountsPage() {
           {/* Add Button */}
           <div className="mt-6 md:mt-8">
             <Button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => {
+                if (hasWithdrawalPassword === false) {
+                  setShowPasswordPrompt(true);
+                  return;
+                }
+                setShowAddForm(true);
+              }}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-h-[48px] md:min-h-[52px] rounded-lg text-sm md:text-base"
             >
               <Plus className="w-5 h-5 mr-2" />
@@ -331,6 +349,29 @@ export default function BankAccountsPage() {
           </Sheet>
         </div>
       </div>
+
+      {/* Withdrawal Password Required Dialog */}
+      <Dialog open={showPasswordPrompt} onOpenChange={setShowPasswordPrompt}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-destructive" />
+              Yêu cầu tạo mật khẩu rút tiền
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Bạn cần tạo mật khẩu rút tiền trước khi liên kết tài khoản ngân hàng. Vui lòng đến trang Bảo mật để thiết lập.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowPasswordPrompt(false)}>
+              Để sau
+            </Button>
+            <Button onClick={() => navigate('/security')}>
+              Đến trang Bảo mật
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
