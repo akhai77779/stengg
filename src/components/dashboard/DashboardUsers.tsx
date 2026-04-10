@@ -1592,6 +1592,43 @@ export function DashboardUsers() {
         onOpenChange={setShowCreateUserDialog}
         onUserCreated={fetchData}
       />
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sửa thông tin người dùng</DialogTitle>
+            <DialogDescription>Thay đổi mã ID và tên hiển thị</DialogDescription>
+          </DialogHeader>
+          {editUser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Mã ID (user_code)</Label>
+                <Input
+                  type="number"
+                  value={editUserCode}
+                  onChange={(e) => setEditUserCode(e.target.value)}
+                  placeholder="VD: 68101"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tên hiển thị</Label>
+                <Input
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Nhập tên người dùng"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUser(null)}>Hủy</Button>
+            <Button onClick={handleEditUser} disabled={isEditingUser}>
+              {isEditingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
