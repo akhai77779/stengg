@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote } from 'lucide-react';
+import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -127,6 +127,12 @@ export function DashboardUsers() {
 
   // Create user dialog
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+
+  // Edit user dialog
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUserCode, setEditUserCode] = useState('');
+  const [isEditingUser, setIsEditingUser] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -633,6 +639,61 @@ export function DashboardUsers() {
     setIsUpdatingFreeze(false);
   };
 
+  const handleOpenEditUser = (profile: Profile) => {
+    setEditUser(profile);
+    setEditFullName(profile.full_name || '');
+    setEditUserCode(profile.user_code?.toString() || '');
+  };
+
+  const handleEditUser = async () => {
+    if (!editUser) return;
+
+    const trimmedName = editFullName.trim();
+    const trimmedCode = editUserCode.trim();
+
+    if (!trimmedName) {
+      toast({ title: 'Lỗi', description: 'Tên không được để trống', variant: 'destructive' });
+      return;
+    }
+
+    const codeNum = trimmedCode ? parseInt(trimmedCode, 10) : null;
+    if (trimmedCode && (isNaN(codeNum!) || codeNum! < 1)) {
+      toast({ title: 'Lỗi', description: 'Mã ID phải là số dương', variant: 'destructive' });
+      return;
+    }
+
+    setIsEditingUser(true);
+
+    try {
+      const updateData: Record<string, unknown> = { full_name: trimmedName };
+      if (codeNum !== null) {
+        updateData.user_code = codeNum;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', editUser.id);
+
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Thành công', description: 'Đã cập nhật thông tin người dùng' });
+        setProfiles(profiles.map(p =>
+          p.id === editUser.id
+            ? { ...p, full_name: trimmedName, user_code: codeNum ?? p.user_code }
+            : p
+        ));
+        setEditUser(null);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    }
+
+    setIsEditingUser(false);
+  };
+
   return (
     <>
       <Card className="bg-card border-border">
@@ -821,6 +882,10 @@ export function DashboardUsers() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem onClick={() => handleOpenEditUser(profile)}>
+                                <Pencil className="w-4 h-4 mr-2 text-blue-500" />
+                                Sửa ID / Tên
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setTransactionHistoryUser(profile)}>
                                 <History className="w-4 h-4 mr-2 text-blue-500" />
                                 Lịch sử nạp/rút
@@ -1527,6 +1592,43 @@ export function DashboardUsers() {
         onOpenChange={setShowCreateUserDialog}
         onUserCreated={fetchData}
       />
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sửa thông tin người dùng</DialogTitle>
+            <DialogDescription>Thay đổi mã ID và tên hiển thị</DialogDescription>
+          </DialogHeader>
+          {editUser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Mã ID (user_code)</Label>
+                <Input
+                  type="number"
+                  value={editUserCode}
+                  onChange={(e) => setEditUserCode(e.target.value)}
+                  placeholder="VD: 68101"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tên hiển thị</Label>
+                <Input
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Nhập tên người dùng"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUser(null)}>Hủy</Button>
+            <Button onClick={handleEditUser} disabled={isEditingUser}>
+              {isEditingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
