@@ -639,6 +639,61 @@ export function DashboardUsers() {
     setIsUpdatingFreeze(false);
   };
 
+  const handleOpenEditUser = (profile: Profile) => {
+    setEditUser(profile);
+    setEditFullName(profile.full_name || '');
+    setEditUserCode(profile.user_code?.toString() || '');
+  };
+
+  const handleEditUser = async () => {
+    if (!editUser) return;
+
+    const trimmedName = editFullName.trim();
+    const trimmedCode = editUserCode.trim();
+
+    if (!trimmedName) {
+      toast({ title: 'Lỗi', description: 'Tên không được để trống', variant: 'destructive' });
+      return;
+    }
+
+    const codeNum = trimmedCode ? parseInt(trimmedCode, 10) : null;
+    if (trimmedCode && (isNaN(codeNum!) || codeNum! < 1)) {
+      toast({ title: 'Lỗi', description: 'Mã ID phải là số dương', variant: 'destructive' });
+      return;
+    }
+
+    setIsEditingUser(true);
+
+    try {
+      const updateData: Record<string, unknown> = { full_name: trimmedName };
+      if (codeNum !== null) {
+        updateData.user_code = codeNum;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', editUser.id);
+
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Thành công', description: 'Đã cập nhật thông tin người dùng' });
+        setProfiles(profiles.map(p =>
+          p.id === editUser.id
+            ? { ...p, full_name: trimmedName, user_code: codeNum ?? p.user_code }
+            : p
+        ));
+        setEditUser(null);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    }
+
+    setIsEditingUser(false);
+  };
+
   return (
     <>
       <Card className="bg-card border-border">
