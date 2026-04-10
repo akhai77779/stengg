@@ -256,7 +256,13 @@ export default function BankAccountsPage() {
           {/* Add Button */}
           <div className="mt-6 md:mt-8">
             <Button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => {
+                if (hasWithdrawalPassword === false) {
+                  setShowPasswordPrompt(true);
+                  return;
+                }
+                setShowAddForm(true);
+              }}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-h-[48px] md:min-h-[52px] rounded-lg text-sm md:text-base"
             >
               <Plus className="w-5 h-5 mr-2" />
