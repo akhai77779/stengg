@@ -349,6 +349,29 @@ export default function BankAccountsPage() {
           </Sheet>
         </div>
       </div>
+
+      {/* Withdrawal Password Required Dialog */}
+      <Dialog open={showPasswordPrompt} onOpenChange={setShowPasswordPrompt}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-destructive" />
+              Yêu cầu tạo mật khẩu rút tiền
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Bạn cần tạo mật khẩu rút tiền trước khi liên kết tài khoản ngân hàng. Vui lòng đến trang Bảo mật để thiết lập.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowPasswordPrompt(false)}>
+              Để sau
+            </Button>
+            <Button onClick={() => navigate('/security')}>
+              Đến trang Bảo mật
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
