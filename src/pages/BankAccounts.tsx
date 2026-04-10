@@ -64,6 +64,9 @@ export default function BankAccountsPage() {
     
     if (user) {
       fetchBankAccounts();
+      // Check withdrawal password status
+      supabase.rpc('has_withdrawal_password', { _user_id: user.id })
+        .then(({ data }) => setHasWithdrawalPassword(data === true));
     }
   }, [user, authLoading, navigate]);
 
