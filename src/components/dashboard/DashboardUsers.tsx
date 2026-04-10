@@ -882,6 +882,10 @@ export function DashboardUsers() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem onClick={() => handleOpenEditUser(profile)}>
+                                <Pencil className="w-4 h-4 mr-2 text-blue-500" />
+                                Sửa ID / Tên
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setTransactionHistoryUser(profile)}>
                                 <History className="w-4 h-4 mr-2 text-blue-500" />
                                 Lịch sử nạp/rút
