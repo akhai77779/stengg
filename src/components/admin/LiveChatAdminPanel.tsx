@@ -442,7 +442,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
 
   return (
     <TooltipProvider>
-    <div className={cn("flex bg-background", containerHeight)}>
+    <div className={cn("flex bg-background relative", containerHeight)}>
       {/* Sidebar - Room List */}
       <div className={cn(
         "border-r flex flex-col",
