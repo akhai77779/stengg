@@ -8,7 +8,6 @@ import {
   StickyNote,
   Edit2,
   Trash2,
-  Clock,
   CheckCircle2,
   Bot,
   BarChart3,
@@ -18,6 +17,7 @@ import {
   FileSpreadsheet,
   PanelRight,
   PanelRightClose,
+  ArrowLeft,
 } from "lucide-react";
 import { Inbox, XCircle, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
