@@ -734,7 +734,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                     <Button
                       variant={selectedRoom.status === "active" ? "default" : "outline"}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-2 text-xs hidden sm:inline-flex"
                       onClick={() => handleStatusChange("active")}
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -743,13 +743,13 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                     <Button
                       variant={selectedRoom.status === "closed" ? "destructive" : "outline"}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-2 text-xs hidden sm:inline-flex"
                       onClick={() => handleStatusChange("closed")}
                     >
                       Đóng
                     </Button>
 
-                    {/* Export dropdown */}
+                    {/* Export dropdown - hidden on small screens */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
