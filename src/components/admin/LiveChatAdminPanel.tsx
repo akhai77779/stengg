@@ -63,14 +63,6 @@ import { CustomerInfoPanel } from "./CustomerInfoPanel";
 import { exportChatToCSV, exportChatToPDF } from "@/lib/exportLiveChatHistory";
 import { useToast } from "@/hooks/use-toast";
 
-// Quick reply templates
-const QUICK_REPLIES = [
-  "Xin chào! Tôi có thể giúp gì cho bạn?",
-  "Cảm ơn bạn đã liên hệ. Vui lòng chờ trong giây lát.",
-  "Vấn đề của bạn đã được ghi nhận. Chúng tôi sẽ phản hồi sớm nhất có thể.",
-  "Bạn có thể cung cấp thêm thông tin chi tiết được không?",
-  "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!",
-];
 
 interface LiveChatAdminPanelProps {
   isEmbedded?: boolean;
