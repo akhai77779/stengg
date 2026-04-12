@@ -309,20 +309,6 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
       attachment_name: attachment?.name,
     });
   };
-
-  // Quick reply
-  const handleQuickReply = (text: string) => {
-    if (!selectedRoom || !user) return;
-
-    sendMessage({
-      room_id: selectedRoom.id,
-      sender_type: "support",
-      sender_id: user.id,
-      sender_name: "Support ST Engineering",
-      message: text,
-    });
-  };
-
   // Room status helpers
   const getStatusColor = (status: string) => {
     switch (status) {
