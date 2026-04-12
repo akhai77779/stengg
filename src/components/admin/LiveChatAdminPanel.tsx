@@ -702,25 +702,34 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
             <>
               {/* Chat Header */}
               <div className="p-3 border-b">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {/* Mobile back button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 md:hidden shrink-0"
+                      onClick={() => setSelectedRoom(null)}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarFallback className="text-xs">
                         {selectedRoom.customer_name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium text-sm">{selectedRoom.customer_name}</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{selectedRoom.customer_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {selectedRoom.customer_email || "Khách"}
                       </p>
                     </div>
-                    <Badge variant="outline" className="ml-1 text-xs">
+                    <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
                       {getStatusText(selectedRoom.status)}
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     {/* Status buttons */}
                     <Button
                       variant={selectedRoom.status === "active" ? "default" : "outline"}
