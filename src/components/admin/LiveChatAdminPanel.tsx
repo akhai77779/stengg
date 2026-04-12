@@ -437,11 +437,20 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const containerHeight = isEmbedded ? "h-full" : "h-[calc(100vh-4rem)]";
   const sidebarWidth = isEmbedded ? "w-64" : "w-80";
 
+  // Mobile: toggle between room list and chat view
+  const showRoomListOnMobile = !selectedRoom;
+
   return (
     <TooltipProvider>
     <div className={cn("flex bg-background", containerHeight)}>
       {/* Sidebar - Room List */}
-      <div className={cn("border-r flex flex-col", sidebarWidth)}>
+      <div className={cn(
+        "border-r flex flex-col",
+        sidebarWidth,
+        // Mobile: full width when showing room list, hidden when showing chat
+        "max-md:absolute max-md:inset-0 max-md:w-full max-md:z-10 max-md:bg-background",
+        !showRoomListOnMobile && "max-md:hidden"
+      )}>
         {/* Header */}
         <div className="p-3 border-b space-y-2">
           <div className="flex items-center justify-between">
