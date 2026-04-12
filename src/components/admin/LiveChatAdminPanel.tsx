@@ -749,10 +749,10 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                       Đóng
                     </Button>
 
-                    {/* Export dropdown - hidden on small screens */}
+                    {/* Export dropdown - hidden on small mobile */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7 px-2 gap-1">
+                        <Button variant="outline" size="sm" className="h-7 px-2 gap-1 hidden sm:inline-flex">
                           <Download className="h-3 w-3" />
                           <span className="text-xs">Xuất</span>
                         </Button>
