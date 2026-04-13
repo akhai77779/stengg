@@ -1,7 +1,7 @@
  import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, Hash, Smile, X, FileText, Settings, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ export function ChatInputWithExtras({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
    const { templates, loading: templatesLoading } = useQuickReplyTemplates();
  
    // Filter only active templates
@@ -112,8 +112,21 @@ export function ChatInputWithExtras({
     inputRef.current?.focus();
   };
 
-  // Handle keyboard navigation for inline suggestions
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handle keyboard navigation for inline suggestions + Enter/Shift+Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter without Shift = send
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (showInlineHashtag && filteredTemplates.length > 0) {
+        e.preventDefault();
+        const selected = filteredTemplates[selectedSuggestionIndex];
+        handleInlineTemplateSelect(selected.text, selected.tag);
+        return;
+      }
+      e.preventDefault();
+      handleSubmit(e);
+      return;
+    }
+    
     if (!showInlineHashtag || filteredTemplates.length === 0) return;
     
     switch (e.key) {
@@ -129,20 +142,13 @@ export function ChatInputWithExtras({
           prev > 0 ? prev - 1 : filteredTemplates.length - 1
         );
         break;
-      case "Enter":
-        if (showInlineHashtag && filteredTemplates.length > 0) {
-          e.preventDefault();
-          const selected = filteredTemplates[selectedSuggestionIndex];
-          handleInlineTemplateSelect(selected.text, selected.tag);
-        }
-        break;
       case "Escape":
         e.preventDefault();
         setShowInlineHashtag(false);
         setHashtagQuery("");
         break;
       case "Tab":
-        if (showInlineHashtag && filteredTemplates.length > 0) {
+        if (filteredTemplates.length > 0) {
           e.preventDefault();
           const selected = filteredTemplates[selectedSuggestionIndex];
           handleInlineTemplateSelect(selected.text, selected.tag);
@@ -196,7 +202,7 @@ export function ChatInputWithExtras({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessage(value);
     detectHashtag(value);
@@ -286,7 +292,7 @@ export function ChatInputWithExtras({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 relative">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 relative">
         <input
           ref={fileInputRef}
           type="file"
@@ -396,14 +402,15 @@ export function ChatInputWithExtras({
         </Popover>
 
         {/* Message Input */}
-        <Input
+        <Textarea
           ref={inputRef}
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || uploading}
-          className="flex-1 h-8 text-sm"
+          className="flex-1 min-h-[36px] max-h-[120px] text-sm resize-none py-2"
+          rows={1}
         />
 
         {/* Send Button */}
