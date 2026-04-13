@@ -1,7 +1,7 @@
  import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, Hash, Smile, X, FileText, Settings, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
