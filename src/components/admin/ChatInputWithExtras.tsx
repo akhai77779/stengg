@@ -402,14 +402,15 @@ export function ChatInputWithExtras({
         </Popover>
 
         {/* Message Input */}
-        <Input
+        <Textarea
           ref={inputRef}
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || uploading}
-          className="flex-1 h-8 text-sm"
+          className="flex-1 min-h-[36px] max-h-[120px] text-sm resize-none py-2"
+          rows={1}
         />
 
         {/* Send Button */}
