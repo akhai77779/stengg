@@ -418,106 +418,142 @@ export default function AdminOptionTrades() {
         </div>
       ) : (
         /* ─── Desktop: Table View ─── */
-        <div className="rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Người dùng</TableHead>
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Hướng</TableHead>
-                <TableHead>Số tiền</TableHead>
-                <TableHead>Giá vào</TableHead>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Override</TableHead>
-                <TableHead>Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trades.map((trade) => (
-                <TableRow key={trade.id} className={trade.status === 'active' ? 'bg-primary/5' : ''}>
-                  <TableCell className="font-medium">
-                    {profiles[trade.user_id] || trade.user_id.slice(0, 8)}
-                  </TableCell>
-                  <TableCell>{products[trade.product_id]?.name || trade.product_id.slice(0, 8)}</TableCell>
-                  <TableCell>
-                    <Badge variant={trade.direction === 'buy' ? 'default' : 'destructive'}>
-                      {trade.direction === 'buy' ? (
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 mr-1" />
-                      )}
-                      {trade.direction === 'buy' ? 'MUA' : 'BÁN'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-semibold">${trade.amount.toLocaleString()}</TableCell>
-                  <TableCell>${trade.entry_price.toFixed(4)}</TableCell>
-                  <TableCell>
-                    {trade.status === 'active' ? (
-                      <span className="font-mono text-blue-500">{getTimeRemaining(trade.expires_at)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">{trade.duration_seconds}s</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[trade.status]}>
-                      {statusLabels[trade.status]}
-                    </Badge>
-                    {trade.profit_loss !== null && (
-                      <span className={cn(
-                        "ml-2 text-sm font-medium",
-                        trade.profit_loss >= 0 ? "text-green-500" : "text-red-500"
-                      )}>
-                        {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {trade.status === 'active' && (
-                      <Select
-                        value={trade.admin_result || 'none'}
-                        onValueChange={(v) => handleSetResult(trade.id, v === 'none' ? null : v as 'win' | 'lose')}
-                      >
-                        <SelectTrigger className="w-[120px] h-8">
-                          <SelectValue placeholder="Tự động" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Tự động</SelectItem>
-                          <SelectItem value="win">
-                            <span className="flex items-center gap-1 text-green-500">
-                              <CheckCircle className="h-3 w-3" /> Thắng
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="lose">
-                            <span className="flex items-center gap-1 text-red-500">
-                              <XCircle className="h-3 w-3" /> Thua
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {trade.admin_result && trade.status !== 'active' && (
-                      <Badge variant="outline" className="text-yellow-500 border-yellow-500">
-                        Override: {trade.admin_result === 'win' ? 'Thắng' : 'Thua'}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {trade.status === 'active' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleForceSettle(trade)}
-                      >
-                        Kết thúc ngay
-                      </Button>
-                    )}
-                  </TableCell>
+        <Card className="overflow-hidden">
+          <div className="max-h-[calc(100vh-320px)] overflow-auto">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
+                <TableRow className="hover:bg-transparent border-b-2 border-border">
+                  <TableHead className="w-[180px] font-semibold">Người dùng</TableHead>
+                  <TableHead className="w-[160px] font-semibold">Sản phẩm</TableHead>
+                  <TableHead className="w-[90px] font-semibold text-center">Hướng</TableHead>
+                  <TableHead className="w-[120px] font-semibold text-right">Số tiền</TableHead>
+                  <TableHead className="w-[120px] font-semibold text-right">Giá vào</TableHead>
+                  <TableHead className="w-[100px] font-semibold text-center">Thời gian</TableHead>
+                  <TableHead className="w-[140px] font-semibold text-center">Trạng thái</TableHead>
+                  <TableHead className="w-[150px] font-semibold text-center">Override</TableHead>
+                  <TableHead className="w-[130px] font-semibold text-center">Hành động</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {trades.map((trade, idx) => (
+                  <TableRow 
+                    key={trade.id} 
+                    className={cn(
+                      'transition-colors',
+                      trade.status === 'active' && 'bg-blue-500/5 hover:bg-blue-500/10',
+                      trade.status !== 'active' && idx % 2 === 0 && 'bg-muted/30',
+                      trade.status !== 'active' && 'hover:bg-muted/50',
+                    )}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{profiles[trade.user_id] || trade.user_id.slice(0, 8)}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{trade.user_id.slice(0, 12)}…</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{products[trade.product_id]?.name || trade.product_id.slice(0, 8)}</span>
+                        {products[trade.product_id]?.price && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Hiện tại: ${products[trade.product_id].price!.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={trade.direction === 'buy' ? 'default' : 'destructive'} className="min-w-[65px] justify-center">
+                        {trade.direction === 'buy' ? (
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 mr-1" />
+                        )}
+                        {trade.direction === 'buy' ? 'MUA' : 'BÁN'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      ${trade.amount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      ${trade.entry_price.toFixed(4)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {trade.status === 'active' ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-blue-500 font-semibold">
+                          <Clock className="h-3 w-3 animate-pulse" />
+                          {getTimeRemaining(trade.expires_at)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{trade.duration_seconds}s</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <Badge className={cn('min-w-[70px] justify-center', statusColors[trade.status])}>
+                          {statusLabels[trade.status]}
+                        </Badge>
+                        {trade.profit_loss !== null && (
+                          <span className={cn(
+                            "text-xs font-semibold tabular-nums",
+                            trade.profit_loss >= 0 ? "text-green-500" : "text-red-500"
+                          )}>
+                            {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {trade.status === 'active' && (
+                        <Select
+                          value={trade.admin_result || 'none'}
+                          onValueChange={(v) => handleSetResult(trade.id, v === 'none' ? null : v as 'win' | 'lose')}
+                        >
+                          <SelectTrigger className="w-[130px] h-8 mx-auto">
+                            <SelectValue placeholder="Tự động" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Tự động</SelectItem>
+                            <SelectItem value="win">
+                              <span className="flex items-center gap-1 text-green-500">
+                                <CheckCircle className="h-3 w-3" /> Thắng
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="lose">
+                              <span className="flex items-center gap-1 text-red-500">
+                                <XCircle className="h-3 w-3" /> Thua
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {trade.admin_result && trade.status !== 'active' && (
+                        <Badge variant="outline" className="text-yellow-500 border-yellow-500">
+                          Override: {trade.admin_result === 'win' ? 'Thắng' : 'Thua'}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {trade.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => handleForceSettle(trade)}
+                        >
+                          Kết thúc ngay
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="border-t px-4 py-2 flex items-center justify-between text-xs text-muted-foreground bg-muted/30">
+            <span>Hiển thị {trades.length} giao dịch</span>
+            <span>Cập nhật realtime</span>
+          </div>
+        </Card>
       )}
     </div>
   );
