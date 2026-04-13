@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,6 +59,122 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Đã hủy',
 };
 
+/* ─── Mobile Card for a single trade ─── */
+function TradeCard({
+  trade,
+  profiles,
+  products,
+  getTimeRemaining,
+  onSetResult,
+  onForceSettle,
+}: {
+  trade: OptionTrade;
+  profiles: Record<string, string>;
+  products: Record<string, { name: string; price: number | null }>;
+  getTimeRemaining: (exp: string) => string;
+  onSetResult: (id: string, r: 'win' | 'lose' | null) => void;
+  onForceSettle: (t: OptionTrade) => void;
+}) {
+  const isBuy = trade.direction === 'buy';
+
+  return (
+    <Card className={cn(
+      'overflow-hidden',
+      trade.status === 'active' && 'border-blue-500/40'
+    )}>
+      <CardContent className="p-3 space-y-3">
+        {/* Row 1: User + Status */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium truncate flex-1">
+            {profiles[trade.user_id] || trade.user_id.slice(0, 8)}
+          </span>
+          <Badge className={cn('shrink-0', statusColors[trade.status])}>
+            {statusLabels[trade.status]}
+          </Badge>
+        </div>
+
+        {/* Row 2: Product + Direction */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground truncate">
+            {products[trade.product_id]?.name || trade.product_id.slice(0, 8)}
+          </span>
+          <Badge variant={isBuy ? 'default' : 'destructive'} className="shrink-0">
+            {isBuy ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+            {isBuy ? 'MUA' : 'BÁN'}
+          </Badge>
+        </div>
+
+        {/* Row 3: Key metrics grid */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-muted/50 rounded-lg p-2">
+            <p className="text-[10px] text-muted-foreground">Số tiền</p>
+            <p className="text-sm font-bold">${trade.amount.toLocaleString()}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2">
+            <p className="text-[10px] text-muted-foreground">Giá vào</p>
+            <p className="text-sm font-mono">${trade.entry_price.toFixed(2)}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2">
+            <p className="text-[10px] text-muted-foreground">Thời gian</p>
+            {trade.status === 'active' ? (
+              <p className="text-sm font-mono text-blue-500">{getTimeRemaining(trade.expires_at)}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{trade.duration_seconds}s</p>
+            )}
+          </div>
+        </div>
+
+        {/* Profit/loss display */}
+        {trade.profit_loss !== null && (
+          <div className={cn(
+            'text-center py-1.5 rounded-lg text-sm font-semibold',
+            trade.profit_loss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+          )}>
+            {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
+          </div>
+        )}
+
+        {/* Actions for active trades */}
+        {trade.status === 'active' && (
+          <div className="flex items-center gap-2 pt-1">
+            <Select
+              value={trade.admin_result || 'none'}
+              onValueChange={(v) => onSetResult(trade.id, v === 'none' ? null : v as 'win' | 'lose')}
+            >
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue placeholder="Tự động" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Tự động</SelectItem>
+                <SelectItem value="win">
+                  <span className="flex items-center gap-1 text-green-500">
+                    <CheckCircle className="h-3 w-3" /> Thắng
+                  </span>
+                </SelectItem>
+                <SelectItem value="lose">
+                  <span className="flex items-center gap-1 text-red-500">
+                    <XCircle className="h-3 w-3" /> Thua
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={() => onForceSettle(trade)}>
+              Kết thúc
+            </Button>
+          </div>
+        )}
+
+        {/* Override badge for settled */}
+        {trade.admin_result && trade.status !== 'active' && (
+          <Badge variant="outline" className="text-yellow-500 border-yellow-500 text-xs">
+            Override: {trade.admin_result === 'win' ? 'Thắng' : 'Thua'}
+          </Badge>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminOptionTrades() {
   const [trades, setTrades] = useState<OptionTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +182,7 @@ export default function AdminOptionTrades() {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<Record<string, { name: string; price: number | null }>>({});
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetchTrades = useCallback(async () => {
     setIsLoading(true);
@@ -92,12 +210,10 @@ export default function AdminOptionTrades() {
     const tradesData = (data || []) as OptionTrade[];
     setTrades(tradesData);
 
-    // Fetch profiles and products for enrichment
     const userIds = [...new Set(tradesData.map(t => t.user_id))];
     const productIds = [...new Set(tradesData.map(t => t.product_id))];
 
     if (userIds.length > 0) {
-      // Use profiles_safe view for security
       const { data: profilesData } = await supabase
         .from('profiles_safe')
         .select('id, full_name')
@@ -126,20 +242,16 @@ export default function AdminOptionTrades() {
     setIsLoading(false);
   }, [filter, toast]);
 
-  // Ref to hold latest fetchTrades for stable subscription
   const fetchTradesRef = useRef(fetchTrades);
   
-  // Keep ref updated
   useEffect(() => {
     fetchTradesRef.current = fetchTrades;
   }, [fetchTrades]);
 
-  // Initial fetch when filter changes
   useEffect(() => {
     fetchTrades();
   }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Realtime subscription only - no polling needed since pg_cron handles auto-settle
   useEffect(() => {
     console.log('[AdminOptionTrades] Setting up realtime subscription');
     
@@ -165,7 +277,7 @@ export default function AdminOptionTrades() {
       console.log('[AdminOptionTrades] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
-  }, []); // Empty deps - runs once on mount
+  }, []);
 
   const handleSetResult = async (tradeId: string, result: 'win' | 'lose' | null) => {
     const { error } = await supabase
@@ -211,64 +323,63 @@ export default function AdminOptionTrades() {
     return remaining > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : 'Hết giờ';
   };
 
-  // Stats
   const activeTrades = trades.filter(t => t.status === 'active');
   const totalActiveAmount = activeTrades.reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Quản lý Option Trades</h1>
+        <h1 className="text-xl md:text-2xl font-bold">Quản lý Option Trades</h1>
         <Button variant="outline" size="sm" onClick={fetchTrades}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Làm mới
+          <span className="hidden sm:inline">Làm mới</span>
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Giao dịch đang chạy</p>
-                <p className="text-2xl font-bold">{activeTrades.length}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-sm text-muted-foreground truncate">Đang chạy</p>
+                <p className="text-lg md:text-2xl font-bold">{activeTrades.length}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <Clock className="h-5 w-5 md:h-8 md:w-8 text-blue-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Tổng tiền đang đặt</p>
-                <p className="text-2xl font-bold">${totalActiveAmount.toLocaleString()}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-sm text-muted-foreground truncate">Tổng tiền</p>
+                <p className="text-lg md:text-2xl font-bold">${totalActiveAmount.toLocaleString()}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-5 w-5 md:h-8 md:w-8 text-green-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Cần can thiệp</p>
-                <p className="text-2xl font-bold text-yellow-500">
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-sm text-muted-foreground truncate">Can thiệp</p>
+                <p className="text-lg md:text-2xl font-bold text-yellow-500">
                   {activeTrades.filter(t => !t.admin_result).length}
                 </p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-yellow-500" />
+              <AlertTriangle className="h-5 w-5 md:h-8 md:w-8 text-yellow-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <span className="text-sm text-muted-foreground">Lọc:</span>
         <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[140px] md:w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -279,7 +390,7 @@ export default function AdminOptionTrades() {
         </Select>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -290,7 +401,23 @@ export default function AdminOptionTrades() {
             Không có giao dịch nào
           </CardContent>
         </Card>
+      ) : isMobile ? (
+        /* ─── Mobile: Card View ─── */
+        <div className="space-y-3">
+          {trades.map((trade) => (
+            <TradeCard
+              key={trade.id}
+              trade={trade}
+              profiles={profiles}
+              products={products}
+              getTimeRemaining={getTimeRemaining}
+              onSetResult={handleSetResult}
+              onForceSettle={handleForceSettle}
+            />
+          ))}
+        </div>
       ) : (
+        /* ─── Desktop: Table View ─── */
         <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
