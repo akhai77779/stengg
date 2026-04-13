@@ -176,10 +176,12 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
   }
 
   return (
-    <div 
-      ref={scrollContainerRef} 
-      className="flex-1 min-h-0 h-full overflow-y-auto overscroll-contain"
-    >
+    <div className="relative flex-1 min-h-0 h-full">
+      <div 
+        ref={scrollContainerRef} 
+        className="h-full overflow-y-auto overscroll-contain"
+        onScroll={handleScroll}
+      >
         <div className="p-4 space-y-4 pb-2">
           {messages.map((message) => {
             const isOwn = message.sender_id === currentUserId || 
