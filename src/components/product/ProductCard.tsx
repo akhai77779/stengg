@@ -56,41 +56,52 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
     >
       <CardContent className="p-0">
         {/* Mobile: horizontal row layout */}
-        <div className="flex items-stretch md:hidden overflow-hidden rounded-lg">
-          <div className="w-16 flex-shrink-0 relative">
-            {product.image_url ? (
-              <div className="h-full overflow-hidden">
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover min-h-[72px]" loading="lazy" />
-              </div>
-            ) : (
-              <div className="h-full min-h-[72px] bg-muted/30 flex items-center justify-center">
-                {getCategoryIcon(product.name, product.category)}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center">
-            <h3 className="font-semibold text-foreground text-sm line-clamp-1 mb-1">{product.name}</h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>VOL:</span>
-              <span className="text-foreground">{formatVolume(product.volume, product.turnover)}</span>
+        <div className="relative md:hidden overflow-hidden rounded-lg">
+          {/* Ghost background image - mobile */}
+          {product.image_url && (
+            <div className="absolute left-0 top-0 bottom-0 w-[120px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
+              <img
+                src={product.image_url}
+                alt=""
+                className="w-full h-full object-cover opacity-35"
+                loading="lazy"
+                style={{
+                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+                }}
+              />
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <AnimatedPrice value={product.price} formatter={formatPrice} className="text-base font-bold tabular-nums" />
-              <div className={changeBadgeClass}>
-                {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <AnimatedStat value={formatChange(product.price_change)} className="text-xs font-medium" />
-                <span>%</span>
+          )}
+          {!product.image_url && (
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-10">
+              {getCategoryIcon(product.name, product.category)}
+            </div>
+          )}
+          <div className="relative z-10 flex items-center px-3 py-3">
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <h3 className="font-semibold text-foreground text-sm line-clamp-1 mb-1">{product.name}</h3>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>VOL:</span>
+                <span className="text-foreground">{formatVolume(product.volume, product.turnover)}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <AnimatedPrice value={product.price} formatter={formatPrice} className="text-base font-bold tabular-nums" />
+                <div className={changeBadgeClass}>
+                  {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  <AnimatedStat value={formatChange(product.price_change)} className="text-xs font-medium" />
+                  <span>%</span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center pr-3 py-2">
-            {chartData.length >= 2 ? (
-              <MiniCandleChart data={chartData} width={100} height={52} className="opacity-90 group-hover:opacity-100 transition-opacity" />
-            ) : (
-              <div className="w-[100px] h-[52px] flex items-center justify-center">
-                <span className="text-xs text-muted-foreground/50">—</span>
-              </div>
-            )}
+            <div className="flex items-center pl-2">
+              {chartData.length >= 2 ? (
+                <MiniCandleChart data={chartData} width={100} height={52} className="opacity-90 group-hover:opacity-100 transition-opacity" />
+              ) : (
+                <div className="w-[100px] h-[52px] flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground/50">—</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
