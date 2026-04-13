@@ -119,6 +119,8 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
               </div>
             </div>
           )}
+          {/* Content area - above the ghost image */}
+          <div className="relative z-10 flex flex-col gap-2">
             {/* Top: name + badge */}
             <div className="flex items-center justify-between">
               <div className="min-w-0">
