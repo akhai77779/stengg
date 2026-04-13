@@ -108,6 +108,7 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
                   maskImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                   WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                 }}
+              />
             </div>
           )}
           {/* No-image fallback icon */}
