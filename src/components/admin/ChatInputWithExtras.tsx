@@ -48,7 +48,7 @@ export function ChatInputWithExtras({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
    const { templates, loading: templatesLoading } = useQuickReplyTemplates();
  
    // Filter only active templates
