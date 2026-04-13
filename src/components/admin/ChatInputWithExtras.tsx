@@ -292,7 +292,7 @@ export function ChatInputWithExtras({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 relative">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 relative">
         <input
           ref={fileInputRef}
           type="file"
