@@ -51,19 +51,75 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const prevMessageCountRef = useRef(messages.length);
 
-  // Auto scroll to bottom on new messages with smooth animation
+  // Track scroll position to determine if user is near bottom
+  const handleScroll = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    const el = scrollContainerRef.current;
+    const threshold = 100;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    setIsNearBottom(nearBottom);
+    if (nearBottom) {
+      setHasNewMessage(false);
+    }
+  }, []);
+
+  // Auto scroll to bottom on new messages (only if near bottom)
   useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is updated
-    requestAnimationFrame(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({
-          top: scrollContainerRef.current.scrollHeight,
-          behavior: 'smooth'
+    const newCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = newCount;
+
+    if (newCount > prevCount) {
+      // New message arrived
+      if (isNearBottom) {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+              top: scrollContainerRef.current.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
         });
+      } else {
+        setHasNewMessage(true);
       }
-    });
-  }, [messages, typingText]);
+    } else if (newCount === 0 || prevCount === 0) {
+      // Initial load or room switch - scroll to bottom instantly
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [messages, isNearBottom]);
+
+  // Also scroll on typing indicator
+  useEffect(() => {
+    if (typingText && isNearBottom) {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
+    }
+  }, [typingText, isNearBottom]);
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+      setHasNewMessage(false);
+    }
+  }, []);
 
   // Focus edit input when editing starts
   useEffect(() => {
