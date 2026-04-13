@@ -95,22 +95,30 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
         </div>
 
         {/* Desktop: card with image breaking out of frame */}
-        <div className="hidden md:block relative pl-20 pr-4 py-4">
-          {/* Floating image - positioned outside the card on the left */}
-          <div className="absolute -left-5 top-1/2 -translate-y-1/2 z-10">
-            {product.image_url ? (
-              <div className="w-[72px] h-[72px] rounded-2xl overflow-hidden ring-4 ring-background shadow-2xl shadow-black/30 group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300">
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-              </div>
-            ) : (
-              <div className="w-[72px] h-[72px] rounded-2xl bg-card ring-4 ring-background shadow-2xl shadow-black/30 flex items-center justify-center group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300">
+        <div className="hidden md:block relative pr-4 py-4 pl-4 min-h-[200px]">
+          {/* Background image - large, fading, ghost-like */}
+          {product.image_url && (
+            <div className="absolute -left-4 top-0 bottom-0 w-[140px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
+              <img
+                src={product.image_url}
+                alt=""
+                className="w-full h-full object-cover opacity-25 blur-[1px] mask-image-fade"
+                loading="lazy"
+                style={{
+                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
+                }}
+              />
+            </div>
+          )}
+          {/* No-image fallback icon */}
+          {!product.image_url && (
+            <div className="absolute -left-2 top-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-15">
+              <div className="w-24 h-24">
                 {getCategoryIcon(product.name, product.category)}
               </div>
-            )}
-          </div>
-
-          {/* Content area */}
-          <div className="flex flex-col gap-2">
+            </div>
+          )}
             {/* Top: name + badge */}
             <div className="flex items-center justify-between">
               <div className="min-w-0">
