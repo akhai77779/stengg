@@ -112,8 +112,21 @@ export function ChatInputWithExtras({
     inputRef.current?.focus();
   };
 
-  // Handle keyboard navigation for inline suggestions
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handle keyboard navigation for inline suggestions + Enter/Shift+Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter without Shift = send
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (showInlineHashtag && filteredTemplates.length > 0) {
+        e.preventDefault();
+        const selected = filteredTemplates[selectedSuggestionIndex];
+        handleInlineTemplateSelect(selected.text, selected.tag);
+        return;
+      }
+      e.preventDefault();
+      handleSubmit(e);
+      return;
+    }
+    
     if (!showInlineHashtag || filteredTemplates.length === 0) return;
     
     switch (e.key) {
@@ -129,20 +142,13 @@ export function ChatInputWithExtras({
           prev > 0 ? prev - 1 : filteredTemplates.length - 1
         );
         break;
-      case "Enter":
-        if (showInlineHashtag && filteredTemplates.length > 0) {
-          e.preventDefault();
-          const selected = filteredTemplates[selectedSuggestionIndex];
-          handleInlineTemplateSelect(selected.text, selected.tag);
-        }
-        break;
       case "Escape":
         e.preventDefault();
         setShowInlineHashtag(false);
         setHashtagQuery("");
         break;
       case "Tab":
-        if (showInlineHashtag && filteredTemplates.length > 0) {
+        if (filteredTemplates.length > 0) {
           e.preventDefault();
           const selected = filteredTemplates[selectedSuggestionIndex];
           handleInlineTemplateSelect(selected.text, selected.tag);
