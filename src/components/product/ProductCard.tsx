@@ -51,13 +51,13 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
 
   return (
     <Card
-      className="group bg-card border-border hover:border-primary/30 transition-all duration-200 overflow-hidden cursor-pointer active:scale-[0.99]"
+      className="group relative bg-card/80 backdrop-blur-md border-border/50 hover:border-primary/40 transition-all duration-300 cursor-pointer active:scale-[0.99] overflow-visible"
       onClick={() => navigate(`/products/${product.id}`)}
     >
       <CardContent className="p-0">
         {/* Mobile: horizontal row layout */}
-        <div className="flex items-stretch md:hidden">
-          <div className="w-16 flex-shrink-0">
+        <div className="flex items-stretch md:hidden overflow-hidden rounded-lg">
+          <div className="w-16 flex-shrink-0 relative">
             {product.image_url ? (
               <div className="h-full overflow-hidden">
                 <img src={product.image_url} alt={product.name} className="w-full h-full object-cover min-h-[72px]" loading="lazy" />
@@ -94,29 +94,37 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
           </div>
         </div>
 
-        {/* Desktop: vertical card layout */}
+        {/* Desktop: vertical card layout with floating image */}
         <div className="hidden md:flex flex-col">
-          {/* Header row: icon + name + badge */}
-          <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-            <div className="flex-shrink-0">
+          {/* Header row: floating image + name + badge */}
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2 relative">
+            <div className="flex-shrink-0 relative">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />
+                <div className="relative -mt-8 -ml-1 z-10">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden ring-2 ring-background shadow-xl shadow-primary/10 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                </div>
               ) : (
-                getCategoryIcon(product.name, product.category)
+                <div className="relative -mt-8 -ml-1 z-10">
+                  <div className="w-14 h-14 rounded-xl bg-card/90 backdrop-blur-sm ring-2 ring-background shadow-xl shadow-primary/10 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                    {getCategoryIcon(product.name, product.category)}
+                  </div>
+                </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-foreground text-sm line-clamp-1">{product.name}</h3>
               <span className="text-xs text-muted-foreground">{product.symbol || product.category}</span>
             </div>
-            <div className={cn(changeBadgeClass, 'gap-1 px-2')}>
+            <div className={cn(changeBadgeClass, 'gap-1 px-2 backdrop-blur-sm')}>
               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               <AnimatedStat value={formatChange(product.price_change)} className="text-xs font-medium" />
               <span>%</span>
             </div>
           </div>
 
-          {/* Chart area - bigger on desktop */}
+          {/* Chart area */}
           <div className="px-4 py-1">
             {chartData.length >= 2 ? (
               <MiniCandleChart data={chartData} width={260} height={80} className="w-full opacity-90 group-hover:opacity-100 transition-opacity" />
