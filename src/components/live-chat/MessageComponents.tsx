@@ -451,6 +451,18 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* New message indicator when scrolled up */}
+      {hasNewMessage && !isNearBottom && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg text-xs font-medium animate-bounce hover:bg-primary/90 transition-colors"
+        >
+          <ArrowDown className="h-3 w-3" />
+          Tin nhắn mới
+        </button>
+      )}
+    </div>
   );
 });
 
