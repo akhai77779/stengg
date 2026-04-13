@@ -98,15 +98,15 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
         <div className="hidden md:block relative pr-4 py-4 pl-4 min-h-[200px]">
           {/* Background image - large, fading, ghost-like */}
           {product.image_url && (
-            <div className="absolute -left-4 top-0 bottom-0 w-[140px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
+            <div className="absolute -left-4 top-0 bottom-0 w-[200px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
               <img
                 src={product.image_url}
                 alt=""
-                className="w-full h-full object-cover opacity-25 blur-[1px] mask-image-fade"
+                className="w-full h-full object-cover opacity-40 mask-image-fade"
                 loading="lazy"
                 style={{
-                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
-                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
+                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                 }}
               />
             </div>
