@@ -55,18 +55,12 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
       onClick={() => navigate(`/products/${product.id}`)}
     >
       <CardContent className="p-0">
-        <div className="flex items-stretch">
-          {/* Thumbnail */}
-          <div className="w-16 md:w-20 flex-shrink-0">
+        {/* Mobile: horizontal row layout */}
+        <div className="flex items-stretch md:hidden">
+          <div className="w-16 flex-shrink-0">
             {product.image_url ? (
               <div className="h-full overflow-hidden">
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 min-h-[72px]"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover min-h-[72px]" loading="lazy" />
               </div>
             ) : (
               <div className="h-full min-h-[72px] bg-muted/30 flex items-center justify-center">
@@ -74,18 +68,13 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
               </div>
             )}
           </div>
-
-          {/* Info */}
           <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center">
-            <h3 className="font-semibold text-foreground text-sm md:text-base line-clamp-1 mb-1">
-              {product.name}
-            </h3>
+            <h3 className="font-semibold text-foreground text-sm line-clamp-1 mb-1">{product.name}</h3>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>24HVOL:</span>
+              <span>VOL:</span>
               <span className="text-foreground">{formatVolume(product.volume, product.turnover)}</span>
             </div>
-            {/* Mobile price */}
-            <div className="flex items-center gap-2 mt-1 md:hidden">
+            <div className="flex items-center gap-2 mt-1">
               <AnimatedPrice value={product.price} formatter={formatPrice} className="text-base font-bold tabular-nums" />
               <div className={changeBadgeClass}>
                 {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -94,24 +83,67 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
               </div>
             </div>
           </div>
+          <div className="flex items-center pr-3 py-2">
+            {chartData.length >= 2 ? (
+              <MiniCandleChart data={chartData} width={100} height={52} className="opacity-90 group-hover:opacity-100 transition-opacity" />
+            ) : (
+              <div className="w-[100px] h-[52px] flex items-center justify-center">
+                <span className="text-xs text-muted-foreground/50">—</span>
+              </div>
+            )}
+          </div>
+        </div>
 
-          {/* Chart + Desktop price */}
-          <div className="flex items-center gap-3 pr-3 py-2">
+        {/* Desktop: vertical card layout */}
+        <div className="hidden md:flex flex-col">
+          {/* Header row: icon + name + badge */}
+          <div className="flex items-center gap-3 px-4 pt-4 pb-2">
             <div className="flex-shrink-0">
-              {chartData.length >= 2 ? (
-                <MiniCandleChart data={chartData} width={100} height={52} className="opacity-90 group-hover:opacity-100 transition-opacity" />
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />
               ) : (
-                <div className="w-[100px] h-[52px] flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground/50">—</span>
-                </div>
+                getCategoryIcon(product.name, product.category)
               )}
             </div>
-            <div className="hidden md:flex flex-col items-end gap-1 min-w-[90px]">
-              <AnimatedPrice value={product.price} formatter={formatPrice} className="text-base md:text-lg font-bold tabular-nums" />
-              <div className={cn(changeBadgeClass, 'gap-1 px-2')}>
-                {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <AnimatedStat value={formatChange(product.price_change)} className="text-xs font-medium" />
-                <span>%</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground text-sm line-clamp-1">{product.name}</h3>
+              <span className="text-xs text-muted-foreground">{product.symbol || product.category}</span>
+            </div>
+            <div className={cn(changeBadgeClass, 'gap-1 px-2')}>
+              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              <AnimatedStat value={formatChange(product.price_change)} className="text-xs font-medium" />
+              <span>%</span>
+            </div>
+          </div>
+
+          {/* Chart area - bigger on desktop */}
+          <div className="px-4 py-1">
+            {chartData.length >= 2 ? (
+              <MiniCandleChart data={chartData} width={260} height={80} className="w-full opacity-90 group-hover:opacity-100 transition-opacity" />
+            ) : (
+              <div className="w-full h-[80px] flex items-center justify-center">
+                <span className="text-xs text-muted-foreground/50">No data</span>
+              </div>
+            )}
+          </div>
+
+          {/* Price + stats */}
+          <div className="px-4 pb-3 pt-1 flex items-end justify-between">
+            <div>
+              <AnimatedPrice value={product.price} formatter={formatPrice} className="text-lg font-bold tabular-nums" />
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                <span>VOL</span>
+                <span className="text-foreground/70">{formatVolume(product.volume, product.turnover)}</span>
+              </div>
+            </div>
+            <div className="text-right text-[11px] text-muted-foreground space-y-0.5">
+              <div className="flex items-center gap-1 justify-end">
+                <span>H</span>
+                <span className="text-green-400 font-mono tabular-nums">{formatPrice(product.high_24h ?? null)}</span>
+              </div>
+              <div className="flex items-center gap-1 justify-end">
+                <span>L</span>
+                <span className="text-red-400 font-mono tabular-nums">{formatPrice(product.low_24h ?? null)}</span>
               </div>
             </div>
           </div>
