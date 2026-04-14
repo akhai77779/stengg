@@ -170,6 +170,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
         _profit_rate: selectedDuration.profitRate,
         _fee_rate: FEE_RATE,
         _loss_rate: selectedDuration.lossRate,
+        _entry_price: price > 0 ? price : undefined,
       });
 
       if (error) throw error;
