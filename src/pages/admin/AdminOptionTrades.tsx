@@ -76,105 +76,137 @@ function TradeCard({
   onForceSettle: (t: OptionTrade) => void;
 }) {
   const isBuy = trade.direction === 'buy';
+  const isActive = trade.status === 'active';
+  const productName = products[trade.product_id]?.name || trade.product_id.slice(0, 8);
+  const userName = profiles[trade.user_id] || trade.user_id.slice(0, 8);
 
   return (
     <Card className={cn(
-      'overflow-hidden',
-      trade.status === 'active' && 'border-blue-500/40'
+      'overflow-hidden transition-all active:scale-[0.98]',
+      isActive && 'border-blue-500/50 shadow-blue-500/10 shadow-md',
+      trade.status === 'won' && 'border-green-500/30',
+      trade.status === 'lost' && 'border-red-500/30',
     )}>
-      <CardContent className="p-3 space-y-3">
-        {/* Row 1: User + Status */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium truncate flex-1">
-            {profiles[trade.user_id] || trade.user_id.slice(0, 8)}
-          </span>
-          <Badge className={cn('shrink-0', statusColors[trade.status])}>
-            {statusLabels[trade.status]}
-          </Badge>
+      <CardContent className="p-0">
+        {/* Header bar with status color */}
+        <div className={cn(
+          'px-3 py-2 flex items-center justify-between gap-2',
+          isActive && 'bg-blue-500/5',
+          trade.status === 'won' && 'bg-green-500/5',
+          trade.status === 'lost' && 'bg-red-500/5',
+        )}>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Badge variant={isBuy ? 'default' : 'destructive'} className="shrink-0 h-5 text-[10px] px-1.5">
+              {isBuy ? <TrendingUp className="h-2.5 w-2.5 mr-0.5" /> : <TrendingDown className="h-2.5 w-2.5 mr-0.5" />}
+              {isBuy ? 'MUA' : 'BÁN'}
+            </Badge>
+            <span className="text-xs font-medium truncate">{userName}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isActive && (
+              <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-500 font-semibold">
+                <Clock className="h-3 w-3 animate-pulse" />
+                {getTimeRemaining(trade.expires_at)}
+              </span>
+            )}
+            <Badge className={cn('h-5 text-[10px] px-1.5', statusColors[trade.status])}>
+              {statusLabels[trade.status]}
+            </Badge>
+          </div>
         </div>
 
-        {/* Row 2: Product + Direction */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground truncate">
-            {products[trade.product_id]?.name || trade.product_id.slice(0, 8)}
-          </span>
-          <Badge variant={isBuy ? 'default' : 'destructive'} className="shrink-0">
-            {isBuy ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-            {isBuy ? 'MUA' : 'BÁN'}
-          </Badge>
-        </div>
-
-        {/* Row 3: Key metrics grid */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-muted/50 rounded-lg p-2">
-            <p className="text-[10px] text-muted-foreground">Số tiền</p>
-            <p className="text-sm font-bold">${trade.amount.toLocaleString()}</p>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-2">
-            <p className="text-[10px] text-muted-foreground">Giá vào</p>
-            <p className="text-sm font-mono">${trade.entry_price.toFixed(2)}</p>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-2">
-            <p className="text-[10px] text-muted-foreground">Thời gian</p>
-            {trade.status === 'active' ? (
-              <p className="text-sm font-mono text-blue-500">{getTimeRemaining(trade.expires_at)}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{trade.duration_seconds}s</p>
+        <div className="px-3 py-2.5 space-y-2.5">
+          {/* Product name */}
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground truncate">{productName}</span>
+            {products[trade.product_id]?.price && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                Giá hiện tại: ${products[trade.product_id].price!.toFixed(2)}
+              </span>
             )}
           </div>
+
+          {/* Metrics row */}
+          <div className="grid grid-cols-3 gap-1.5">
+            <div className="bg-muted/40 rounded-md px-2 py-1.5 text-center">
+              <p className="text-[9px] text-muted-foreground leading-tight">Số tiền</p>
+              <p className="text-xs font-bold tabular-nums">${trade.amount.toLocaleString()}</p>
+            </div>
+            <div className="bg-muted/40 rounded-md px-2 py-1.5 text-center">
+              <p className="text-[9px] text-muted-foreground leading-tight">Giá vào</p>
+              <p className="text-xs font-mono tabular-nums">${trade.entry_price.toFixed(2)}</p>
+            </div>
+            <div className="bg-muted/40 rounded-md px-2 py-1.5 text-center">
+              <p className="text-[9px] text-muted-foreground leading-tight">
+                {trade.exit_price !== null ? 'Giá ra' : 'Thời gian'}
+              </p>
+              <p className="text-xs font-mono tabular-nums">
+                {trade.exit_price !== null 
+                  ? `$${trade.exit_price.toFixed(2)}` 
+                  : `${trade.duration_seconds}s`}
+              </p>
+            </div>
+          </div>
+
+          {/* Profit/loss */}
+          {trade.profit_loss !== null && (
+            <div className={cn(
+              'flex items-center justify-center py-1.5 rounded-md text-xs font-semibold tabular-nums',
+              trade.profit_loss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+            )}>
+              {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
+            </div>
+          )}
+
+          {/* Override badge */}
+          {trade.admin_result && !isActive && (
+            <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 text-[10px] w-full justify-center">
+              <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+              Override: {trade.admin_result === 'win' ? 'Thắng' : 'Thua'}
+            </Badge>
+          )}
+
+          {/* Actions for active trades */}
+          {isActive && (
+            <div className="flex items-center gap-2 pt-0.5">
+              <Select
+                value={trade.admin_result || 'none'}
+                onValueChange={(v) => onSetResult(trade.id, v === 'none' ? null : v as 'win' | 'lose')}
+              >
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Tự động" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Tự động</SelectItem>
+                  <SelectItem value="win">
+                    <span className="flex items-center gap-1 text-green-500">
+                      <CheckCircle className="h-3 w-3" /> Thắng
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="lose">
+                    <span className="flex items-center gap-1 text-red-500">
+                      <XCircle className="h-3 w-3" /> Thua
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={() => onForceSettle(trade)}>
+                Kết thúc
+              </Button>
+            </div>
+          )}
+
+          {/* Settled time */}
+          {trade.settled_at && (
+            <p className="text-[10px] text-muted-foreground text-right">
+              {new Date(trade.settled_at).toLocaleString('vi-VN')}
+            </p>
+          )}
         </div>
-
-        {/* Profit/loss display */}
-        {trade.profit_loss !== null && (
-          <div className={cn(
-            'text-center py-1.5 rounded-lg text-sm font-semibold',
-            trade.profit_loss >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-          )}>
-            {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
-          </div>
-        )}
-
-        {/* Actions for active trades */}
-        {trade.status === 'active' && (
-          <div className="flex items-center gap-2 pt-1">
-            <Select
-              value={trade.admin_result || 'none'}
-              onValueChange={(v) => onSetResult(trade.id, v === 'none' ? null : v as 'win' | 'lose')}
-            >
-              <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Tự động" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Tự động</SelectItem>
-                <SelectItem value="win">
-                  <span className="flex items-center gap-1 text-green-500">
-                    <CheckCircle className="h-3 w-3" /> Thắng
-                  </span>
-                </SelectItem>
-                <SelectItem value="lose">
-                  <span className="flex items-center gap-1 text-red-500">
-                    <XCircle className="h-3 w-3" /> Thua
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={() => onForceSettle(trade)}>
-              Kết thúc
-            </Button>
-          </div>
-        )}
-
-        {/* Override badge for settled */}
-        {trade.admin_result && trade.status !== 'active' && (
-          <Badge variant="outline" className="text-yellow-500 border-yellow-500 text-xs">
-            Override: {trade.admin_result === 'win' ? 'Thắng' : 'Thua'}
-          </Badge>
-        )}
       </CardContent>
     </Card>
   );
 }
-
 export default function AdminOptionTrades() {
   const [trades, setTrades] = useState<OptionTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
