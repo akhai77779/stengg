@@ -867,7 +867,7 @@ const ProductDetail = () => {
             <div className="mt-3">
               <ActiveOptionTrade 
                 productId={product.id} 
-                currentPrice={product.price}
+                currentPrice={displayPrice ?? product.price}
                 onSettled={() => {
                   fetchProduct();
                   fetchActivePositionCount();
