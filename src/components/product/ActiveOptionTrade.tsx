@@ -213,24 +213,4 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
           </div>
         </div>
 
-        {/* Current Status Indicator */}
-        <div className={cn(
-          "mt-3 p-2 rounded-lg text-center font-medium",
-          isWinning ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-        )}>
-          {isWinning ? (
-            <span className="flex items-center justify-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Đang thắng
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <XCircle className="h-4 w-4" />
-              Đang thua
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+
