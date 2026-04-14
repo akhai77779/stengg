@@ -929,7 +929,7 @@ const ProductDetail = () => {
               id: product.id,
               name: product.name,
               symbol: product.symbol,
-              price: product.price,
+              price: displayPrice ?? product.price,
             }}
             initialDirection={tradeDirection}
             onSuccess={fetchProduct}
