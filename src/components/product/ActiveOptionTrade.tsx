@@ -212,5 +212,7 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
             <p className="font-medium text-green-500">+${expectedProfit.toFixed(2)}</p>
           </div>
         </div>
-
-
+      </CardContent>
+    </Card>
+  );
+}
