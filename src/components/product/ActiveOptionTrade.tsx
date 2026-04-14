@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Clock, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface OptionTrade {
   id: string;
@@ -211,24 +211,6 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
             <span className="text-muted-foreground">Lợi nhuận dự kiến</span>
             <p className="font-medium text-green-500">+${expectedProfit.toFixed(2)}</p>
           </div>
-        </div>
-
-        {/* Current Status Indicator */}
-        <div className={cn(
-          "mt-3 p-2 rounded-lg text-center font-medium",
-          isWinning ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-        )}>
-          {isWinning ? (
-            <span className="flex items-center justify-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Đang thắng
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <XCircle className="h-4 w-4" />
-              Đang thua
-            </span>
-          )}
         </div>
       </CardContent>
     </Card>
