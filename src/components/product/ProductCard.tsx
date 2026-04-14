@@ -59,15 +59,15 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
         <div className="relative md:hidden overflow-hidden rounded-lg">
           {/* Ghost background image - mobile */}
           {product.image_url && (
-            <div className="absolute left-0 top-0 bottom-0 w-[160px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
+            <div className="absolute left-0 top-0 bottom-0 w-[120px] z-0 pointer-events-none overflow-hidden rounded-l-lg">
               <img
                 src={product.image_url}
                 alt=""
-                className="w-full h-full object-cover opacity-30"
+                className="w-full h-full object-cover opacity-35"
                 loading="lazy"
                 style={{
-                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 55%, transparent 100%)',
-                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 55%, transparent 100%)',
+                  maskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
                 }}
               />
             </div>
