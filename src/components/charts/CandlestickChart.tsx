@@ -289,30 +289,30 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     return (
       <div className="relative">
         {/* Zoom Controls */}
-        <div className="absolute top-2 right-2 z-10 flex gap-1">
+        <div className="absolute -top-1 right-1 z-10 flex gap-0.5">
           <Button
             size="icon"
             variant="outline"
-            className="h-7 w-7 bg-background/80 backdrop-blur"
+            className="h-5 w-5 min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
             onClick={handleZoomIn}
           >
-            <ZoomIn className="h-3.5 w-3.5" />
+            <ZoomIn className="h-2.5 w-2.5" />
           </Button>
           <Button
             size="icon"
             variant="outline"
-            className="h-7 w-7 bg-background/80 backdrop-blur"
+            className="h-5 w-5 min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
             onClick={handleZoomOut}
           >
-            <ZoomOut className="h-3.5 w-3.5" />
+            <ZoomOut className="h-2.5 w-2.5" />
           </Button>
           <Button
             size="icon"
             variant="outline"
-            className="h-7 w-7 bg-background/80 backdrop-blur"
+            className="h-5 w-5 min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
             onClick={handleResetZoom}
           >
-            <Maximize2 className="h-3.5 w-3.5" />
+            <Maximize2 className="h-2.5 w-2.5" />
           </Button>
         </div>
         <div ref={chartContainerRef} />
