@@ -736,7 +736,7 @@ const ProductDetail = () => {
     <Layout hideFooter>
       <div className="space-y-3 pb-24 bg-background min-h-screen">
         {/* Header with back button, product name, mini chart, realtime status and history icon */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between sticky top-0 z-20 bg-background/95 backdrop-blur-sm py-2 px-1 -mx-1">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/products")} className="h-8 w-8">
               <ArrowLeft className="h-5 w-5" />
