@@ -1,7 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
-import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
 import { calculateMA, calculateEMA } from '@/lib/indicators';
 
