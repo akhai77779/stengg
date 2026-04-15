@@ -819,18 +819,20 @@ const ProductDetail = () => {
         <Card className="bg-card border-border">
           <CardContent className="p-0 overflow-hidden">
             {/* Timeframe selector */}
-            <div className="flex items-center gap-1 px-3 pt-3 pb-1">
-              {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => (
-                <Button
-                  key={tf}
-                  size="sm"
-                  variant={timeframe === tf ? "default" : "outline"}
-                  className="h-7 px-2.5 text-xs font-mono"
-                  onClick={() => setTimeframe(tf)}
-                >
-                  {tf.toUpperCase()}
-                </Button>
-              ))}
+            <div className="flex items-center justify-between px-3 pt-3 pb-1">
+              <div className="flex items-center gap-1">
+                {(["1m", "5m", "15m", "30m", "1h", "1d"] as const).map((tf) => (
+                  <Button
+                    key={tf}
+                    size="sm"
+                    variant={timeframe === tf ? "default" : "outline"}
+                    className="h-7 px-2.5 text-xs font-mono"
+                    onClick={() => setTimeframe(tf)}
+                  >
+                    {tf.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div style={{ height: '320px' }} className="w-full">
               {effectiveCandleData.length > 0 ? (
