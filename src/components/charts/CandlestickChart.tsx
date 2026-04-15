@@ -1,7 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
-import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
 import { calculateMA, calculateEMA } from '@/lib/indicators';
 
@@ -288,33 +286,6 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
     return (
       <div className="relative">
-        {/* Zoom Controls */}
-        <div className="absolute -top-3 right-1 z-10 flex gap-0.5">
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-[22px] w-[22px] min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
-            onClick={handleZoomIn}
-          >
-            <ZoomIn className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-[22px] w-[22px] min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
-            onClick={handleZoomOut}
-          >
-            <ZoomOut className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-[22px] w-[22px] min-h-0 min-w-0 bg-background/80 backdrop-blur border-border/50"
-            onClick={handleResetZoom}
-          >
-            <Maximize2 className="h-3 w-3" />
-          </Button>
-        </div>
         <div ref={chartContainerRef} />
       </div>
     );
