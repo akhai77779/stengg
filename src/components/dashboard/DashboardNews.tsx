@@ -105,6 +105,16 @@ export function DashboardNews() {
     setIsDialogOpen(true);
   };
 
+  const handleSave = async () => {
+    if (!title || !content) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Vui lòng điền tiêu đề và nội dung.',
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     const newsData: any = {
@@ -120,23 +130,6 @@ export function DashboardNews() {
     if (createdAt) {
       newsData.created_at = new Date(createdAt).toISOString();
     }
-        title: 'Lỗi',
-        description: 'Vui lòng điền tiêu đề và nội dung.',
-      });
-      return;
-    }
-
-    setIsSaving(true);
-
-    const newsData = {
-      title,
-      summary: summary || null,
-      content,
-      image_url: imageUrl || null,
-      category,
-      is_featured: isFeatured,
-      author_id: user?.id,
-    };
 
     let error;
 
