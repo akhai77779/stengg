@@ -281,7 +281,7 @@ export function DashboardNews() {
                   onChange={(e) => setCreatedAt(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Để trống nếu muốn dùng ngày hiện tại (chỉ áp dụng khi tạo mới).
+                  Để trống nếu muốn dùng ngày hiện tại. Áp dụng cho cả tạo mới và chỉnh sửa.
                 </p>
               </div>
 
