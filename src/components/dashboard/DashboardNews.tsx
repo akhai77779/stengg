@@ -59,6 +59,7 @@ export function DashboardNews() {
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState<NewsCategory>('company');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [createdAt, setCreatedAt] = useState('');
 
   useEffect(() => {
     fetchNews();
@@ -85,6 +86,7 @@ export function DashboardNews() {
     setImageUrl('');
     setCategory('company');
     setIsFeatured(false);
+    setCreatedAt('');
     setEditingNews(null);
   };
 
@@ -96,6 +98,10 @@ export function DashboardNews() {
     setImageUrl(item.image_url || '');
     setCategory(item.category);
     setIsFeatured(item.is_featured);
+    // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+    const d = new Date(item.created_at);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    setCreatedAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
     setIsDialogOpen(true);
   };
 
@@ -111,7 +117,7 @@ export function DashboardNews() {
 
     setIsSaving(true);
 
-    const newsData = {
+    const newsData: any = {
       title,
       summary: summary || null,
       content,
@@ -120,6 +126,10 @@ export function DashboardNews() {
       is_featured: isFeatured,
       author_id: user?.id,
     };
+
+    if (createdAt) {
+      newsData.created_at = new Date(createdAt).toISOString();
+    }
 
     let error;
 
@@ -260,6 +270,19 @@ export function DashboardNews() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="created_at">Ngày tạo</Label>
+                <Input
+                  id="created_at"
+                  type="datetime-local"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Để trống nếu muốn dùng ngày hiện tại (chỉ áp dụng khi tạo mới).
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
