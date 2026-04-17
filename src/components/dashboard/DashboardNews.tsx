@@ -272,6 +272,19 @@ export function DashboardNews() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="created_at">Ngày tạo</Label>
+                <Input
+                  id="created_at"
+                  type="datetime-local"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Để trống nếu muốn dùng ngày hiện tại (chỉ áp dụng khi tạo mới).
+                </p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Hủy
