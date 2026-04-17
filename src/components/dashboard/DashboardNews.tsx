@@ -105,21 +105,21 @@ export function DashboardNews() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (item: News) => {
-    setEditingNews(item);
-    setTitle(item.title);
-    setSummary(item.summary || '');
-    setContent(item.content);
-    setImageUrl(item.image_url || '');
-    setCategory(item.category);
-    setIsFeatured(item.is_featured);
-    setIsDialogOpen(true);
-  };
+    setIsSaving(true);
 
-  const handleSave = async () => {
-    if (!title || !content) {
-      toast({
-        variant: 'destructive',
+    const newsData: any = {
+      title,
+      summary: summary || null,
+      content,
+      image_url: imageUrl || null,
+      category,
+      is_featured: isFeatured,
+      author_id: user?.id,
+    };
+
+    if (createdAt) {
+      newsData.created_at = new Date(createdAt).toISOString();
+    }
         title: 'Lỗi',
         description: 'Vui lòng điền tiêu đề và nội dung.',
       });
