@@ -294,7 +294,6 @@ export function DashboardNews() {
               <TableRow>
                 <TableHead>Tiêu đề</TableHead>
                 <TableHead>Danh mục</TableHead>
-                <TableHead>Lượt xem</TableHead>
                 <TableHead>Ngày tạo</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
@@ -311,7 +310,6 @@ export function DashboardNews() {
                   <TableCell>
                     <Badge variant="outline">{categoryLabels[item.category]}</Badge>
                   </TableCell>
-                  <TableCell>{item.views}</TableCell>
                   <TableCell>{format(new Date(item.created_at), 'dd/MM/yyyy')}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
