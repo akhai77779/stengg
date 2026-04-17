@@ -59,6 +59,7 @@ export function DashboardNews() {
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState<NewsCategory>('company');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [createdAt, setCreatedAt] = useState('');
 
   useEffect(() => {
     fetchNews();
@@ -85,7 +86,23 @@ export function DashboardNews() {
     setImageUrl('');
     setCategory('company');
     setIsFeatured(false);
+    setCreatedAt('');
     setEditingNews(null);
+  };
+
+  const handleEdit = (item: News) => {
+    setEditingNews(item);
+    setTitle(item.title);
+    setSummary(item.summary || '');
+    setContent(item.content);
+    setImageUrl(item.image_url || '');
+    setCategory(item.category);
+    setIsFeatured(item.is_featured);
+    // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+    const d = new Date(item.created_at);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    setCreatedAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setIsDialogOpen(true);
   };
 
   const handleEdit = (item: News) => {
