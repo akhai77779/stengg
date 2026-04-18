@@ -4,7 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
@@ -39,7 +39,7 @@ export default function Charity() {
   const [donateAmount, setDonateAmount] = useState('');
   const [isDonating, setIsDonating] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
-  const { profile, refetch: refetchProfile } = useProfile();
+  const { profile, refetch: refetchProfile } = useProfile(user?.id);
   const { t } = useLanguage();
   const navigate = useNavigate();
 
