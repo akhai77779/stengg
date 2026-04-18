@@ -35,6 +35,7 @@ import AdminBanners from "./pages/admin/AdminBanners";
 import AdminNews from "./pages/admin/AdminNews";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCharity from "./pages/admin/AdminCharity";
+import AdminCharityDonations from "./pages/admin/AdminCharityDonations";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminUsers from "./pages/admin/AdminUsers";
