@@ -409,8 +409,7 @@ export default function Charity() {
                         <div className="min-w-0">
                           <div className="text-[10px] text-muted-foreground leading-none">Nhà hảo tâm</div>
                           <div className="text-xs font-bold text-foreground tabular-nums">
-                            {new Set(donations.map(d => d.user_id)).size}
-                            {donations.length >= 20 && '+'}
+                            {programStats?.unique_donors ?? new Set(donations.map(d => d.user_id)).size}
                           </div>
                         </div>
                       </div>
@@ -419,7 +418,7 @@ export default function Charity() {
                         <div className="min-w-0">
                           <div className="text-[10px] text-muted-foreground leading-none">Lượt quyên góp</div>
                           <div className="text-xs font-bold text-foreground tabular-nums">
-                            {donations.length}{donations.length >= 20 && '+'}
+                            {programStats?.total_donations ?? donations.length}
                           </div>
                         </div>
                       </div>
