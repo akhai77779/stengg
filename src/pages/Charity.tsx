@@ -84,6 +84,11 @@ export default function Charity() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
   const [isDonating, setIsDonating] = useState(false);
+  const [donations, setDonations] = useState<DonationRecord[]>([]);
+  const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
+  const [isLoadingDonations, setIsLoadingDonations] = useState(false);
+  const [isLoadingTopDonors, setIsLoadingTopDonors] = useState(false);
+  const [activeTab, setActiveTab] = useState('info');
   const { user, isLoading: authLoading } = useAuth();
   const { profile, refetch: refetchProfile } = useProfile(user?.id);
   const { t } = useLanguage();
