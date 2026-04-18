@@ -22,6 +22,9 @@ interface CharityProgram {
   image_url: string | null;
   target_amount: number;
   current_amount: number;
+  currency: string;
+  cycle_days: number;
+  interest_rate: number;
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
@@ -42,6 +45,9 @@ export function DashboardCharity() {
   const [imageUrl, setImageUrl] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [cycleDays, setCycleDays] = useState('30');
+  const [interestRate, setInterestRate] = useState('55');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -70,6 +76,9 @@ export function DashboardCharity() {
     setImageUrl('');
     setTargetAmount('');
     setCurrentAmount('');
+    setCurrency('USD');
+    setCycleDays('30');
+    setInterestRate('55');
     setStartDate('');
     setEndDate('');
     setIsActive(true);
@@ -83,6 +92,9 @@ export function DashboardCharity() {
     setImageUrl(item.image_url || '');
     setTargetAmount(item.target_amount.toString());
     setCurrentAmount(item.current_amount.toString());
+    setCurrency(item.currency || 'USD');
+    setCycleDays(String(item.cycle_days ?? 30));
+    setInterestRate(String(item.interest_rate ?? 0));
     setStartDate(item.start_date || '');
     setEndDate(item.end_date || '');
     setIsActive(item.is_active);
@@ -107,6 +119,9 @@ export function DashboardCharity() {
       image_url: imageUrl || null,
       target_amount: parseFloat(targetAmount) || 0,
       current_amount: parseFloat(currentAmount) || 0,
+      currency: currency || 'USD',
+      cycle_days: parseInt(cycleDays) || 30,
+      interest_rate: parseFloat(interestRate) || 0,
       start_date: startDate || null,
       end_date: endDate || null,
       is_active: isActive,
@@ -229,7 +244,7 @@ export function DashboardCharity() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="targetAmount">Mục tiêu (VND)</Label>
+                  <Label htmlFor="targetAmount">Mục tiêu</Label>
                   <Input
                     id="targetAmount"
                     type="number"
@@ -240,13 +255,48 @@ export function DashboardCharity() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="currentAmount">Đã quyên góp (VND)</Label>
+                  <Label htmlFor="currentAmount">Đã quyên góp</Label>
                   <Input
                     id="currentAmount"
                     type="number"
                     value={currentAmount}
                     onChange={(e) => setCurrentAmount(e.target.value)}
                     placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Tiền tệ quỹ</Label>
+                  <Input
+                    id="currency"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                    placeholder="USD"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cycleDays">Chu kỳ (ngày)</Label>
+                  <Input
+                    id="cycleDays"
+                    type="number"
+                    value={cycleDays}
+                    onChange={(e) => setCycleDays(e.target.value)}
+                    placeholder="30"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="interestRate">Lãi suất (%)</Label>
+                  <Input
+                    id="interestRate"
+                    type="number"
+                    step="0.01"
+                    value={interestRate}
+                    onChange={(e) => setInterestRate(e.target.value)}
+                    placeholder="55"
                   />
                 </div>
               </div>
