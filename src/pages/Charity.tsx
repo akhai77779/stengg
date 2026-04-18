@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, Loader2, Heart } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { ChevronRight, Loader2, Heart, Wallet } from 'lucide-react';
 
 interface CharityProgram {
   id: string;
@@ -32,9 +36,41 @@ export default function Charity() {
   const [selected, setSelected] = useState<CharityProgram | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = useState(0);
+  const [donateAmount, setDonateAmount] = useState('');
+  const [isDonating, setIsDonating] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
+  const { profile, refetch: refetchProfile } = useProfile();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  const handleDonate = async () => {
+    if (!user || !selected) return;
+    const amount = parseFloat(donateAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: 'Số tiền không hợp lệ', variant: 'destructive' });
+      return;
+    }
+    if ((profile?.balance ?? 0) < amount) {
+      toast({ title: 'Số dư không đủ', variant: 'destructive' });
+      return;
+    }
+    setIsDonating(true);
+    const { data, error } = await supabase.rpc('donate_to_charity', {
+      _user_id: user.id,
+      _program_id: selected.id,
+      _amount: amount,
+    });
+    setIsDonating(false);
+    const result = data as { success: boolean; error?: string; new_current_amount?: number } | null;
+    if (error || !result?.success) {
+      toast({ title: 'Quyên góp thất bại', description: result?.error || error?.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: '❤️ Cảm ơn bạn!', description: `Đã quyên góp ${amount} ${selected.currency} cho "${selected.title}"` });
+    setDonateAmount('');
+    await Promise.all([fetchPrograms(), refetchProfile()]);
+    setSelected(prev => prev && result.new_current_amount !== undefined ? { ...prev, current_amount: result.new_current_amount } : prev);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -213,7 +249,7 @@ export default function Charity() {
       </div>
 
       {/* Detail Dialog */}
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDonateAmount(''); } }}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           {selected && (
             <>
@@ -258,6 +294,52 @@ export default function Charity() {
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>{selected.current_amount.toLocaleString()} {selected.currency}</span>
                     <span>{selected.target_amount.toLocaleString()} {selected.currency}</span>
+                  </div>
+                </div>
+
+                {/* Donate section */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Wallet className="w-3.5 h-3.5" /> Số dư khả dụng
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {(profile?.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="Nhập số tiền (USDT)"
+                      value={donateAmount}
+                      onChange={(e) => setDonateAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      disabled={isDonating}
+                      className="h-10"
+                    />
+                    <Button
+                      onClick={handleDonate}
+                      disabled={isDonating || !donateAmount}
+                      size="default"
+                      className="shrink-0"
+                    >
+                      {isDonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Heart className="w-4 h-4 fill-current" /> Quyên góp</>}
+                    </Button>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[10, 50, 100, 500].map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setDonateAmount(String(v))}
+                        disabled={isDonating}
+                        className="px-2.5 py-1 text-xs rounded-md bg-muted/60 hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+                      >
+                        {v} USDT
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
