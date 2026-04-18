@@ -164,6 +164,12 @@ const translations: Record<Language, Record<string, string>> = {
     'charity.totalDonation': 'Tổng số tiền quyên góp',
     'charity.peopleHelped': 'Người được hỗ trợ',
     'charity.description': 'ST Engineering luôn đồng hành cùng cộng đồng thông qua các chương trình từ thiện ý nghĩa. Cùng chung tay góp phần xây dựng xã hội tốt đẹp hơn.',
+    'charity.allFunds': 'Tất cả các quỹ',
+    'charity.fundCurrency': 'Tiền tệ quỹ',
+    'charity.fundCycle': 'Chu kỳ quỹ',
+    'charity.comprehensiveRate': 'Lãi suất toàn diện',
+    'charity.days': 'ngày',
+    'charity.noPrograms': 'Chưa có chương trình từ thiện',
     
     // Deposit/Withdraw
     'deposit.title': 'Nạp tiền',
