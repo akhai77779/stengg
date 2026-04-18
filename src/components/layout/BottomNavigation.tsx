@@ -1,13 +1,13 @@
 import { forwardRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Newspaper, Package, Heart, User } from 'lucide-react';
+import { Home, Newspaper, Package, CircleDollarSign, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { label: 'Trang nhất', href: '/', icon: Home },
   { label: 'Tin tức', href: '/news', icon: Newspaper },
   { label: 'Sản phẩm', href: '/products', icon: Package },
-  { label: 'Từ thiện', href: '/charity', icon: Heart },
+  { label: 'Talent Charity', href: '/charity', icon: CircleDollarSign },
   { label: 'Của tôi', href: '/profile', icon: User },
 ];
 
