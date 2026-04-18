@@ -82,6 +82,7 @@ const App = () => (
                     <Route path="products-monitor" element={<AdminProductsMonitor />} />
                     <Route path="option-trades" element={<AdminOptionTrades />} />
                     <Route path="charity" element={<AdminCharity />} />
+                    <Route path="charity-donations" element={<AdminCharityDonations />} />
                     <Route path="transactions" element={<AdminTransactions />} />
                     <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
                     <Route path="audit-logs" element={<AdminAuditLogs />} />
