@@ -1232,6 +1232,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      donate_to_charity: {
+        Args: { _amount: number; _program_id: string; _user_id: string }
+        Returns: Json
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
