@@ -22,6 +22,9 @@ interface CharityProgram {
   image_url: string | null;
   target_amount: number;
   current_amount: number;
+  currency: string;
+  cycle_days: number;
+  interest_rate: number;
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
