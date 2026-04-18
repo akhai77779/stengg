@@ -14,7 +14,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon } from 'lucide-react';
+import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon, Users, Gift } from 'lucide-react';
 
 interface DonationRecord {
   id: string;
