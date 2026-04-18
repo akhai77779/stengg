@@ -120,7 +120,7 @@ export default function Charity() {
     }
     toast({ title: '❤️ Cảm ơn bạn!', description: `Đã quyên góp ${amount} ${selected.currency} cho "${selected.title}"` });
     setDonateAmount('');
-    await Promise.all([fetchPrograms(), refetchProfile(), fetchDonations(selected.id), fetchTopDonors(selected.id)]);
+    await Promise.all([fetchPrograms(), refetchProfile(), fetchDonations(selected.id), fetchTopDonors(selected.id), fetchProgramStats(selected.id)]);
     setSelected(prev => prev && result.new_current_amount !== undefined ? { ...prev, current_amount: result.new_current_amount } : prev);
   };
 
@@ -140,13 +140,31 @@ export default function Charity() {
     setIsLoadingTopDonors(false);
   };
 
+  const fetchProgramStats = async (programId: string) => {
+    const { data, error } = await supabase.rpc('get_charity_program_stats', { _program_id: programId });
+    if (error) {
+      console.error('Error fetching program stats:', error);
+      setProgramStats(null);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setProgramStats({
+        unique_donors: Number(row.unique_donors ?? 0),
+        total_donations: Number(row.total_donations ?? 0),
+      });
+    }
+  };
+
   useEffect(() => {
     if (selected?.id) {
       fetchDonations(selected.id);
       fetchTopDonors(selected.id);
+      fetchProgramStats(selected.id);
     } else {
       setDonations([]);
       setTopDonors([]);
+      setProgramStats(null);
       setActiveTab('info');
     }
   }, [selected?.id]);
