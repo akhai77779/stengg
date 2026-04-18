@@ -137,11 +137,16 @@ export default function Charity() {
             {/* Hero Title & description */}
             {heroProgram && (
               <div className="mb-6 px-1">
-                <h1 className="text-lg md:text-xl font-bold text-foreground leading-snug mb-2">
-                  {heroProgram.title}
-                </h1>
+                <div className="flex items-start gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                    <Heart className="w-4 h-4 text-primary fill-primary" />
+                  </div>
+                  <h1 className="text-base md:text-lg font-bold text-foreground leading-snug">
+                    {heroProgram.title}
+                  </h1>
+                </div>
                 {heroProgram.description && (
-                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-4">
+                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
                     {heroProgram.description}
                   </p>
                 )}
@@ -150,7 +155,7 @@ export default function Charity() {
 
             {/* Section: All funds */}
             <h2 className="text-base md:text-lg font-bold text-foreground mb-3 px-1">
-              {t('charity.allFunds') || 'Tất cả các quỹ'}
+              {t('charity.allFunds') || 'All funds'}
             </h2>
 
             <div className="grid grid-cols-2 gap-3">
@@ -161,7 +166,7 @@ export default function Charity() {
                   className="text-left"
                 >
                   <Card className="overflow-hidden bg-card border-border hover:border-primary/50 transition-all active:scale-[0.98] h-full flex flex-col">
-                    <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+                    <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                       {p.image_url ? (
                         <img
                           src={p.image_url}
@@ -175,28 +180,27 @@ export default function Charity() {
                         </div>
                       )}
                     </div>
-                    <div className="p-2.5 flex-1 flex flex-col">
-                      <p className="text-[11px] md:text-xs text-muted-foreground font-medium mb-1.5 line-clamp-1">
-                        {p.title}
-                      </p>
-                      <h3 className="text-sm md:text-base font-bold text-foreground mb-2 line-clamp-2 leading-tight">
+                    <div className="p-3 flex-1 flex flex-col">
+                      <h3 className="text-sm md:text-base font-bold text-foreground mb-2.5 line-clamp-2 leading-tight">
                         {p.title}
                       </h3>
                       <div className="space-y-1 text-[11px] md:text-xs text-muted-foreground mt-auto">
                         <div>
-                          {t('charity.fundCurrency') || 'Tiền tệ quỹ'}: <span className="text-foreground">{p.currency}</span>
+                          {t('charity.fundCurrency') || 'Fund currency'}: <span className="text-foreground">{p.currency}</span>
                         </div>
                         <div>
-                          {t('charity.fundCycle') || 'Chu kỳ quỹ'}: <span className="text-foreground">{p.cycle_days} {t('charity.days') || 'ngày'}</span>
+                          {t('charity.fundCycle') || 'Fund cycle'}: <span className="text-foreground">{p.cycle_days} {t('charity.days') || 'days'}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>
-                            {t('charity.comprehensiveRate') || 'Lãi suất toàn diện'}:{' '}
+                        <div className="flex items-end justify-between gap-2">
+                          <span className="leading-snug">
+                            {t('charity.comprehensiveRate') || 'Comprehensive interest rate'}:{' '}
                             <span className="text-success font-semibold">
                               {Number(p.interest_rate).toFixed(0)}%
                             </span>
                           </span>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          <div className="w-6 h-6 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                          </div>
                         </div>
                       </div>
                     </div>
