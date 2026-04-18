@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
@@ -13,7 +14,52 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ChevronRight, Loader2, Heart, Wallet } from 'lucide-react';
+import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon } from 'lucide-react';
+
+interface DonationRecord {
+  id: string;
+  user_id: string;
+  amount: number;
+  donor_email: string | null;
+  donor_name: string | null;
+  created_at: string;
+}
+
+interface TopDonor {
+  user_id: string;
+  donor_email: string | null;
+  donor_name: string | null;
+  total_amount: number;
+  donation_count: number;
+  last_donation_at: string;
+}
+
+const anonymizeEmail = (email: string | null | undefined, name?: string | null): string => {
+  if (email && !email.endsWith('@phone.local')) {
+    const [local, domain] = email.split('@');
+    if (local && domain) {
+      const visible = local.slice(0, 2);
+      const masked = local.length > 2 ? '*'.repeat(Math.min(local.length - 2, 4)) : '**';
+      return `${visible}${masked}@${domain}`;
+    }
+  }
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    return parts.map(p => p[0] + '***').join(' ');
+  }
+  return 'Ẩn danh';
+};
+
+const formatRelativeTime = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'vừa xong';
+  if (min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} giờ trước`;
+  const day = Math.floor(hr / 24);
+  return `${day} ngày trước`;
+};
 
 interface CharityProgram {
   id: string;
@@ -38,6 +84,11 @@ export default function Charity() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
   const [isDonating, setIsDonating] = useState(false);
+  const [donations, setDonations] = useState<DonationRecord[]>([]);
+  const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
+  const [isLoadingDonations, setIsLoadingDonations] = useState(false);
+  const [isLoadingTopDonors, setIsLoadingTopDonors] = useState(false);
+  const [activeTab, setActiveTab] = useState('info');
   const { user, isLoading: authLoading } = useAuth();
   const { profile, refetch: refetchProfile } = useProfile(user?.id);
   const { t } = useLanguage();
@@ -68,9 +119,36 @@ export default function Charity() {
     }
     toast({ title: '❤️ Cảm ơn bạn!', description: `Đã quyên góp ${amount} ${selected.currency} cho "${selected.title}"` });
     setDonateAmount('');
-    await Promise.all([fetchPrograms(), refetchProfile()]);
+    await Promise.all([fetchPrograms(), refetchProfile(), fetchDonations(selected.id), fetchTopDonors(selected.id)]);
     setSelected(prev => prev && result.new_current_amount !== undefined ? { ...prev, current_amount: result.new_current_amount } : prev);
   };
+
+  const fetchDonations = async (programId: string) => {
+    setIsLoadingDonations(true);
+    const { data, error } = await supabase.rpc('get_charity_donations', { _program_id: programId, _limit: 20 });
+    if (error) console.error('Error fetching donations:', error);
+    else setDonations((data as DonationRecord[]) || []);
+    setIsLoadingDonations(false);
+  };
+
+  const fetchTopDonors = async (programId: string) => {
+    setIsLoadingTopDonors(true);
+    const { data, error } = await supabase.rpc('get_charity_top_donors', { _program_id: programId, _limit: 5 });
+    if (error) console.error('Error fetching top donors:', error);
+    else setTopDonors((data as TopDonor[]) || []);
+    setIsLoadingTopDonors(false);
+  };
+
+  useEffect(() => {
+    if (selected?.id) {
+      fetchDonations(selected.id);
+      fetchTopDonors(selected.id);
+    } else {
+      setDonations([]);
+      setTopDonors([]);
+      setActiveTab('info');
+    }
+  }, [selected?.id]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -264,81 +342,172 @@ export default function Charity() {
                   className="w-full rounded-lg mt-2"
                 />
               )}
-              <div className="space-y-3 pt-2">
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="bg-muted/40 rounded-lg p-2 text-center">
-                    <div className="text-muted-foreground mb-0.5">{t('charity.fundCurrency') || 'Tiền tệ'}</div>
-                    <div className="font-semibold text-foreground">{selected.currency}</div>
-                  </div>
-                  <div className="bg-muted/40 rounded-lg p-2 text-center">
-                    <div className="text-muted-foreground mb-0.5">{t('charity.fundCycle') || 'Chu kỳ'}</div>
-                    <div className="font-semibold text-foreground">{selected.cycle_days}d</div>
-                  </div>
-                  <div className="bg-muted/40 rounded-lg p-2 text-center">
-                    <div className="text-muted-foreground mb-0.5">{t('charity.comprehensiveRate') || 'Lãi suất'}</div>
-                    <div className="font-semibold text-success">{Number(selected.interest_rate).toFixed(0)}%</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">{t('charity.progress')}</span>
-                    <span className="text-primary font-medium">
-                      {getProgress(selected.current_amount, selected.target_amount).toFixed(0)}%
-                    </span>
-                  </div>
-                  <Progress value={getProgress(selected.current_amount, selected.target_amount)} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>{selected.current_amount.toLocaleString()} {selected.currency}</span>
-                    <span>{selected.target_amount.toLocaleString()} {selected.currency}</span>
-                  </div>
-                </div>
 
-                {/* Donate section */}
-                <div className="border-t border-border pt-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <Wallet className="w-3.5 h-3.5" /> Số dư khả dụng
-                    </span>
-                    <span className="font-semibold text-foreground">
-                      {(profile?.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT
-                    </span>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
+                <TabsList className="grid w-full grid-cols-3 h-9">
+                  <TabsTrigger value="info" className="text-xs gap-1">
+                    <Heart className="w-3.5 h-3.5" /> Thông tin
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="text-xs gap-1">
+                    <History className="w-3.5 h-3.5" /> Lịch sử
+                  </TabsTrigger>
+                  <TabsTrigger value="top" className="text-xs gap-1">
+                    <Trophy className="w-3.5 h-3.5" /> Top 5
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-3 pt-3 mt-0">
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-muted/40 rounded-lg p-2 text-center">
+                      <div className="text-muted-foreground mb-0.5">{t('charity.fundCurrency') || 'Tiền tệ'}</div>
+                      <div className="font-semibold text-foreground">{selected.currency}</div>
+                    </div>
+                    <div className="bg-muted/40 rounded-lg p-2 text-center">
+                      <div className="text-muted-foreground mb-0.5">{t('charity.fundCycle') || 'Chu kỳ'}</div>
+                      <div className="font-semibold text-foreground">{selected.cycle_days}d</div>
+                    </div>
+                    <div className="bg-muted/40 rounded-lg p-2 text-center">
+                      <div className="text-muted-foreground mb-0.5">{t('charity.comprehensiveRate') || 'Lãi suất'}</div>
+                      <div className="font-semibold text-success">{Number(selected.interest_rate).toFixed(0)}%</div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="Nhập số tiền (USDT)"
-                      value={donateAmount}
-                      onChange={(e) => setDonateAmount(e.target.value)}
-                      min="0"
-                      step="0.01"
-                      disabled={isDonating}
-                      className="h-10"
-                    />
-                    <Button
-                      onClick={handleDonate}
-                      disabled={isDonating || !donateAmount}
-                      size="default"
-                      className="shrink-0"
-                    >
-                      {isDonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Heart className="w-4 h-4 fill-current" /> Quyên góp</>}
-                    </Button>
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">{t('charity.progress')}</span>
+                      <span className="text-primary font-medium">
+                        {getProgress(selected.current_amount, selected.target_amount).toFixed(0)}%
+                      </span>
+                    </div>
+                    <Progress value={getProgress(selected.current_amount, selected.target_amount)} className="h-2" />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>{selected.current_amount.toLocaleString()} {selected.currency}</span>
+                      <span>{selected.target_amount.toLocaleString()} {selected.currency}</span>
+                    </div>
                   </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {[10, 50, 100, 500].map(v => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setDonateAmount(String(v))}
+
+                  {/* Donate section */}
+                  <div className="border-t border-border pt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Wallet className="w-3.5 h-3.5" /> Số dư khả dụng
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {(profile?.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="Nhập số tiền (USDT)"
+                        value={donateAmount}
+                        onChange={(e) => setDonateAmount(e.target.value)}
+                        min="0"
+                        step="0.01"
                         disabled={isDonating}
-                        className="px-2.5 py-1 text-xs rounded-md bg-muted/60 hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+                        className="h-10"
+                      />
+                      <Button
+                        onClick={handleDonate}
+                        disabled={isDonating || !donateAmount}
+                        size="default"
+                        className="shrink-0"
                       >
-                        {v} USDT
-                      </button>
-                    ))}
+                        {isDonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Heart className="w-4 h-4 fill-current" /> Quyên góp</>}
+                      </Button>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[10, 50, 100, 500].map(v => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setDonateAmount(String(v))}
+                          disabled={isDonating}
+                          className="px-2.5 py-1 text-xs rounded-md bg-muted/60 hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+                        >
+                          {v} USDT
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="pt-3 mt-0">
+                  {isLoadingDonations ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    </div>
+                  ) : donations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      Chưa có lịch sử quyên góp
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1">
+                      {donations.map(d => (
+                        <div key={d.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5 text-xs">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <UserIcon className="w-3.5 h-3.5 text-primary" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-foreground truncate">
+                                {anonymizeEmail(d.donor_email, d.donor_name)}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {formatRelativeTime(d.created_at)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="font-semibold text-success shrink-0 ml-2">
+                            +{Number(d.amount).toLocaleString()} {selected.currency}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="top" className="pt-3 mt-0">
+                  {isLoadingTopDonors ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    </div>
+                  ) : topDonors.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      <Trophy className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      Chưa có nhà hảo tâm
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {topDonors.map((donor, idx) => {
+                        const medals = ['bg-yellow-500/15 text-yellow-600 dark:text-yellow-400', 'bg-slate-400/15 text-slate-500 dark:text-slate-300', 'bg-orange-500/15 text-orange-600 dark:text-orange-400'];
+                        const rankClass = idx < 3 ? medals[idx] : 'bg-muted text-muted-foreground';
+                        return (
+                          <div key={donor.user_id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5 text-xs">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 font-bold text-xs ${rankClass}`}>
+                                {idx + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-foreground truncate">
+                                  {anonymizeEmail(donor.donor_email, donor.donor_name)}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {donor.donation_count} lần · {formatRelativeTime(donor.last_donation_at)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="font-semibold text-success shrink-0 ml-2">
+                              {Number(donor.total_amount).toLocaleString()} {selected.currency}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </>
           )}
         </DialogContent>
