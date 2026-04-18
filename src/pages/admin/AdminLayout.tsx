@@ -63,6 +63,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       { to: "/admin/products-monitor", label: "Market Monitor", icon: LayoutDashboard },
       { to: "/admin/option-trades", label: "Option Trades", icon: Clock, badgeKey: 'option_trade' },
       { to: "/admin/charity", label: t('admin.charity'), icon: Heart },
+      { to: "/admin/charity-donations", label: "Quyên góp", icon: Heart },
       { to: "/admin/transactions", label: t('admin.transactions'), icon: CreditCard, badgeKey: 'transaction' },
       { to: "/admin/identity-verifications", label: t('admin.identityVerifications'), icon: UserCheck, badgeKey: 'verification' },
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
