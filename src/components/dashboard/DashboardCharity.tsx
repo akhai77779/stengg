@@ -76,6 +76,9 @@ export function DashboardCharity() {
     setImageUrl('');
     setTargetAmount('');
     setCurrentAmount('');
+    setCurrency('USD');
+    setCycleDays('30');
+    setInterestRate('55');
     setStartDate('');
     setEndDate('');
     setIsActive(true);
@@ -89,6 +92,9 @@ export function DashboardCharity() {
     setImageUrl(item.image_url || '');
     setTargetAmount(item.target_amount.toString());
     setCurrentAmount(item.current_amount.toString());
+    setCurrency(item.currency || 'USD');
+    setCycleDays(String(item.cycle_days ?? 30));
+    setInterestRate(String(item.interest_rate ?? 0));
     setStartDate(item.start_date || '');
     setEndDate(item.end_date || '');
     setIsActive(item.is_active);
