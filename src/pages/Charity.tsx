@@ -86,6 +86,7 @@ export default function Charity() {
   const [isDonating, setIsDonating] = useState(false);
   const [donations, setDonations] = useState<DonationRecord[]>([]);
   const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
+  const [programStats, setProgramStats] = useState<{ unique_donors: number; total_donations: number } | null>(null);
   const [isLoadingDonations, setIsLoadingDonations] = useState(false);
   const [isLoadingTopDonors, setIsLoadingTopDonors] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
@@ -119,7 +120,7 @@ export default function Charity() {
     }
     toast({ title: '❤️ Cảm ơn bạn!', description: `Đã quyên góp ${amount} ${selected.currency} cho "${selected.title}"` });
     setDonateAmount('');
-    await Promise.all([fetchPrograms(), refetchProfile(), fetchDonations(selected.id), fetchTopDonors(selected.id)]);
+    await Promise.all([fetchPrograms(), refetchProfile(), fetchDonations(selected.id), fetchTopDonors(selected.id), fetchProgramStats(selected.id)]);
     setSelected(prev => prev && result.new_current_amount !== undefined ? { ...prev, current_amount: result.new_current_amount } : prev);
   };
 
@@ -139,13 +140,31 @@ export default function Charity() {
     setIsLoadingTopDonors(false);
   };
 
+  const fetchProgramStats = async (programId: string) => {
+    const { data, error } = await supabase.rpc('get_charity_program_stats', { _program_id: programId });
+    if (error) {
+      console.error('Error fetching program stats:', error);
+      setProgramStats(null);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setProgramStats({
+        unique_donors: Number(row.unique_donors ?? 0),
+        total_donations: Number(row.total_donations ?? 0),
+      });
+    }
+  };
+
   useEffect(() => {
     if (selected?.id) {
       fetchDonations(selected.id);
       fetchTopDonors(selected.id);
+      fetchProgramStats(selected.id);
     } else {
       setDonations([]);
       setTopDonors([]);
+      setProgramStats(null);
       setActiveTab('info');
     }
   }, [selected?.id]);
@@ -390,8 +409,7 @@ export default function Charity() {
                         <div className="min-w-0">
                           <div className="text-[10px] text-muted-foreground leading-none">Nhà hảo tâm</div>
                           <div className="text-xs font-bold text-foreground tabular-nums">
-                            {new Set(donations.map(d => d.user_id)).size}
-                            {donations.length >= 20 && '+'}
+                            {programStats?.unique_donors ?? new Set(donations.map(d => d.user_id)).size}
                           </div>
                         </div>
                       </div>
@@ -400,7 +418,7 @@ export default function Charity() {
                         <div className="min-w-0">
                           <div className="text-[10px] text-muted-foreground leading-none">Lượt quyên góp</div>
                           <div className="text-xs font-bold text-foreground tabular-nums">
-                            {donations.length}{donations.length >= 20 && '+'}
+                            {programStats?.total_donations ?? donations.length}
                           </div>
                         </div>
                       </div>

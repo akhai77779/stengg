@@ -1240,6 +1240,21 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_all_charity_donations: {
+        Args: { _limit?: number; _offset?: number; _program_id?: string }
+        Returns: {
+          amount: number
+          created_at: string
+          currency: string
+          donor_email: string
+          donor_name: string
+          id: string
+          program_id: string
+          program_title: string
+          user_code: number
+          user_id: string
+        }[]
+      }
       get_charity_donations: {
         Args: { _limit?: number; _program_id: string }
         Returns: {
@@ -1249,6 +1264,14 @@ export type Database = {
           donor_name: string
           id: string
           user_id: string
+        }[]
+      }
+      get_charity_program_stats: {
+        Args: { _program_id: string }
+        Returns: {
+          total_amount: number
+          total_donations: number
+          unique_donors: number
         }[]
       }
       get_charity_top_donors: {

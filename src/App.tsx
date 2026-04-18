@@ -35,6 +35,7 @@ import AdminBanners from "./pages/admin/AdminBanners";
 import AdminNews from "./pages/admin/AdminNews";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCharity from "./pages/admin/AdminCharity";
+import AdminCharityDonations from "./pages/admin/AdminCharityDonations";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -81,6 +82,7 @@ const App = () => (
                     <Route path="products-monitor" element={<AdminProductsMonitor />} />
                     <Route path="option-trades" element={<AdminOptionTrades />} />
                     <Route path="charity" element={<AdminCharity />} />
+                    <Route path="charity-donations" element={<AdminCharityDonations />} />
                     <Route path="transactions" element={<AdminTransactions />} />
                     <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
                     <Route path="audit-logs" element={<AdminAuditLogs />} />
