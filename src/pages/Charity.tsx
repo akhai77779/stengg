@@ -383,6 +383,25 @@ export default function Charity() {
                       <span>{selected.current_amount.toLocaleString()} {selected.currency}</span>
                       <span>{selected.target_amount.toLocaleString()} {selected.currency}</span>
                     </div>
+                    {/* Badges: total donors & total donations */}
+                    <div className="flex gap-2 mt-2.5">
+                      <div className="flex-1 flex items-center gap-1.5 bg-primary/5 border border-primary/15 rounded-lg px-2.5 py-1.5">
+                        <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-muted-foreground leading-none">Nhà hảo tâm</div>
+                          <div className="text-xs font-bold text-foreground tabular-nums">{topDonors.length}</div>
+                        </div>
+                      </div>
+                      <div className="flex-1 flex items-center gap-1.5 bg-success/5 border border-success/15 rounded-lg px-2.5 py-1.5">
+                        <Gift className="w-3.5 h-3.5 text-success shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-muted-foreground leading-none">Lượt quyên góp</div>
+                          <div className="text-xs font-bold text-foreground tabular-nums">
+                            {topDonors.reduce((sum, d) => sum + Number(d.donation_count || 0), 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Donate section */}
