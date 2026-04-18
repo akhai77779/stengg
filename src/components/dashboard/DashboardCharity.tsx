@@ -45,6 +45,9 @@ export function DashboardCharity() {
   const [imageUrl, setImageUrl] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [cycleDays, setCycleDays] = useState('30');
+  const [interestRate, setInterestRate] = useState('55');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isActive, setIsActive] = useState(true);
