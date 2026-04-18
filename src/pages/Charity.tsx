@@ -86,6 +86,7 @@ export default function Charity() {
   const [isDonating, setIsDonating] = useState(false);
   const [donations, setDonations] = useState<DonationRecord[]>([]);
   const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
+  const [programStats, setProgramStats] = useState<{ unique_donors: number; total_donations: number } | null>(null);
   const [isLoadingDonations, setIsLoadingDonations] = useState(false);
   const [isLoadingTopDonors, setIsLoadingTopDonors] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
