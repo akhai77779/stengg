@@ -14,7 +14,52 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ChevronRight, Loader2, Heart, Wallet } from 'lucide-react';
+import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon } from 'lucide-react';
+
+interface DonationRecord {
+  id: string;
+  user_id: string;
+  amount: number;
+  donor_email: string | null;
+  donor_name: string | null;
+  created_at: string;
+}
+
+interface TopDonor {
+  user_id: string;
+  donor_email: string | null;
+  donor_name: string | null;
+  total_amount: number;
+  donation_count: number;
+  last_donation_at: string;
+}
+
+const anonymizeEmail = (email: string | null | undefined, name?: string | null): string => {
+  if (email && !email.endsWith('@phone.local')) {
+    const [local, domain] = email.split('@');
+    if (local && domain) {
+      const visible = local.slice(0, 2);
+      const masked = local.length > 2 ? '*'.repeat(Math.min(local.length - 2, 4)) : '**';
+      return `${visible}${masked}@${domain}`;
+    }
+  }
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    return parts.map(p => p[0] + '***').join(' ');
+  }
+  return 'Ẩn danh';
+};
+
+const formatRelativeTime = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'vừa xong';
+  if (min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} giờ trước`;
+  const day = Math.floor(hr / 24);
+  return `${day} ngày trước`;
+};
 
 interface CharityProgram {
   id: string;
