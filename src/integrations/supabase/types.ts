@@ -137,11 +137,14 @@ export type Database = {
       charity_programs: {
         Row: {
           created_at: string
+          currency: string
           current_amount: number
+          cycle_days: number
           description: string | null
           end_date: string | null
           id: string
           image_url: string | null
+          interest_rate: number
           is_active: boolean
           start_date: string | null
           target_amount: number
@@ -150,11 +153,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string
           current_amount?: number
+          cycle_days?: number
           description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
+          interest_rate?: number
           is_active?: boolean
           start_date?: string | null
           target_amount?: number
@@ -163,11 +169,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string
           current_amount?: number
+          cycle_days?: number
           description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
+          interest_rate?: number
           is_active?: boolean
           start_date?: string | null
           target_amount?: number
