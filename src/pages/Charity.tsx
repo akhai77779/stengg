@@ -173,16 +173,12 @@ export default function Charity() {
             {/* Hero Title & description */}
             {heroProgram && (
               <div className="mb-6 px-1">
-                <div className="flex items-start gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-                    <Heart className="w-4 h-4 text-primary fill-primary" />
-                  </div>
-                  <h1 className="text-base md:text-lg font-bold text-foreground leading-snug">
-                    {heroProgram.title}
-                  </h1>
-                </div>
+                <h1 className="flex items-center justify-center gap-2 text-base md:text-lg font-bold text-foreground leading-snug mb-2 text-center">
+                  <Heart className="w-4 h-4 md:w-5 md:h-5 text-destructive fill-destructive shrink-0" />
+                  <span>{heroProgram.title}</span>
+                </h1>
                 {heroProgram.description && (
-                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed text-center">
                     {heroProgram.description}
                   </p>
                 )}
