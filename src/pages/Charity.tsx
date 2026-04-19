@@ -14,7 +14,10 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon, Users, Gift } from 'lucide-react';
+import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon, Users, Gift, PiggyBank } from 'lucide-react';
+import { SavingsCard } from '@/components/savings/SavingsCard';
+import { SavingsDetailDialog, type SavingsPackage } from '@/components/savings/SavingsDetailDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface DonationRecord {
   id: string;
