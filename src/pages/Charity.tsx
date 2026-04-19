@@ -497,6 +497,32 @@ export default function Charity() {
         onClose={() => setSelectedSavings(null)}
         onDepositSuccess={fetchPrograms}
       />
+
+      {/* Donate confirmation */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-destructive fill-destructive" />
+              Xác nhận quyên góp
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn chắc chắn muốn quyên góp{' '}
+              <span className="font-semibold text-foreground">
+                {Number(donateAmount || 0).toLocaleString()} {selected?.currency || 'USDT'}
+              </span>
+              {selected ? <> cho chương trình <span className="font-semibold text-foreground">"{selected.title}"</span></> : null}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDonating}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDonate} disabled={isDonating}>
+              {isDonating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Layout>
   );
 }
