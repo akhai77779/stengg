@@ -45,6 +45,7 @@ export default function AdminCharityDonations() {
   const { toast } = useToast();
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
   const [programFilter, setProgramFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [donations, setDonations] = useState<DonationRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
