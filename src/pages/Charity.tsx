@@ -90,6 +90,7 @@ export default function Charity() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
   const [isDonating, setIsDonating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [donations, setDonations] = useState<DonationRecord[]>([]);
   const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
   const [programStats, setProgramStats] = useState<{ unique_donors: number; total_donations: number } | null>(null);
