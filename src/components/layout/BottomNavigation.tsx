@@ -2,17 +2,19 @@ import { forwardRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Newspaper, Package, CircleDollarSign, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { label: 'Trang nhất', href: '/', icon: Home },
-  { label: 'Tin tức', href: '/news', icon: Newspaper },
-  { label: 'Sản phẩm', href: '/products', icon: Package },
-  { label: 'Talent Charity', href: '/charity', icon: CircleDollarSign },
-  { label: 'Của tôi', href: '/profile', icon: User },
-];
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const BottomNavigation = forwardRef<HTMLElement, object>(function BottomNavigation(_, ref) {
   const location = useLocation();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { label: t('nav.home'), href: '/', icon: Home },
+    { label: t('nav.news'), href: '/news', icon: Newspaper },
+    { label: t('nav.products'), href: '/products', icon: Package },
+    { label: t('nav.charity'), href: '/charity', icon: CircleDollarSign },
+    { label: t('nav.profile'), href: '/profile', icon: User },
+  ];
 
   return (
     <nav ref={ref} className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-inset-bottom">
