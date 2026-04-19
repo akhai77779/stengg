@@ -380,20 +380,7 @@ export default function Charity() {
                 />
               )}
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
-                <TabsList className="grid w-full grid-cols-3 h-9">
-                  <TabsTrigger value="info" className="text-xs gap-1">
-                    <Heart className="w-3.5 h-3.5" /> Thông tin
-                  </TabsTrigger>
-                  <TabsTrigger value="history" className="text-xs gap-1">
-                    <History className="w-3.5 h-3.5" /> Lịch sử
-                  </TabsTrigger>
-                  <TabsTrigger value="top" className="text-xs gap-1">
-                    <Trophy className="w-3.5 h-3.5" /> Top 5
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="info" className="space-y-3 pt-3 mt-0">
+              <div className="space-y-3 pt-3">
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="bg-muted/40 rounded-lg p-2 text-center">
                       <div className="text-muted-foreground mb-0.5">{t('charity.fundCurrency') || 'Tiền tệ'}</div>
