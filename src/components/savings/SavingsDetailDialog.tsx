@@ -264,7 +264,7 @@ export function SavingsDetailDialog({ pkg, onClose, onDepositSuccess }: SavingsD
                   disabled={isSubmitting}
                   className="h-10"
                 />
-                <Button onClick={handleDeposit} disabled={isSubmitting || !amount} className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white">
+                <Button onClick={requestDeposit} disabled={isSubmitting || !amount} className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white">
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><PiggyBank className="w-4 h-4" /> Gửi</>}
                 </Button>
               </div>
@@ -335,6 +335,49 @@ export function SavingsDetailDialog({ pkg, onClose, onDepositSuccess }: SavingsD
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Confirm deposit */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <PiggyBank className="w-5 h-5 text-blue-500" />
+              Xác nhận gửi tiết kiệm
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <div>
+                  Bạn chắc chắn muốn gửi tiết kiệm{' '}
+                  <span className="font-semibold text-foreground">
+                    {amt.toLocaleString()} {pkg.currency}
+                  </span>{' '}
+                  vào gói <span className="font-semibold text-foreground">"{pkg.title}"</span>?
+                </div>
+                <div className="bg-muted/40 rounded-md p-2 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>Kỳ hạn</span>
+                    <span className="font-medium text-foreground">{pkg.cycle_months} tháng</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Lãi dự kiến ({pkg.interest_rate_percent}%)</span>
+                    <span className="font-medium text-success">+{expectedInterest.toLocaleString(undefined, { maximumFractionDigits: 2 })} {pkg.currency}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-1">
+                    <span>Nhận khi đáo hạn</span>
+                    <span className="font-bold text-success">{expectedPayout.toLocaleString(undefined, { maximumFractionDigits: 2 })} {pkg.currency}</span>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeposit} disabled={isSubmitting} className="bg-blue-500 hover:bg-blue-600 text-white">
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
