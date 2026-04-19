@@ -81,8 +81,10 @@ interface CharityProgram {
 
 export default function Charity() {
   const [programs, setPrograms] = useState<CharityProgram[]>([]);
+  const [savingsPackages, setSavingsPackages] = useState<SavingsPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<CharityProgram | null>(null);
+  const [selectedSavings, setSelectedSavings] = useState<SavingsPackage | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
@@ -187,13 +189,17 @@ export default function Charity() {
   }, [carouselApi]);
 
   const fetchPrograms = async () => {
-    const { data, error } = await supabase
-      .from('charity_programs')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [progRes, pkgRes] = await Promise.all([
+      supabase.from('charity_programs').select('*').order('created_at', { ascending: false }),
+      supabase.from('savings_packages').select('*').eq('is_active', true).order('display_order', { ascending: true }),
+    ]);
 
-    if (error) console.error('Error fetching charity programs:', error);
-    else setPrograms((data as CharityProgram[]) || []);
+    if (progRes.error) console.error('Error fetching charity programs:', progRes.error);
+    else setPrograms((progRes.data as CharityProgram[]) || []);
+
+    if (pkgRes.error) console.error('Error fetching savings packages:', pkgRes.error);
+    else setSavingsPackages((pkgRes.data as SavingsPackage[]) || []);
+
     setIsLoading(false);
   };
 
