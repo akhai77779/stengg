@@ -54,6 +54,7 @@ export function SavingsDetailDialog({ pkg, onClose, onDepositSuccess }: SavingsD
   const { profile, refetch: refetchProfile } = useProfile(user?.id);
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
   const [myDeposits, setMyDeposits] = useState<MyDeposit[]>([]);
   const [isLoadingDeposits, setIsLoadingDeposits] = useState(false);
@@ -108,7 +109,7 @@ export function SavingsDetailDialog({ pkg, onClose, onDepositSuccess }: SavingsD
   const poolProgress = pkg.max_total_pool > 0 ? Math.min((pkg.current_pool / pkg.max_total_pool) * 100, 100) : 0;
   const remaining = Math.max(pkg.max_total_pool - pkg.current_pool, 0);
 
-  const handleDeposit = async () => {
+  const requestDeposit = () => {
     if (!user) return;
     if (!amt || amt <= 0) {
       toast({ title: 'Số tiền không hợp lệ', variant: 'destructive' });
@@ -122,6 +123,12 @@ export function SavingsDetailDialog({ pkg, onClose, onDepositSuccess }: SavingsD
       toast({ title: 'Số dư không đủ', variant: 'destructive' });
       return;
     }
+    setConfirmOpen(true);
+  };
+
+  const handleDeposit = async () => {
+    if (!user || !amt) return;
+    setConfirmOpen(false);
     setIsSubmitting(true);
     const { data, error } = await supabase.rpc('create_savings_deposit', {
       _user_id: user.id,
