@@ -102,7 +102,7 @@ export default function Charity() {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const handleDonate = async () => {
+  const requestDonate = () => {
     if (!user || !selected) return;
     const amount = parseFloat(donateAmount);
     if (!amount || amount <= 0) {
@@ -113,6 +113,14 @@ export default function Charity() {
       toast({ title: 'Số dư không đủ', variant: 'destructive' });
       return;
     }
+    setConfirmOpen(true);
+  };
+
+  const handleDonate = async () => {
+    if (!user || !selected) return;
+    const amount = parseFloat(donateAmount);
+    if (!amount || amount <= 0) return;
+    setConfirmOpen(false);
     setIsDonating(true);
     const { data, error } = await supabase.rpc('donate_to_charity', {
       _user_id: user.id,
