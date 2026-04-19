@@ -14,7 +14,10 @@ import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon, Users, Gift } from 'lucide-react';
+import { ChevronRight, Loader2, Heart, Wallet, History, Trophy, User as UserIcon, Users, Gift, PiggyBank } from 'lucide-react';
+import { SavingsCard } from '@/components/savings/SavingsCard';
+import { SavingsDetailDialog, type SavingsPackage } from '@/components/savings/SavingsDetailDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface DonationRecord {
   id: string;
@@ -78,8 +81,10 @@ interface CharityProgram {
 
 export default function Charity() {
   const [programs, setPrograms] = useState<CharityProgram[]>([]);
+  const [savingsPackages, setSavingsPackages] = useState<SavingsPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<CharityProgram | null>(null);
+  const [selectedSavings, setSelectedSavings] = useState<SavingsPackage | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
@@ -184,13 +189,17 @@ export default function Charity() {
   }, [carouselApi]);
 
   const fetchPrograms = async () => {
-    const { data, error } = await supabase
-      .from('charity_programs')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [progRes, pkgRes] = await Promise.all([
+      supabase.from('charity_programs').select('*').order('created_at', { ascending: false }),
+      supabase.from('savings_packages').select('*').eq('is_active', true).order('display_order', { ascending: true }),
+    ]);
 
-    if (error) console.error('Error fetching charity programs:', error);
-    else setPrograms((data as CharityProgram[]) || []);
+    if (progRes.error) console.error('Error fetching charity programs:', progRes.error);
+    else setPrograms((progRes.data as CharityProgram[]) || []);
+
+    if (pkgRes.error) console.error('Error fetching savings packages:', pkgRes.error);
+    else setSavingsPackages((pkgRes.data as SavingsPackage[]) || []);
+
     setIsLoading(false);
   };
 
@@ -217,10 +226,10 @@ export default function Charity() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : programs.length === 0 ? (
+        ) : programs.length === 0 && savingsPackages.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>{t('charity.noPrograms') || 'Chưa có chương trình từ thiện'}</p>
+            <p>{t('charity.noPrograms') || 'Chưa có chương trình nào'}</p>
           </div>
         ) : (
           <>
@@ -282,15 +291,21 @@ export default function Charity() {
               </div>
             )}
 
-            {/* Section: All funds */}
+            {/* Section: All funds (Savings + Charity) */}
             <h2 className="text-base md:text-lg font-bold text-foreground mb-3 px-1">
-              {t('charity.allFunds') || 'All funds'}
+              {t('charity.allFunds') || 'Tất cả chương trình'}
             </h2>
 
             <div className="grid grid-cols-2 gap-3">
+              {/* Savings packages */}
+              {savingsPackages.map(pkg => (
+                <SavingsCard key={`s-${pkg.id}`} pkg={pkg} onClick={() => setSelectedSavings(pkg)} />
+              ))}
+
+              {/* Charity programs */}
               {programs.map(p => (
                 <button
-                  key={p.id}
+                  key={`c-${p.id}`}
                   onClick={() => setSelected(p)}
                   className="text-left"
                 >
@@ -308,6 +323,9 @@ export default function Charity() {
                           <Heart className="w-8 h-8 text-muted-foreground/40" />
                         </div>
                       )}
+                      <Badge className="absolute top-2 left-2 bg-destructive/90 text-destructive-foreground border-0 text-[10px] backdrop-blur-sm">
+                        <Heart className="w-3 h-3 mr-1 fill-current" /> Từ thiện
+                      </Badge>
                     </div>
                     <div className="p-3 flex-1 flex flex-col">
                       <h3 className="text-sm md:text-base font-bold text-foreground mb-2.5 line-clamp-2 leading-tight">
@@ -552,6 +570,13 @@ export default function Charity() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Savings Detail Dialog */}
+      <SavingsDetailDialog
+        pkg={selectedSavings}
+        onClose={() => setSelectedSavings(null)}
+        onDepositSuccess={fetchPrograms}
+      />
     </Layout>
   );
 }
