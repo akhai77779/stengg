@@ -226,10 +226,10 @@ export default function Charity() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : programs.length === 0 ? (
+        ) : programs.length === 0 && savingsPackages.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>{t('charity.noPrograms') || 'Chưa có chương trình từ thiện'}</p>
+            <p>{t('charity.noPrograms') || 'Chưa có chương trình nào'}</p>
           </div>
         ) : (
           <>
@@ -291,15 +291,21 @@ export default function Charity() {
               </div>
             )}
 
-            {/* Section: All funds */}
+            {/* Section: All funds (Savings + Charity) */}
             <h2 className="text-base md:text-lg font-bold text-foreground mb-3 px-1">
-              {t('charity.allFunds') || 'All funds'}
+              {t('charity.allFunds') || 'Tất cả chương trình'}
             </h2>
 
             <div className="grid grid-cols-2 gap-3">
+              {/* Savings packages */}
+              {savingsPackages.map(pkg => (
+                <SavingsCard key={`s-${pkg.id}`} pkg={pkg} onClick={() => setSelectedSavings(pkg)} />
+              ))}
+
+              {/* Charity programs */}
               {programs.map(p => (
                 <button
-                  key={p.id}
+                  key={`c-${p.id}`}
                   onClick={() => setSelected(p)}
                   className="text-left"
                 >
@@ -317,6 +323,9 @@ export default function Charity() {
                           <Heart className="w-8 h-8 text-muted-foreground/40" />
                         </div>
                       )}
+                      <Badge className="absolute top-2 left-2 bg-destructive/90 text-destructive-foreground border-0 text-[10px] backdrop-blur-sm">
+                        <Heart className="w-3 h-3 mr-1 fill-current" /> Từ thiện
+                      </Badge>
                     </div>
                     <div className="p-3 flex-1 flex flex-col">
                       <h3 className="text-sm md:text-base font-bold text-foreground mb-2.5 line-clamp-2 leading-tight">
