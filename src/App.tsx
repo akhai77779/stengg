@@ -29,7 +29,6 @@ import SwitchAccount from "./pages/SwitchAccount";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
-import Savings from "./pages/Savings";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminBanners from "./pages/admin/AdminBanners";
@@ -45,8 +44,6 @@ import AdminOptionTrades from "./pages/admin/AdminOptionTrades";
 import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications";
 import AdminLiveChat from "./pages/admin/AdminLiveChat";
 import AdminProductsMonitor from "./pages/admin/AdminProductsMonitor";
-import AdminSavings from "./pages/admin/AdminSavings";
-import AdminSavingsDeposits from "./pages/admin/AdminSavingsDeposits";
 
 const queryClient = new QueryClient();
 
@@ -71,7 +68,6 @@ const App = () => (
                   <Route path="/products" element={<Products />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/charity" element={<Charity />} />
-                  <Route path="/savings" element={<Savings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/wallet-details" element={<WalletDetails />} />
                   <Route path="/security" element={<SecuritySettings />} />
@@ -87,8 +83,6 @@ const App = () => (
                     <Route path="option-trades" element={<AdminOptionTrades />} />
                     <Route path="charity" element={<AdminCharity />} />
                     <Route path="charity-donations" element={<AdminCharityDonations />} />
-                    <Route path="savings" element={<AdminSavings />} />
-                    <Route path="savings-deposits" element={<AdminSavingsDeposits />} />
                     <Route path="transactions" element={<AdminTransactions />} />
                     <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
                     <Route path="audit-logs" element={<AdminAuditLogs />} />

@@ -1,2 +1,0 @@
-ALTER TABLE public.savings_packages DROP CONSTRAINT IF EXISTS savings_packages_cycle_months_check;
-ALTER TABLE public.savings_packages ADD CONSTRAINT savings_packages_cycle_months_check CHECK (cycle_months >= 1 AND cycle_months <= 120);
