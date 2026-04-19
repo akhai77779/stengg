@@ -1,13 +1,8 @@
 import { forwardRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Newspaper, Package, User } from 'lucide-react';
+import { Home, Newspaper, Package, CircleDollarSign, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import charityIcon from '@/assets/charity-icon.png';
-
-const CharityIcon = ({ className }: { className?: string }) => (
-  <img src={charityIcon} alt="" className={cn('object-contain invert', className)} />
-);
 
 export const BottomNavigation = forwardRef<HTMLElement, object>(function BottomNavigation(_, ref) {
   const location = useLocation();
@@ -17,7 +12,7 @@ export const BottomNavigation = forwardRef<HTMLElement, object>(function BottomN
     { label: t('nav.home'), href: '/', icon: Home },
     { label: t('nav.news'), href: '/news', icon: Newspaper },
     { label: t('nav.products'), href: '/products', icon: Package },
-    { label: t('nav.charity'), href: '/charity', icon: CharityIcon },
+    { label: t('nav.charity'), href: '/charity', icon: CircleDollarSign },
     { label: t('nav.profile'), href: '/profile', icon: User },
   ];
 
