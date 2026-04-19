@@ -56,7 +56,7 @@ interface UserDeposit {
 
 export default function Savings() {
   const { user } = useAuth();
-  const { profile, refreshProfile } = useProfile();
+  const { profile, refetch: refetchProfile } = useProfile(user?.id);
   const navigate = useNavigate();
 
   const [packages, setPackages] = useState<SavingsPackage[]>([]);
@@ -160,7 +160,7 @@ export default function Savings() {
       });
       setSelectedPackage(null);
       setAmount('');
-      await Promise.all([loadData(), refreshProfile()]);
+      await Promise.all([loadData(), refetchProfile()]);
     } catch (e: any) {
       toast({ title: e.message || 'Lỗi', variant: 'destructive' });
     } finally {
