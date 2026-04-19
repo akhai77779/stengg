@@ -463,7 +463,7 @@ export default function Charity() {
                         className="h-10"
                       />
                       <Button
-                        onClick={handleDonate}
+                        onClick={requestDonate}
                         disabled={isDonating || !donateAmount}
                         size="default"
                         className="shrink-0"
