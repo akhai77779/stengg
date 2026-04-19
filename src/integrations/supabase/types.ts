@@ -1003,6 +1003,63 @@ export type Database = {
         }
         Relationships: []
       }
+      savings_packages: {
+        Row: {
+          created_at: string
+          currency: string
+          current_pool: number
+          cycle_months: number
+          description: string | null
+          display_order: number
+          event_end_at: string | null
+          event_start_at: string | null
+          id: string
+          image_url: string | null
+          interest_rate_percent: number
+          is_active: boolean
+          max_total_pool: number
+          min_deposit_amount: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          current_pool?: number
+          cycle_months: number
+          description?: string | null
+          display_order?: number
+          event_end_at?: string | null
+          event_start_at?: string | null
+          id?: string
+          image_url?: string | null
+          interest_rate_percent: number
+          is_active?: boolean
+          max_total_pool?: number
+          min_deposit_amount?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          current_pool?: number
+          cycle_months?: number
+          description?: string | null
+          display_order?: number
+          event_end_at?: string | null
+          event_start_at?: string | null
+          id?: string
+          image_url?: string | null
+          interest_rate_percent?: number
+          is_active?: boolean
+          max_total_pool?: number
+          min_deposit_amount?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1126,6 +1183,68 @@ export type Database = {
         }
         Relationships: []
       }
+      user_savings_deposits: {
+        Row: {
+          created_at: string
+          currency: string
+          cycle_months: number
+          id: string
+          interest_amount: number
+          interest_rate_percent: number
+          matures_at: string
+          package_id: string
+          paid_at: string | null
+          principal_amount: number
+          started_at: string
+          status: string
+          total_payout: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          cycle_months: number
+          id?: string
+          interest_amount: number
+          interest_rate_percent: number
+          matures_at: string
+          package_id: string
+          paid_at?: string | null
+          principal_amount: number
+          started_at?: string
+          status?: string
+          total_payout: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          cycle_months?: number
+          id?: string
+          interest_amount?: number
+          interest_rate_percent?: number
+          matures_at?: string
+          package_id?: string
+          paid_at?: string | null
+          principal_amount?: number
+          started_at?: string
+          status?: string
+          total_payout?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_savings_deposits_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "savings_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       profiles_safe: {
@@ -1219,6 +1338,10 @@ export type Database = {
       cleanup_expired_notifications: { Args: never; Returns: undefined }
       cleanup_expired_phone_otps: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      create_savings_deposit: {
+        Args: { _amount: number; _package_id: string; _user_id: string }
+        Returns: Json
+      }
       create_withdrawal_request: {
         Args: {
           _amount: number
@@ -1285,6 +1408,24 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_savings_package_stats: {
+        Args: { _package_id: string }
+        Returns: {
+          active_principal: number
+          total_deposits: number
+          total_principal: number
+          unique_depositors: number
+        }[]
+      }
+      get_user_active_savings_total: {
+        Args: { _user_id: string }
+        Returns: {
+          active_count: number
+          total_expected_interest: number
+          total_expected_payout: number
+          total_principal: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1338,6 +1479,7 @@ export type Database = {
         }[]
       }
       run_live_price_sync_loop: { Args: never; Returns: undefined }
+      settle_matured_savings_deposits: { Args: never; Returns: Json }
       settle_option_trade: {
         Args: { _exit_price: number; _trade_id: string }
         Returns: Json
