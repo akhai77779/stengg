@@ -220,6 +220,17 @@ export default function AdminCharityDonations() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="Khoảng thời gian" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả thời gian</SelectItem>
+                <SelectItem value="30">30 ngày qua</SelectItem>
+                <SelectItem value="60">60 ngày qua</SelectItem>
+                <SelectItem value="90">90 ngày qua</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
