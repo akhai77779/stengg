@@ -570,6 +570,13 @@ export default function Charity() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Savings Detail Dialog */}
+      <SavingsDetailDialog
+        pkg={selectedSavings}
+        onClose={() => setSelectedSavings(null)}
+        onDepositSuccess={fetchPrograms}
+      />
     </Layout>
   );
 }
