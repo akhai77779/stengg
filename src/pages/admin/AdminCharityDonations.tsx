@@ -86,14 +86,22 @@ export default function AdminCharityDonations() {
   }, [programFilter, toast]);
 
   const filtered = useMemo(() => {
+    let result = donations;
+    if (dateFilter !== 'all') {
+      const days = Number(dateFilter);
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      result = result.filter((d) => new Date(d.created_at).getTime() >= cutoff);
+    }
     const q = search.trim().toLowerCase();
-    if (!q) return donations;
-    return donations.filter((d) =>
-      [d.donor_email, d.donor_name, d.program_title, String(d.user_code ?? '')]
-        .filter(Boolean)
-        .some((s) => String(s).toLowerCase().includes(q))
-    );
-  }, [donations, search]);
+    if (q) {
+      result = result.filter((d) =>
+        [d.donor_email, d.donor_name, d.program_title, String(d.user_code ?? '')]
+          .filter(Boolean)
+          .some((s) => String(s).toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [donations, search, dateFilter]);
 
   const stats = useMemo(() => {
     const totalAmount = filtered.reduce((sum, d) => sum + Number(d.amount || 0), 0);
