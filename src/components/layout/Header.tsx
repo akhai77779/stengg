@@ -17,7 +17,7 @@ import {
   Home, 
   Newspaper, 
   Package, 
-  Heart, 
+  HandHeart, 
   User, 
   Settings, 
   LogOut,
@@ -37,7 +37,7 @@ export function Header() {
     { label: t('nav.home'), href: '/', icon: Home },
     { label: t('nav.news'), href: '/news', icon: Newspaper },
     { label: t('nav.products'), href: '/products', icon: Package },
-    { label: t('nav.charity'), href: '/charity', icon: Heart },
+    { label: t('nav.charity'), href: '/charity', icon: HandHeart },
   ];
 
   const handleSignOut = async () => {
