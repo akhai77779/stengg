@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 import { Progress } from '@/components/ui/progress';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
@@ -89,6 +90,7 @@ export default function Charity() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [donateAmount, setDonateAmount] = useState('');
   const [isDonating, setIsDonating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [donations, setDonations] = useState<DonationRecord[]>([]);
   const [topDonors, setTopDonors] = useState<TopDonor[]>([]);
   const [programStats, setProgramStats] = useState<{ unique_donors: number; total_donations: number } | null>(null);
@@ -100,7 +102,7 @@ export default function Charity() {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const handleDonate = async () => {
+  const requestDonate = () => {
     if (!user || !selected) return;
     const amount = parseFloat(donateAmount);
     if (!amount || amount <= 0) {
@@ -111,6 +113,14 @@ export default function Charity() {
       toast({ title: 'Số dư không đủ', variant: 'destructive' });
       return;
     }
+    setConfirmOpen(true);
+  };
+
+  const handleDonate = async () => {
+    if (!user || !selected) return;
+    const amount = parseFloat(donateAmount);
+    if (!amount || amount <= 0) return;
+    setConfirmOpen(false);
     setIsDonating(true);
     const { data, error } = await supabase.rpc('donate_to_charity', {
       _user_id: user.id,
@@ -453,7 +463,7 @@ export default function Charity() {
                         className="h-10"
                       />
                       <Button
-                        onClick={handleDonate}
+                        onClick={requestDonate}
                         disabled={isDonating || !donateAmount}
                         size="default"
                         className="shrink-0"
@@ -487,6 +497,32 @@ export default function Charity() {
         onClose={() => setSelectedSavings(null)}
         onDepositSuccess={fetchPrograms}
       />
+
+      {/* Donate confirmation */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-destructive fill-destructive" />
+              Xác nhận quyên góp
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn chắc chắn muốn quyên góp{' '}
+              <span className="font-semibold text-foreground">
+                {Number(donateAmount || 0).toLocaleString()} {selected?.currency || 'USDT'}
+              </span>
+              {selected ? <> cho chương trình <span className="font-semibold text-foreground">"{selected.title}"</span></> : null}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDonating}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDonate} disabled={isDonating}>
+              {isDonating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Layout>
   );
 }
