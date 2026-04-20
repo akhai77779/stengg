@@ -10,7 +10,7 @@ interface SavingsCardProps {
 
 export function SavingsCard({ pkg, onClick }: SavingsCardProps) {
   return (
-    <button onClick={onClick} className="text-left">
+    <button onClick={onClick} className="text-left group">
       <Card className="overflow-hidden bg-card border-border hover:border-blue-500/50 transition-all active:scale-[0.98] h-full flex flex-col">
         <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           {pkg.image_url ? (
@@ -41,8 +41,9 @@ export function SavingsCard({ pkg, onClick }: SavingsCardProps) {
                 Lãi suất:{' '}
                 <span className="text-success font-semibold">{pkg.interest_rate_percent}%</span>
               </span>
-              <div className="w-6 h-6 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-500 shrink-0 transition-all duration-300 group-hover:gap-1.5 group-hover:px-2.5">
+                <span className="text-[10px] md:text-[11px] font-medium whitespace-nowrap">Xem thêm</span>
+                <ChevronRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
               </div>
             </div>
           </div>
