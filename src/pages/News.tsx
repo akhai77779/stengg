@@ -98,6 +98,26 @@ export default function News() {
     setIsLoading(false);
   };
 
+  // Tự động tăng views ngẫu nhiên để trông sống động hơn (chỉ hiển thị, không ghi DB)
+  useEffect(() => {
+    if (news.length === 0) return;
+
+    const interval = setInterval(() => {
+      setNews((prev) =>
+        prev.map((item) => {
+          // ~40% xác suất mỗi item được tăng trong tick này
+          if (Math.random() < 0.4) {
+            const increment = Math.floor(Math.random() * 3) + 1; // +1..+3
+            return { ...item, views: item.views + increment };
+          }
+          return item;
+        })
+      );
+    }, 4000); // mỗi 4 giây
+
+    return () => clearInterval(interval);
+  }, [news.length]);
+
   const filteredNews = news.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.summary?.toLowerCase().includes(searchQuery.toLowerCase())
