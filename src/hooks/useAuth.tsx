@@ -3,6 +3,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { clearProfileCache } from '@/hooks/useProfile';
 import { clearBalanceCache } from '@/hooks/useExternalBalance';
+import { clearGeoCache } from '@/hooks/useIPGeolocation';
+import { clearCustomerIpCache } from '@/components/admin/CustomerInfoPanel';
 
 /**
  * Authentication Context and Provider
@@ -108,7 +110,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           lastCheckedUserIdRef.current = null;
           setIsAdmin(false);
           setIsAdminLoading(false);
+          // Defensive: also clear admin-side caches on any sign-out event
+          // (covers cases where signOut() wasn't the trigger, e.g. token expiry).
+          clearGeoCache();
+          clearCustomerIpCache();
         } else if (session?.user) {
+          // Account switch within the same browser session: if the user id
+          // changed, drop cached IP/geo data tied to the previous admin.
+          if (
+            lastCheckedUserIdRef.current &&
+            lastCheckedUserIdRef.current !== session.user.id
+          ) {
+            clearGeoCache();
+            clearCustomerIpCache();
+          }
           // Defer role check with setTimeout to prevent deadlock
           setTimeout(() => {
             checkAdminRole(session.user.id);
@@ -199,6 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear all cached data before signing out
     clearProfileCache();
     clearBalanceCache();
+    // Clear geolocation + customer IP caches so the next admin session
+    // doesn't see the previous admin's cached lookups.
+    clearGeoCache();
+    clearCustomerIpCache();
     console.log('All user caches cleared on logout');
     
     await supabase.auth.signOut();

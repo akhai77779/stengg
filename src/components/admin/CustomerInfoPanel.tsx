@@ -40,6 +40,14 @@ import { supabase } from "@/integrations/supabase/client";
 const customerIpCache = new Map<string, { ip: string | null; timestamp: number }>();
 const CUSTOMER_IP_TTL = 10 * 60 * 1000; // 10 minutes
 
+/**
+ * Clear cached customer IP lookups. Call on logout / account switch so the
+ * next admin session doesn't reuse the previous admin's cached profile IPs.
+ */
+export function clearCustomerIpCache() {
+  customerIpCache.clear();
+}
+
 interface CustomerInfoPanelProps {
   room: LiveChatRoom;
   messages: LiveChatMessage[];
