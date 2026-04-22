@@ -89,12 +89,15 @@ export function CustomerInfoPanel({
 
   // Fetch geolocation for customer's IP (only after lookup completes and we have an IP)
   const { location, isLoading: locationLoading, refetch: refetchLocation } = useIPGeolocation({
-    enabled: ipLookupDone && !!customerIp,
-    cacheKey: `customer_${room.customer_id}`,
+    // Always run after lookup completes. If we have customer IP, look that up;
+    // otherwise fall back to the browser's current IP (no `ip` param sent).
+    enabled: ipLookupDone,
+    cacheKey: customerIp ? `customer_${room.customer_id}` : "browser_fallback",
     ip: customerIp,
   });
 
-  const noIpAvailable = ipLookupDone && !customerIp;
+  // Whether we're showing the browser's IP as a fallback (no stored customer IP)
+  const usingBrowserFallback = ipLookupDone && !customerIp;
 
   // Calculate stats
   const customerMessages = messages.filter(m => m.sender_type === "customer");
@@ -166,8 +169,6 @@ export function CustomerInfoPanel({
                 <Skeleton className="h-4 w-32 mx-auto" />
                 <Skeleton className="h-4 w-24 mx-auto" />
               </>
-            ) : noIpAvailable ? (
-              <p className="text-xs text-muted-foreground">Không có dữ liệu IP</p>
             ) : location ? (
               <>
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -178,6 +179,11 @@ export function CustomerInfoPanel({
                   <Clock className="h-3 w-3" />
                   {location.localTime} giờ địa phương
                 </p>
+                {usingBrowserFallback && (
+                  <p className="text-[10px] text-muted-foreground/70 italic">
+                    (IP trình duyệt — chưa có lịch sử đăng nhập)
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-xs text-muted-foreground">Không xác định vị trí</p>
