@@ -18,6 +18,7 @@ export interface GeoLocation {
 interface UseIPGeolocationOptions {
   enabled?: boolean;
   cacheKey?: string; // Used to cache per customer
+  ip?: string | null; // Optional IP to look up (admin viewing customer)
 }
 
 // Simple in-memory cache to avoid repeated calls
@@ -25,7 +26,7 @@ const geoCache = new Map<string, { data: GeoLocation; timestamp: number }>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
-  const { enabled = true, cacheKey = "default" } = options;
+  const { enabled = true, cacheKey = "default", ip } = options;
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,9 @@ export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("ip-geolocation");
+      const { data, error: fnError } = await supabase.functions.invoke("ip-geolocation", {
+        body: ip ? { ip } : {},
+      });
 
       if (fnError) {
         throw new Error(fnError.message);
@@ -87,7 +90,7 @@ export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [cacheKey]);
+  }, [cacheKey, ip]);
 
   // Fetch on mount if enabled
   useEffect(() => {
