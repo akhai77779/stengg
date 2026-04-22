@@ -89,12 +89,15 @@ export function CustomerInfoPanel({
 
   // Fetch geolocation for customer's IP (only after lookup completes and we have an IP)
   const { location, isLoading: locationLoading, refetch: refetchLocation } = useIPGeolocation({
-    enabled: ipLookupDone && !!customerIp,
-    cacheKey: `customer_${room.customer_id}`,
+    // Always run after lookup completes. If we have customer IP, look that up;
+    // otherwise fall back to the browser's current IP (no `ip` param sent).
+    enabled: ipLookupDone,
+    cacheKey: customerIp ? `customer_${room.customer_id}` : "browser_fallback",
     ip: customerIp,
   });
 
-  const noIpAvailable = ipLookupDone && !customerIp;
+  // Whether we're showing the browser's IP as a fallback (no stored customer IP)
+  const usingBrowserFallback = ipLookupDone && !customerIp;
 
   // Calculate stats
   const customerMessages = messages.filter(m => m.sender_type === "customer");
