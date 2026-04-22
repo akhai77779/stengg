@@ -26,14 +26,18 @@ const geoCache = new Map<string, { data: GeoLocation; timestamp: number }>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
-  const { enabled = true, cacheKey = "default", ip } = options;
+  const { enabled = true, cacheKey, ip } = options;
+  // Prefer IP-based cache key so the same IP across different rooms/users
+  // shares a single cached geolocation entry. Fall back to provided cacheKey
+  // (or "browser_fallback") when no explicit IP is passed.
+  const effectiveCacheKey = ip ? `ip_${ip}` : (cacheKey || "browser_fallback");
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLocation = useCallback(async (forceRefresh = false) => {
     // Check cache first
-    const cached = geoCache.get(cacheKey);
+    const cached = geoCache.get(effectiveCacheKey);
     if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       setLocation(cached.data);
       return cached.data;
@@ -61,7 +65,11 @@ export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
       };
 
       // Update cache
-      geoCache.set(cacheKey, { data: geoData, timestamp: Date.now() });
+      geoCache.set(effectiveCacheKey, { data: geoData, timestamp: Date.now() });
+      // Also cache by resolved IP so future lookups for the same IP hit fast.
+      if (geoData.ip && geoData.ip !== "unknown") {
+        geoCache.set(`ip_${geoData.ip}`, { data: geoData, timestamp: Date.now() });
+      }
       setLocation(geoData);
       return geoData;
 
@@ -90,7 +98,7 @@ export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [cacheKey, ip]);
+  }, [effectiveCacheKey, ip]);
 
   // Fetch on mount if enabled
   useEffect(() => {

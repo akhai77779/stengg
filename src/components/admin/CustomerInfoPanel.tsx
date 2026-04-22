@@ -35,6 +35,11 @@ import { BOT_CONFIG, isWithinWorkingHours } from "@/hooks/useLiveChatBot";
 import { useIPGeolocation, getCountryFlag } from "@/hooks/useIPGeolocation";
 import { supabase } from "@/integrations/supabase/client";
 
+// Module-level cache for customer IP lookups so re-opening the panel or
+// switching between rooms doesn't re-hit the profiles table every time.
+const customerIpCache = new Map<string, { ip: string | null; timestamp: number }>();
+const CUSTOMER_IP_TTL = 10 * 60 * 1000; // 10 minutes
+
 interface CustomerInfoPanelProps {
   room: LiveChatRoom;
   messages: LiveChatMessage[];
@@ -62,14 +67,25 @@ export function CustomerInfoPanel({
   // Look up customer's last_login_ip from profiles (skip for guests)
   useEffect(() => {
     let cancelled = false;
-    setIpLookupDone(false);
-    setCustomerIp(null);
-
     const isGuest = room.customer_id?.startsWith("guest_");
     if (isGuest) {
+      setCustomerIp(null);
       setIpLookupDone(true);
       return;
     }
+
+    // Serve from module cache when fresh — avoids redundant profile queries
+    // when the admin switches rooms or re-opens the panel.
+    const cached = customerIpCache.get(room.customer_id);
+    if (cached && Date.now() - cached.timestamp < CUSTOMER_IP_TTL) {
+      setCustomerIp(cached.ip);
+      setIpLookupDone(true);
+      return;
+    }
+
+    // Only show loading state on a real fetch
+    setIpLookupDone(false);
+    setCustomerIp(null);
 
     (async () => {
       const { data } = await supabase
@@ -78,7 +94,9 @@ export function CustomerInfoPanel({
         .eq("id", room.customer_id)
         .maybeSingle();
       if (cancelled) return;
-      setCustomerIp(data?.last_login_ip ?? null);
+      const ip = data?.last_login_ip ?? null;
+      customerIpCache.set(room.customer_id, { ip, timestamp: Date.now() });
+      setCustomerIp(ip);
       setIpLookupDone(true);
     })();
 
