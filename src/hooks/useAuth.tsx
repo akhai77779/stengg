@@ -3,6 +3,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { clearProfileCache } from '@/hooks/useProfile';
 import { clearBalanceCache } from '@/hooks/useExternalBalance';
+import { clearGeoCache } from '@/hooks/useIPGeolocation';
+import { clearCustomerIpCache } from '@/components/admin/CustomerInfoPanel';
 
 /**
  * Authentication Context and Provider
@@ -199,6 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear all cached data before signing out
     clearProfileCache();
     clearBalanceCache();
+    // Clear geolocation + customer IP caches so the next admin session
+    // doesn't see the previous admin's cached lookups.
+    clearGeoCache();
+    clearCustomerIpCache();
     console.log('All user caches cleared on logout');
     
     await supabase.auth.signOut();
