@@ -169,8 +169,6 @@ export function CustomerInfoPanel({
                 <Skeleton className="h-4 w-32 mx-auto" />
                 <Skeleton className="h-4 w-24 mx-auto" />
               </>
-            ) : noIpAvailable ? (
-              <p className="text-xs text-muted-foreground">Không có dữ liệu IP</p>
             ) : location ? (
               <>
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -181,6 +179,11 @@ export function CustomerInfoPanel({
                   <Clock className="h-3 w-3" />
                   {location.localTime} giờ địa phương
                 </p>
+                {usingBrowserFallback && (
+                  <p className="text-[10px] text-muted-foreground/70 italic">
+                    (IP trình duyệt — chưa có lịch sử đăng nhập)
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-xs text-muted-foreground">Không xác định vị trí</p>
