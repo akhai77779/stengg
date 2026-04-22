@@ -33,6 +33,7 @@ import { LiveChatRoom } from "@/hooks/useLiveChatRooms";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
 import { BOT_CONFIG, isWithinWorkingHours } from "@/hooks/useLiveChatBot";
 import { useIPGeolocation, getCountryFlag } from "@/hooks/useIPGeolocation";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerInfoPanelProps {
   room: LiveChatRoom;
@@ -54,13 +55,46 @@ export function CustomerInfoPanel({
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(true);
   const [showBotInfo, setShowBotInfo] = useState(true);
   const [showLocationInfo, setShowLocationInfo] = useState(true);
+  const [customerIp, setCustomerIp] = useState<string | null>(null);
+  const [ipLookupDone, setIpLookupDone] = useState(false);
   const isWorking = isWithinWorkingHours();
 
-  // Fetch real IP geolocation
+  // Look up customer's last_login_ip from profiles (skip for guests)
+  useEffect(() => {
+    let cancelled = false;
+    setIpLookupDone(false);
+    setCustomerIp(null);
+
+    const isGuest = room.customer_id?.startsWith("guest_");
+    if (isGuest) {
+      setIpLookupDone(true);
+      return;
+    }
+
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("last_login_ip")
+        .eq("id", room.customer_id)
+        .maybeSingle();
+      if (cancelled) return;
+      setCustomerIp(data?.last_login_ip ?? null);
+      setIpLookupDone(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [room.customer_id]);
+
+  // Fetch geolocation for customer's IP (only after lookup completes and we have an IP)
   const { location, isLoading: locationLoading, refetch: refetchLocation } = useIPGeolocation({
-    enabled: true,
-    cacheKey: room.customer_id,
+    enabled: ipLookupDone && !!customerIp,
+    cacheKey: `customer_${room.customer_id}`,
+    ip: customerIp,
   });
+
+  const noIpAvailable = ipLookupDone && !customerIp;
 
   // Calculate stats
   const customerMessages = messages.filter(m => m.sender_type === "customer");
@@ -127,11 +161,13 @@ export function CustomerInfoPanel({
 
           {/* Location from IP */}
           <div className="text-center space-y-0.5">
-            {locationLoading ? (
+            {!ipLookupDone || locationLoading ? (
               <>
                 <Skeleton className="h-4 w-32 mx-auto" />
                 <Skeleton className="h-4 w-24 mx-auto" />
               </>
+            ) : noIpAvailable ? (
+              <p className="text-xs text-muted-foreground">Không có dữ liệu IP</p>
             ) : location ? (
               <>
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
