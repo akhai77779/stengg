@@ -110,7 +110,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           lastCheckedUserIdRef.current = null;
           setIsAdmin(false);
           setIsAdminLoading(false);
+          // Defensive: also clear admin-side caches on any sign-out event
+          // (covers cases where signOut() wasn't the trigger, e.g. token expiry).
+          clearGeoCache();
+          clearCustomerIpCache();
         } else if (session?.user) {
+          // Account switch within the same browser session: if the user id
+          // changed, drop cached IP/geo data tied to the previous admin.
+          if (
+            lastCheckedUserIdRef.current &&
+            lastCheckedUserIdRef.current !== session.user.id
+          ) {
+            clearGeoCache();
+            clearCustomerIpCache();
+          }
           // Defer role check with setTimeout to prevent deadlock
           setTimeout(() => {
             checkAdminRole(session.user.id);
