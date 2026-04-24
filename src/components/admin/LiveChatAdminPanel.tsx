@@ -915,7 +915,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
               </div>
 
               {/* Message Input with Extras */}
-              <div className="p-3 border-t">
+              <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-3 border-t">
                 <ChatInputWithExtras
                   onSend={handleSend}
                   onTyping={startTyping}
