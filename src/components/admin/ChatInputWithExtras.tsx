@@ -487,18 +487,20 @@ export function ChatInputWithExtras({
           className="h-7 sm:h-8 px-2 sm:px-3 shrink-0"
           disabled={disabled || sending || (!message.trim() && !selectedFile)}
           aria-busy={sending}
+          aria-label={sending ? (uploading ? "Đang tải tệp" : "Đang gửi tin nhắn") : "Gửi tin nhắn"}
         >
           {sending ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" />
-              <span className="text-xs">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current xs:mr-1" />
+              {/* Ẩn label trên <360px (iPhone SE) để không tràn ngang */}
+              <span className="text-xs hidden xs:inline">
                 {uploading ? "Đang tải..." : "Đang gửi..."}
               </span>
             </>
           ) : (
             <>
-              <Send className="h-4 w-4 mr-1" />
-              <span className="text-xs">Gửi</span>
+              <Send className="h-4 w-4 xs:mr-1" />
+              <span className="text-xs hidden xs:inline">Gửi</span>
             </>
           )}
         </Button>
