@@ -76,6 +76,7 @@ export function ChatInputWithExtras({
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
+    const prevHeight = el.style.height;
     el.style.height = "auto";
     // Đo line-height thực tế từ computed style để cap chính xác bội số của line
     const cs = window.getComputedStyle(el);
@@ -91,7 +92,25 @@ export function ChatInputWithExtras({
 
     const next = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${next}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+    const isOverflowing = el.scrollHeight > maxHeight;
+    el.style.overflowY = isOverflowing ? "auto" : "hidden";
+
+    // Auto-scroll caret xuống cuối khi textarea tăng chiều cao hoặc đã đạt max
+    // → đảm bảo dòng đang gõ (dòng cuối) không bị che/cắt khi gần 10 dòng.
+    const grew = parseFloat(prevHeight || "0") < next;
+    if (grew || isOverflowing) {
+      // Dùng rAF để chạy sau khi browser layout xong height mới
+      requestAnimationFrame(() => {
+        // Chỉ scroll khi caret đang ở cuối (người dùng đang gõ tiếp tục),
+        // tránh nhảy view khi họ click sửa giữa văn bản.
+        const atEnd =
+          el.selectionStart === el.value.length &&
+          el.selectionEnd === el.value.length;
+        if (atEnd) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    }
   }, [message, isMobile]);
 
   // Reset selected index when filtered results change
