@@ -88,11 +88,25 @@ export function ChatInputWithExtras({
     const chrome = padTop + padBottom + borderTop + borderBottom;
 
     const maxLines = isMobile ? 8 : 11;
+    const minLines = 1;
+    // Min/Max height tính chính xác theo bội số nguyên của line + chrome
+    const minHeight = Math.ceil(chrome + lineHeight * minLines);
     const maxHeight = Math.ceil(chrome + lineHeight * maxLines);
 
-    const next = Math.min(el.scrollHeight, maxHeight);
+    // Guard: scrollHeight có thể lệch (font chưa load, sub-pixel rounding,
+    // zoom của trình duyệt mobile…) → clamp cứng trong [minHeight, maxHeight]
+    // và **không bao giờ** gán style.height vượt maxHeight để tránh đẩy layout.
+    const rawScroll = el.scrollHeight;
+    const clamped = Math.min(Math.max(rawScroll, minHeight), maxHeight);
+    const next = clamped;
     el.style.height = `${next}px`;
-    const isOverflowing = el.scrollHeight > maxHeight;
+    // Đặt thêm maxHeight cứng ở style để CSS đồng bộ với JS,
+    // phòng trường hợp class Tailwind bị override hoặc Textarea tự set.
+    el.style.maxHeight = `${maxHeight}px`;
+
+    // Chỉ bật scroll khi nội dung thực sự cần (rawScroll > maxHeight + 1px tolerance
+    // để bỏ qua nhiễu sub-pixel khiến scrollbar nhấp nháy ở mép).
+    const isOverflowing = rawScroll > maxHeight + 1;
     el.style.overflowY = isOverflowing ? "auto" : "hidden";
 
     // Auto-scroll caret xuống cuối khi textarea tăng chiều cao hoặc đã đạt max
@@ -108,6 +122,18 @@ export function ChatInputWithExtras({
           el.selectionEnd === el.value.length;
         if (atEnd) {
           el.scrollTop = el.scrollHeight;
+        } else {
+          // Caret ở giữa: đảm bảo caret luôn nằm trong vùng nhìn thấy,
+          // không để bị crop ở phần đầu/cuối của textarea.
+          const caretLine = Math.floor(
+            (el.value.substring(0, el.selectionStart).split("\n").length - 1)
+          );
+          const caretTop = caretLine * lineHeight;
+          if (caretTop < el.scrollTop) {
+            el.scrollTop = Math.max(0, caretTop - lineHeight);
+          } else if (caretTop > el.scrollTop + (next - chrome) - lineHeight) {
+            el.scrollTop = caretTop - (next - chrome) + lineHeight * 2;
+          }
         }
       });
     }
