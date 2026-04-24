@@ -39,6 +39,7 @@ export function ChatInputWithExtras({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [showHashtag, setShowHashtag] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
    const [showManager, setShowManager] = useState(false);
@@ -199,7 +200,9 @@ export function ChatInputWithExtras({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() && !selectedFile) return;
+    if (sending) return; // Tránh double submit
 
+    setSending(true);
     try {
       let attachment: { url: string; type: "image" | "file"; name: string } | undefined;
       if (selectedFile && onUpload) {
@@ -213,6 +216,7 @@ export function ChatInputWithExtras({
       console.error("Error sending message:", error);
     } finally {
       setUploading(false);
+      setSending(false);
       // Keep focus on textarea so admin can continue typing
       requestAnimationFrame(() => {
         inputRef.current?.focus();
