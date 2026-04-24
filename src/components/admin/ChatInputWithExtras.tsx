@@ -68,6 +68,17 @@ export function ChatInputWithExtras({
     };
   }, [previewUrl]);
 
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = 240; // ~10 rows
+    const next = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [message]);
+
   // Reset selected index when filtered results change
   useEffect(() => {
     setSelectedSuggestionIndex(0);
