@@ -356,7 +356,7 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showHashtag && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0 hidden xs:inline-flex sm:inline-flex", showHashtag && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
               <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -424,7 +424,7 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showEmoji && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0 hidden xs:inline-flex sm:inline-flex", showEmoji && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
               <Smile className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
