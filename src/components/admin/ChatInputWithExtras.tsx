@@ -346,10 +346,10 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-8 w-8", showHashtag && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showHashtag && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
-              <Hash className="h-4 w-4" />
+              <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" align="start">
@@ -400,11 +400,11 @@ export function ChatInputWithExtras({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || sending}
         >
-          <Paperclip className="h-4 w-4" />
+          <Paperclip className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
 
         {/* Emoji */}
@@ -414,10 +414,10 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-8 w-8", showEmoji && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showEmoji && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
-              <Smile className="h-4 w-4" />
+              <Smile className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" align="start">
@@ -447,7 +447,7 @@ export function ChatInputWithExtras({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || sending}
-          className="flex-1 min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-2 leading-5 overflow-hidden"
+          className="flex-1 min-h-[32px] sm:min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-1.5 sm:py-2 px-2.5 sm:px-3 leading-5 overflow-hidden"
           rows={1}
         />
 
@@ -455,7 +455,7 @@ export function ChatInputWithExtras({
         <Button
           type="submit"
           size="sm"
-          className="h-8 px-3"
+          className="h-7 sm:h-8 px-2 sm:px-3 shrink-0"
           disabled={disabled || sending || (!message.trim() && !selectedFile)}
           aria-busy={sending}
         >
