@@ -210,6 +210,10 @@ export function ChatInputWithExtras({
       console.error("Error sending message:", error);
     } finally {
       setUploading(false);
+      // Keep focus on textarea so admin can continue typing
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
     }
   };
 
