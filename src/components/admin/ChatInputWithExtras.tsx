@@ -77,8 +77,9 @@ export function ChatInputWithExtras({
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // Smaller cap on mobile so 10 lines vẫn nằm gọn trong viewport
-    const maxHeight = isMobile ? 180 : 240; // ~10 rows desktop, ~9 rows mobile
+    // Cap chính xác = padding (12px) + line-height (20px) * số dòng
+    // → tránh cắt nửa dòng cuối khi scroll
+    const maxHeight = isMobile ? 12 + 20 * 8 : 12 + 20 * 11; // 172px (8 dòng) mobile, 232px (11 dòng) desktop
     const next = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
@@ -447,7 +448,7 @@ export function ChatInputWithExtras({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || sending}
-          className="flex-1 min-h-[32px] sm:min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-1.5 sm:py-2 px-2.5 sm:px-3 leading-5 overflow-hidden"
+          className="flex-1 min-h-[32px] sm:min-h-[36px] max-h-[172px] sm:max-h-[232px] text-sm resize-none py-1.5 sm:py-2 px-2.5 sm:px-3 leading-5 overflow-hidden"
           rows={1}
         />
 
