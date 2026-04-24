@@ -450,6 +450,16 @@ export function ChatInputWithExtras({
        {isAdmin && (
          <QuickReplyManager open={showManager} onOpenChange={setShowManager} />
        )}
+       {/* Keyboard shortcut hint */}
+       <p className="text-[10px] text-muted-foreground px-1 leading-tight">
+         Nhấn{" "}
+         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>{" "}
+         để gửi •{" "}
+         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
+         {" + "}
+         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>{" "}
+         để xuống dòng
+       </p>
     </div>
   );
 }
