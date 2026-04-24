@@ -25,14 +25,6 @@ interface UseIPGeolocationOptions {
 const geoCache = new Map<string, { data: GeoLocation; timestamp: number }>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-/**
- * Clear all cached geolocation data. Call this on logout / account switch
- * so the next admin session doesn't see the previous admin's cached IPs.
- */
-export function clearGeoCache() {
-  geoCache.clear();
-}
-
 export function useIPGeolocation(options: UseIPGeolocationOptions = {}) {
   const { enabled = true, cacheKey, ip } = options;
   // Prefer IP-based cache key so the same IP across different rooms/users
