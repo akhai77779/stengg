@@ -260,18 +260,18 @@ export function ChatInputWithExtras({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5 sm:space-y-2">
       {/* File preview */}
       {selectedFile && (
-        <div className="p-2 bg-muted rounded-lg flex items-center gap-2">
+        <div className="p-1.5 sm:p-2 bg-muted rounded-lg flex items-center gap-2">
           {previewUrl ? (
             <img
               src={previewUrl}
               alt="Preview"
-              className="h-12 w-12 object-cover rounded"
+              className="h-10 w-10 sm:h-12 sm:w-12 object-cover rounded"
             />
           ) : (
-            <div className="h-12 w-12 bg-background rounded flex items-center justify-center">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-background rounded flex items-center justify-center">
               <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
           )}
@@ -330,7 +330,7 @@ export function ChatInputWithExtras({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 relative">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1 sm:gap-1.5 relative">
         <input
           ref={fileInputRef}
           type="file"
