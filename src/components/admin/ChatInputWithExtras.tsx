@@ -39,6 +39,7 @@ export function ChatInputWithExtras({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [showHashtag, setShowHashtag] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
    const [showManager, setShowManager] = useState(false);
@@ -199,7 +200,9 @@ export function ChatInputWithExtras({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() && !selectedFile) return;
+    if (sending) return; // Tránh double submit
 
+    setSending(true);
     try {
       let attachment: { url: string; type: "image" | "file"; name: string } | undefined;
       if (selectedFile && onUpload) {
@@ -213,6 +216,7 @@ export function ChatInputWithExtras({
       console.error("Error sending message:", error);
     } finally {
       setUploading(false);
+      setSending(false);
       // Keep focus on textarea so admin can continue typing
       requestAnimationFrame(() => {
         inputRef.current?.focus();
@@ -327,7 +331,7 @@ export function ChatInputWithExtras({
               variant="ghost"
               size="icon"
               className={cn("h-8 w-8", showHashtag && "bg-primary/10 text-primary")}
-              disabled={disabled || uploading}
+              disabled={disabled || sending}
             >
               <Hash className="h-4 w-4" />
             </Button>
@@ -382,7 +386,7 @@ export function ChatInputWithExtras({
           size="icon"
           className="h-8 w-8"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
+          disabled={disabled || sending}
         >
           <Paperclip className="h-4 w-4" />
         </Button>
@@ -395,7 +399,7 @@ export function ChatInputWithExtras({
               variant="ghost"
               size="icon"
               className={cn("h-8 w-8", showEmoji && "bg-primary/10 text-primary")}
-              disabled={disabled || uploading}
+              disabled={disabled || sending}
             >
               <Smile className="h-4 w-4" />
             </Button>
@@ -426,7 +430,7 @@ export function ChatInputWithExtras({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled || uploading}
+          disabled={disabled || sending}
           className="flex-1 min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-2 leading-5 overflow-hidden"
           rows={1}
         />
@@ -436,10 +440,16 @@ export function ChatInputWithExtras({
           type="submit"
           size="sm"
           className="h-8 px-3"
-          disabled={disabled || uploading || (!message.trim() && !selectedFile)}
+          disabled={disabled || sending || (!message.trim() && !selectedFile)}
+          aria-busy={sending}
         >
-          {uploading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+          {sending ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" />
+              <span className="text-xs">
+                {uploading ? "Đang tải..." : "Đang gửi..."}
+              </span>
+            </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-1" />
