@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
  import { useQuickReplyTemplates } from "@/hooks/useQuickReplyTemplates";
  import { QuickReplyManager } from "./QuickReplyManager";
@@ -129,8 +130,14 @@ export function ChatInputWithExtras({
 
   // Handle keyboard navigation for inline suggestions + Enter/Shift+Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter without Shift = send
-    if (e.key === "Enter" && !e.shiftKey) {
+    // Bỏ qua khi đang trong IME composition (gõ tiếng Việt/Trung/Nhật...)
+    // - keyCode 229 là tín hiệu chuẩn cho phím đang được IME xử lý
+    // - nativeEvent.isComposing được set khi composition đang diễn ra
+    const isComposing =
+      (e.nativeEvent as KeyboardEvent).isComposing || e.keyCode === 229;
+
+    // Enter without Shift = send (chỉ trên desktop, mobile để Enter = newline tự nhiên)
+    if (e.key === "Enter" && !e.shiftKey && !isComposing && !isMobile) {
       if (showInlineHashtag && filteredTemplates.length > 0) {
         e.preventDefault();
         const selected = filteredTemplates[selectedSuggestionIndex];
@@ -143,6 +150,7 @@ export function ChatInputWithExtras({
     }
     
     if (!showInlineHashtag || filteredTemplates.length === 0) return;
+    if (isComposing) return;
     
     switch (e.key) {
       case "ArrowDown":
