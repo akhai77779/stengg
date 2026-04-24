@@ -479,20 +479,22 @@ export function ChatInputWithExtras({
        {isAdmin && (
          <QuickReplyManager open={showManager} onOpenChange={setShowManager} />
        )}
-       {/* Keyboard shortcut hint */}
-       <p className="text-[10px] text-muted-foreground px-1 leading-tight flex flex-wrap items-center gap-x-1 gap-y-0.5">
-         <span className="inline-flex items-center gap-1">
-           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
-           <span>để gửi</span>
-         </span>
-         <span className="hidden sm:inline">•</span>
-         <span className="inline-flex items-center gap-1">
-           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
-           <span>+</span>
-           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
-           <span>để xuống dòng</span>
-         </span>
-       </p>
+       {/* Keyboard shortcut hint - chỉ hiển thị trên desktop vì mobile không dùng phím vật lý */}
+       {!isMobile && (
+         <p className="text-[10px] text-muted-foreground px-1 leading-tight flex flex-wrap items-center gap-x-1 gap-y-0.5">
+           <span className="inline-flex items-center gap-1">
+             <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
+             <span>để gửi</span>
+           </span>
+           <span className="hidden sm:inline">•</span>
+           <span className="inline-flex items-center gap-1">
+             <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
+             <span>+</span>
+             <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
+             <span>để xuống dòng</span>
+           </span>
+         </p>
+       )}
     </div>
   );
 }
