@@ -207,8 +207,13 @@ export function ChatInputWithExtras({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() && !selectedFile) return;
     if (sending) return; // Tránh double submit
+    if (!message.trim() && !selectedFile) {
+      toast.error("Tin nhắn trống", {
+        description: "Vui lòng nhập nội dung hoặc đính kèm tệp trước khi gửi.",
+      });
+      return;
+    }
 
     setSending(true);
     try {
@@ -222,6 +227,9 @@ export function ChatInputWithExtras({
       handleClearFile();
     } catch (error) {
       console.error("Error sending message:", error);
+      const description =
+        error instanceof Error ? error.message : "Vui lòng thử lại sau.";
+      toast.error("Không gửi được tin nhắn", { description });
     } finally {
       setUploading(false);
       setSending(false);
