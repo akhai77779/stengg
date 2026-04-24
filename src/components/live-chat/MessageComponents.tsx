@@ -75,13 +75,18 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
 
     if (newCount > prevCount) {
       // New message arrived
-      if (isNearBottom) {
+      const lastMessage = messages[newCount - 1];
+      // Khi chính người dùng (admin) vừa gửi tin → luôn cuộn xuống dù đang đọc tin cũ
+      const isOwnMessage = lastMessage?.sender_id === currentUserId;
+
+      if (isNearBottom || isOwnMessage) {
         requestAnimationFrame(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
               top: scrollContainerRef.current.scrollHeight,
               behavior: 'smooth'
             });
+            setHasNewMessage(false);
           }
         });
       } else {
@@ -95,7 +100,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
         }
       });
     }
-  }, [messages, isNearBottom]);
+  }, [messages, isNearBottom, currentUserId]);
 
   // Also scroll on typing indicator
   useEffect(() => {
