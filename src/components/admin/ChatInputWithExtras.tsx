@@ -331,7 +331,7 @@ export function ChatInputWithExtras({
               variant="ghost"
               size="icon"
               className={cn("h-8 w-8", showHashtag && "bg-primary/10 text-primary")}
-              disabled={disabled || uploading}
+              disabled={disabled || sending}
             >
               <Hash className="h-4 w-4" />
             </Button>
@@ -386,7 +386,7 @@ export function ChatInputWithExtras({
           size="icon"
           className="h-8 w-8"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
+          disabled={disabled || sending}
         >
           <Paperclip className="h-4 w-4" />
         </Button>
@@ -399,7 +399,7 @@ export function ChatInputWithExtras({
               variant="ghost"
               size="icon"
               className={cn("h-8 w-8", showEmoji && "bg-primary/10 text-primary")}
-              disabled={disabled || uploading}
+              disabled={disabled || sending}
             >
               <Smile className="h-4 w-4" />
             </Button>
