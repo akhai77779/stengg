@@ -430,7 +430,7 @@ export function ChatInputWithExtras({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled || uploading}
+          disabled={disabled || sending}
           className="flex-1 min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-2 leading-5 overflow-hidden"
           rows={1}
         />
@@ -440,10 +440,16 @@ export function ChatInputWithExtras({
           type="submit"
           size="sm"
           className="h-8 px-3"
-          disabled={disabled || uploading || (!message.trim() && !selectedFile)}
+          disabled={disabled || sending || (!message.trim() && !selectedFile)}
+          aria-busy={sending}
         >
-          {uploading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+          {sending ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" />
+              <span className="text-xs">
+                {uploading ? "Đang tải..." : "Đang gửi..."}
+              </span>
+            </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-1" />
