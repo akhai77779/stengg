@@ -77,8 +77,18 @@ export function ChatInputWithExtras({
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // Smaller cap on mobile so 10 lines vẫn nằm gọn trong viewport
-    const maxHeight = isMobile ? 180 : 240; // ~10 rows desktop, ~9 rows mobile
+    // Đo line-height thực tế từ computed style để cap chính xác bội số của line
+    const cs = window.getComputedStyle(el);
+    const lineHeight = parseFloat(cs.lineHeight) || 20;
+    const padTop = parseFloat(cs.paddingTop) || 0;
+    const padBottom = parseFloat(cs.paddingBottom) || 0;
+    const borderTop = parseFloat(cs.borderTopWidth) || 0;
+    const borderBottom = parseFloat(cs.borderBottomWidth) || 0;
+    const chrome = padTop + padBottom + borderTop + borderBottom;
+
+    const maxLines = isMobile ? 8 : 11;
+    const maxHeight = Math.ceil(chrome + lineHeight * maxLines);
+
     const next = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
@@ -346,7 +356,7 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showHashtag && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0 hidden xs:inline-flex sm:inline-flex", showHashtag && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
               <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -414,7 +424,7 @@ export function ChatInputWithExtras({
               type="button"
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", showEmoji && "bg-primary/10 text-primary")}
+              className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0 hidden xs:inline-flex sm:inline-flex", showEmoji && "bg-primary/10 text-primary")}
               disabled={disabled || sending}
             >
               <Smile className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -447,7 +457,7 @@ export function ChatInputWithExtras({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || sending}
-          className="flex-1 min-h-[32px] sm:min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-1.5 sm:py-2 px-2.5 sm:px-3 leading-5 overflow-hidden"
+          className="flex-1 min-h-[32px] sm:min-h-[36px] max-h-[172px] sm:max-h-[232px] text-sm resize-none py-1.5 sm:py-2 px-2.5 sm:px-3 leading-5 overflow-hidden"
           rows={1}
         />
 
@@ -479,14 +489,19 @@ export function ChatInputWithExtras({
        {isAdmin && (
          <QuickReplyManager open={showManager} onOpenChange={setShowManager} />
        )}
-       {/* Keyboard shortcut hint - chỉ hiển thị trên desktop vì mobile không dùng phím vật lý */}
-       {!isMobile && (
+       {/* Hint hiển thị cả desktop & mobile, nội dung khác nhau theo thiết bị */}
+       {isMobile ? (
+         <p className="text-[10px] text-muted-foreground px-1 leading-tight">
+           Nhấn nút <span className="inline-flex items-center align-middle"><Send className="h-2.5 w-2.5 inline mx-0.5" /></span>
+           {" "}để gửi tin nhắn
+         </p>
+       ) : (
          <p className="text-[10px] text-muted-foreground px-1 leading-tight flex flex-wrap items-center gap-x-1 gap-y-0.5">
            <span className="inline-flex items-center gap-1">
              <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
              <span>để gửi</span>
            </span>
-           <span className="hidden sm:inline">•</span>
+           <span>•</span>
            <span className="inline-flex items-center gap-1">
              <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
              <span>+</span>
