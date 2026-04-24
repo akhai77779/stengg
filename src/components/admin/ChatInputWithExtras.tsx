@@ -325,7 +325,7 @@ export function ChatInputWithExtras({
       {/* Inline hashtag suggestions popover */}
       {showInlineHashtag && filteredTemplates.length > 0 && (
         <div className="relative">
-          <div className="absolute bottom-full left-0 mb-1 w-80 max-h-48 overflow-y-auto bg-popover border rounded-lg shadow-lg z-50">
+          <div className="absolute bottom-full left-0 right-0 xs:right-auto mb-1 w-full xs:w-80 max-w-[calc(100vw-1.5rem)] max-h-48 overflow-y-auto bg-popover border rounded-lg shadow-lg z-50">
             <div className="p-1.5">
               <p className="text-[10px] font-medium text-muted-foreground px-2 py-1">
                 Trả lời nhanh {hashtagQuery && `• "${hashtagQuery}"`}
