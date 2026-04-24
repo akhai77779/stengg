@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
  import { useQuickReplyTemplates } from "@/hooks/useQuickReplyTemplates";
  import { QuickReplyManager } from "./QuickReplyManager";
@@ -49,6 +50,7 @@ export function ChatInputWithExtras({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
    const { templates, loading: templatesLoading } = useQuickReplyTemplates();
  
    // Filter only active templates
@@ -73,11 +75,12 @@ export function ChatInputWithExtras({
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const maxHeight = 240; // ~10 rows
+    // Smaller cap on mobile so 10 lines vẫn nằm gọn trong viewport
+    const maxHeight = isMobile ? 180 : 240; // ~10 rows desktop, ~9 rows mobile
     const next = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [message]);
+  }, [message, isMobile]);
 
   // Reset selected index when filtered results change
   useEffect(() => {
@@ -424,7 +427,7 @@ export function ChatInputWithExtras({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || uploading}
-          className="flex-1 min-h-[36px] max-h-[240px] text-sm resize-none py-2 leading-5 overflow-hidden"
+          className="flex-1 min-h-[36px] max-h-[180px] sm:max-h-[240px] text-sm resize-none py-2 leading-5 overflow-hidden"
           rows={1}
         />
 
@@ -451,14 +454,18 @@ export function ChatInputWithExtras({
          <QuickReplyManager open={showManager} onOpenChange={setShowManager} />
        )}
        {/* Keyboard shortcut hint */}
-       <p className="text-[10px] text-muted-foreground px-1 leading-tight">
-         Nhấn{" "}
-         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>{" "}
-         để gửi •{" "}
-         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
-         {" + "}
-         <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>{" "}
-         để xuống dòng
+       <p className="text-[10px] text-muted-foreground px-1 leading-tight flex flex-wrap items-center gap-x-1 gap-y-0.5">
+         <span className="inline-flex items-center gap-1">
+           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
+           <span>để gửi</span>
+         </span>
+         <span className="hidden sm:inline">•</span>
+         <span className="inline-flex items-center gap-1">
+           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Shift</kbd>
+           <span>+</span>
+           <kbd className="px-1 py-0.5 rounded border bg-muted text-[10px] font-mono">Enter</kbd>
+           <span>để xuống dòng</span>
+         </span>
        </p>
     </div>
   );
