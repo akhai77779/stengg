@@ -77,9 +77,18 @@ export function ChatInputWithExtras({
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // Cap chính xác = padding (12px) + line-height (20px) * số dòng
-    // → tránh cắt nửa dòng cuối khi scroll
-    const maxHeight = isMobile ? 12 + 20 * 8 : 12 + 20 * 11; // 172px (8 dòng) mobile, 232px (11 dòng) desktop
+    // Đo line-height thực tế từ computed style để cap chính xác bội số của line
+    const cs = window.getComputedStyle(el);
+    const lineHeight = parseFloat(cs.lineHeight) || 20;
+    const padTop = parseFloat(cs.paddingTop) || 0;
+    const padBottom = parseFloat(cs.paddingBottom) || 0;
+    const borderTop = parseFloat(cs.borderTopWidth) || 0;
+    const borderBottom = parseFloat(cs.borderBottomWidth) || 0;
+    const chrome = padTop + padBottom + borderTop + borderBottom;
+
+    const maxLines = isMobile ? 8 : 11;
+    const maxHeight = Math.ceil(chrome + lineHeight * maxLines);
+
     const next = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
