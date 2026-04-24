@@ -510,9 +510,17 @@ export function ChatInputWithExtras({
        )}
        {/* Hint hiển thị cả desktop & mobile, nội dung khác nhau theo thiết bị */}
        {isMobile ? (
-         <p className="text-[10px] text-muted-foreground px-1 leading-tight">
-           Nhấn nút <span className="inline-flex items-center align-middle"><Send className="h-2.5 w-2.5 inline mx-0.5" /></span>
-           {" "}để gửi tin nhắn
+         <p
+           className="text-[10px] xs:text-[11px] text-muted-foreground px-1 leading-[1.15] mt-0.5 flex items-center gap-1 whitespace-nowrap overflow-hidden"
+           title="Nhấn nút Gửi để gửi tin nhắn"
+         >
+           {/* <360px: chỉ icon + 'Gửi' để không tràn ngang. ≥360px: nội dung đầy đủ */}
+           <span className="inline-flex items-center gap-1 truncate">
+             <span className="hidden xs:inline">Nhấn nút</span>
+             <Send className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+             <span className="xs:hidden">để gửi</span>
+             <span className="hidden xs:inline">để gửi tin nhắn</span>
+           </span>
          </p>
        ) : (
          <p className="text-[10px] text-muted-foreground px-1 leading-tight flex flex-wrap items-center gap-x-1 gap-y-0.5">
