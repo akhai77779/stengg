@@ -67,15 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdminLoading(true);
     
     try {
-      console.log('Checking admin role for user:', userId);
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      console.log('Admin role check result:', { data, error, userId });
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin',
+      });
 
       if (error) {
         console.error('Error checking admin role:', error);
@@ -83,8 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log('Setting isAdmin to:', !!data);
-      setIsAdmin(!!data);
+      setIsAdmin(data === true);
       // Mark this user as checked
       lastCheckedUserIdRef.current = userId;
     } catch (error) {

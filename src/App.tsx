@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
 import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
+import { AdminRouteGuard } from "@/components/auth/AdminRouteGuard";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -73,7 +74,7 @@ const App = () => (
                   <Route path="/security" element={<SecuritySettings />} />
                   <Route path="/identity-verification" element={<IdentityVerification />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="/admin" element={<AdminRouteGuard><AdminLayout /></AdminRouteGuard>}>
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<AdminOverview />} />
                     <Route path="banners" element={<AdminBanners />} />

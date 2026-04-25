@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ComponentType } from "react";
+import { useMemo, type ComponentType } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -122,7 +122,6 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
 }
 
 export default function AdminLayout() {
-  const { user, isAdmin, isLoading: authLoading, isAdminLoading } = useAuth();
   const { 
     pendingVerificationCount, 
     pendingTransactionCount,
@@ -134,15 +133,6 @@ export default function AdminLayout() {
    
    // Hide footer on live-chat page for full-height layout
    const isLiveChatPage = location.pathname === '/admin/live-chat';
-
-  useEffect(() => {
-    if (authLoading || isAdminLoading) return;
-    if (!user) navigate("/login");
-    else if (!isAdmin) navigate("/");
-  }, [authLoading, isAdminLoading, user, isAdmin, navigate]);
-
-  if (authLoading || isAdminLoading) return null;
-  if (!user || !isAdmin) return null;
 
   return (
      <Layout hideFooter={isLiveChatPage}>
