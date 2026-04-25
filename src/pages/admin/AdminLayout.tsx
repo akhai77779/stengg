@@ -165,16 +165,16 @@ export default function AdminLayout() {
               <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Menu className="h-4 w-4" />
-                      Menu admin
+                    <Button variant="outline" className="h-10 gap-2 px-3 text-sm">
+                      <Menu className="h-4 w-4 shrink-0" />
+                      <span className="whitespace-nowrap">Menu admin</span>
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[320px]">
-                    <SheetHeader>
-                      <SheetTitle>Menu quản trị</SheetTitle>
+                  <SheetContent side="left" className="flex h-dvh w-[min(88vw,340px)] min-w-[280px] max-w-[calc(100vw-1rem)] flex-col overflow-hidden p-0">
+                    <SheetHeader className="shrink-0 border-b border-border px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] text-left">
+                      <SheetTitle className="truncate text-base">Menu quản trị</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-4">
+                    <div className="min-h-0 flex-1">
                       <AdminSidebar 
                         onNavigate={() => undefined}
                         pendingVerificationCount={pendingVerificationCount}
