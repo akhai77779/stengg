@@ -82,13 +82,13 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
   };
 
   return (
-    <aside className="h-full">
-      <div className="p-4">
-        <div className="text-sm font-semibold tracking-wide text-muted-foreground">
+    <aside className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 px-3 py-3 sm:px-4">
+        <div className="truncate text-sm font-semibold tracking-wide text-muted-foreground">
           {t('admin.title')}
         </div>
       </div>
-      <div className="px-2 pb-4">
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {items.map((item) => {
           const active = location.pathname === item.to;
           const Icon = item.icon;
@@ -98,7 +98,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
               key={item.to}
               variant={active ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start gap-2",
+                "h-11 w-full min-w-0 justify-start gap-2 px-3 text-sm",
                 active && "font-medium"
               )}
               onClick={() => {
@@ -106,10 +106,10 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
                 onNavigate?.();
               }}
             >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1 text-left">{item.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-left leading-none">{item.label}</span>
               {badgeCount > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs animate-pulse">
+                <Badge variant="destructive" className="h-5 min-w-5 shrink-0 px-1.5 text-xs animate-pulse">
                   {badgeCount}
                 </Badge>
               )}
@@ -165,16 +165,16 @@ export default function AdminLayout() {
               <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Menu className="h-4 w-4" />
-                      Menu admin
+                    <Button variant="outline" className="h-10 gap-2 px-3 text-sm">
+                      <Menu className="h-4 w-4 shrink-0" />
+                      <span className="whitespace-nowrap">Menu admin</span>
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[320px]">
-                    <SheetHeader>
-                      <SheetTitle>Menu quản trị</SheetTitle>
+                  <SheetContent side="left" className="flex h-dvh w-[min(88vw,340px)] min-w-[280px] max-w-[calc(100vw-1rem)] flex-col overflow-hidden p-0">
+                    <SheetHeader className="shrink-0 border-b border-border px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top))] text-left">
+                      <SheetTitle className="truncate text-base">Menu quản trị</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-4">
+                    <div className="min-h-0 flex-1">
                       <AdminSidebar 
                         onNavigate={() => undefined}
                         pendingVerificationCount={pendingVerificationCount}
