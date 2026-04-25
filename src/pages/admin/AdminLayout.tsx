@@ -82,13 +82,13 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
   };
 
   return (
-    <aside className="h-full">
-      <div className="p-4">
-        <div className="text-sm font-semibold tracking-wide text-muted-foreground">
+    <aside className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 px-3 py-3 sm:px-4">
+        <div className="truncate text-sm font-semibold tracking-wide text-muted-foreground">
           {t('admin.title')}
         </div>
       </div>
-      <div className="px-2 pb-4">
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {items.map((item) => {
           const active = location.pathname === item.to;
           const Icon = item.icon;
@@ -98,7 +98,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
               key={item.to}
               variant={active ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start gap-2",
+                "h-11 w-full min-w-0 justify-start gap-2 px-3 text-sm",
                 active && "font-medium"
               )}
               onClick={() => {
@@ -106,10 +106,10 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
                 onNavigate?.();
               }}
             >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1 text-left">{item.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-left leading-none">{item.label}</span>
               {badgeCount > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs animate-pulse">
+                <Badge variant="destructive" className="h-5 min-w-5 shrink-0 px-1.5 text-xs animate-pulse">
                   {badgeCount}
                 </Badge>
               )}
