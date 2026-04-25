@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useLanguage, Language } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { ChevronLeft, ChevronRight, Sun, Moon, Info, Globe } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Info, Globe, ShieldCheck } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Sheet,
   SheetContent,
@@ -32,6 +33,7 @@ export default function Settings() {
   const { t, language, setLanguage } = useLanguage();
   const { currency } = useCurrency();
   const { theme, setTheme } = useTheme();
+  const { isAdmin, isAdminLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
 
@@ -137,6 +139,20 @@ export default function Settings() {
                 <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
               </div>
             </button>
+
+            {/* Admin shortcut */}
+            {!isAdminLoading && isAdmin && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="relative w-full flex items-center justify-between py-4 border-b border-border/30 hover:bg-muted/20 transition-all duration-200 active:scale-[0.99] touch-action-manipulation min-h-[52px] overflow-hidden"
+              >
+                <span className="min-w-0 flex items-center gap-2 text-sm md:text-base text-foreground">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="truncate">Vào trang Admin</span>
+                </span>
+                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+              </button>
+            )}
 
             {/* About Us */}
             <Sheet>
