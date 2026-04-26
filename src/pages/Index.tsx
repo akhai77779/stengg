@@ -1,7 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
 import { HeroSlider } from '@/components/home/HeroSlider';
-import { LatestNews } from '@/components/home/LatestNews';
-import { FeaturedProducts } from '@/components/home/FeaturedProducts';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { Loader2 } from 'lucide-react';
@@ -35,8 +33,6 @@ const Index = () => {
   return (
     <Layout>
       <HeroSlider />
-      <LatestNews />
-      <FeaturedProducts />
     </Layout>
   );
 };
