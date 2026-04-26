@@ -154,7 +154,7 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
 
   return (
     <Card className={cn(
-      "border-2 transition-colors animate-pulse",
+      "border-2 transition-colors",
       isWinning ? "border-green-500/50 bg-green-500/5" : "border-red-500/50 bg-red-500/5"
     )}>
       <CardContent className="p-4">
@@ -172,7 +172,7 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
           </div>
           <div className="flex items-center gap-2 text-lg font-bold">
             <Clock className="h-5 w-5" />
-            <span className={timeLeft <= 30 ? "text-red-500 animate-pulse" : ""}>
+            <span className={timeLeft <= 30 ? "text-red-500" : ""}>
               {formatTime(timeLeft)}
             </span>
           </div>
