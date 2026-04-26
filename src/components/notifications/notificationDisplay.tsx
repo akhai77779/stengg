@@ -63,11 +63,19 @@ export function TradeResultIcon({ notification }: { notification: NotificationPr
   const tradeResult = getTradeResult(notification);
 
   if (tradeResult === "positive") {
-    return <ArrowUpCircle className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />;
+    return (
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
+        <ArrowUpCircle className="h-4 w-4 text-secondary" />
+      </span>
+    );
   }
 
   if (tradeResult === "negative") {
-    return <ArrowDownCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />;
+    return (
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
+        <ArrowDownCircle className="h-4 w-4 text-destructive" />
+      </span>
+    );
   }
 
   return null;
