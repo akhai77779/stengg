@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, CheckCheck, Volume2, VolumeX, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -121,7 +121,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
 
   const cleanTradeResultText = (text: string) => text
     .replace(/[🎉📉]/g, "")
-    .replace(/\b(thắng|thua)\b/gi, "")
+    .replace(/\b(thắng|thua|won|lost|win|lose)\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 
@@ -300,7 +300,8 @@ export function NotificationBell({ className }: NotificationBellProps) {
                                 "text-sm",
                                 !notification.is_read && "font-semibold"
                               )}>
-                                {cleanTradeResultText(notification.title, true)}
+                                {getTradeResultIcon(notification)}
+                                {getNotificationTitle(notification)}
                               </p>
                               {!notification.is_read && (
                                 <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
@@ -530,7 +531,8 @@ export function NotificationBell({ className }: NotificationBellProps) {
                               "text-sm",
                               !notification.is_read && "font-semibold"
                             )}>
-                              {cleanTradeResultText(notification.title, true)}
+                              {getTradeResultIcon(notification)}
+                              {getNotificationTitle(notification)}
                             </p>
                             {!notification.is_read && (
                               <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
