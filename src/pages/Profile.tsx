@@ -488,11 +488,6 @@ export default function Profile() {
             </Card>
           </div>
 
-          {/* Transaction History */}
-          <div className="mb-4 md:mb-6">
-            <TransactionHistory />
-          </div>
-
           {/* Security Notice */}
           <p className="text-[10px] md:text-xs text-center text-muted-foreground px-4">
             {t('profile.securityNotice')}
