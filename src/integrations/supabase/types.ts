@@ -1326,6 +1326,10 @@ export type Database = {
         Args: { _admin_id: string; _amount: number; _user_id: string }
         Returns: Json
       }
+      assert_no_option_trade_user_notifications: {
+        Args: never
+        Returns: undefined
+      }
       check_rate_limit: {
         Args: {
           _action_type: string
