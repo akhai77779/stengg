@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +18,11 @@ interface MobileNotificationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type NotificationPreview = {
+  type: string;
+  metadata?: Record<string, unknown>;
+};
 
 export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificationSheetProps) {
   const {
@@ -47,28 +52,45 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
     }
   };
 
-  const getNotificationStyles = (notification: { type: string; metadata?: Record<string, unknown> }) => {
+  const getTradeResult = (notification: NotificationPreview) => {
     const result = notification.metadata?.result;
     const profitLoss = Number(notification.metadata?.profit_loss);
 
     if (notification.metadata?.trade_id) {
-      if (result === "won" || (!Number.isNaN(profitLoss) && profitLoss > 0)) {
-        return "border-l-green-500 bg-green-500/5";
-      }
-      if (result === "lost" || (!Number.isNaN(profitLoss) && profitLoss < 0)) {
-        return "border-l-red-500 bg-red-500/5";
-      }
+      if (result === "won" || (!Number.isNaN(profitLoss) && profitLoss > 0)) return "positive";
+      if (result === "lost" || (!Number.isNaN(profitLoss) && profitLoss < 0)) return "negative";
     }
+
+    return null;
+  };
+
+  const getNotificationStyles = (notification: NotificationPreview) => {
+    const tradeResult = getTradeResult(notification);
+
+    if (tradeResult === "positive") return "border-l-secondary bg-secondary/5";
+    if (tradeResult === "negative") return "border-l-destructive bg-destructive/5";
 
     return getTypeStyles(notification.type);
   };
 
-  const cleanTradeResultText = (text: string, isTitle = false) => {
-    if (isTitle) {
-      return text.replace(/(Giao dịch)\s+(thắng|thua)/gi, "$1 quyền chọn");
-    }
+  const cleanTradeResultText = (text: string) => text
+    .replace(/[🎉📉]/g, "")
+    .replace(/\b(thắng|thua|won|lost|win|lose)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
-    return text.replace(/\s+(thắng|thua)\s+/gi, " ");
+  const getNotificationTitle = (notification: { title: string } & NotificationPreview) => {
+    if (notification.metadata?.trade_id) return "Giao dịch quyền chọn";
+    return cleanTradeResultText(notification.title);
+  };
+
+  const getTradeResultIcon = (notification: NotificationPreview) => {
+    const tradeResult = getTradeResult(notification);
+
+    if (tradeResult === "positive") return <ArrowUpCircle className="h-4 w-4 shrink-0 text-secondary" />;
+    if (tradeResult === "negative") return <ArrowDownCircle className="h-4 w-4 shrink-0 text-destructive" />;
+
+    return null;
   };
 
   const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
@@ -152,7 +174,8 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                           "text-sm",
                           !notification.is_read && "font-semibold"
                         )}>
-                          {cleanTradeResultText(notification.title, true)}
+                          {getTradeResultIcon(notification)}
+                          {getNotificationTitle(notification)}
                         </p>
                         {!notification.is_read && (
                           <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
