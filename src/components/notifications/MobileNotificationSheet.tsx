@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -156,7 +156,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                         }}
                         title="Xóa thông báo"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
