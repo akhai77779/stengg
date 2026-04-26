@@ -496,7 +496,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                       key={notification.id}
                       className={cn(
                         "relative p-3 sm:p-4 border-l-4 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation",
-                        getTypeStyles(notification.type),
+                        getNotificationStyles(notification),
                         !notification.is_read && "bg-accent/30"
                       )}
                       onClick={() => handleNotificationClick(notification.id, notification.is_read)}
@@ -508,14 +508,14 @@ export function NotificationBell({ className }: NotificationBellProps) {
                               "text-sm",
                               !notification.is_read && "font-semibold"
                             )}>
-                              {notification.title}
+                              {cleanTradeResultText(notification.title, true)}
                             </p>
                             {!notification.is_read && (
                               <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap break-words">
-                            {notification.message}
+                            {cleanTradeResultText(notification.message)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(notification.created_at), {
