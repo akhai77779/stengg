@@ -227,13 +227,13 @@ export function NotificationBell({ className }: NotificationBellProps) {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
                               <p className={cn(
-                                "text-sm",
+                                "flex min-w-0 items-center gap-1.5 text-sm leading-5",
                                 !notification.is_read && "font-semibold"
                               )}>
                                 <TradeResultIcon notification={notification} />
-                                {getNotificationTitle(notification)}
+                                <span className="min-w-0 truncate">{getNotificationTitle(notification)}</span>
                               </p>
                               {!notification.is_read && (
                                 <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
@@ -458,13 +458,13 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex min-w-0 items-center gap-2">
                             <p className={cn(
-                              "text-sm",
+                              "flex min-w-0 items-center gap-1.5 text-sm leading-5",
                               !notification.is_read && "font-semibold"
                             )}>
                               <TradeResultIcon notification={notification} />
-                              {getNotificationTitle(notification)}
+                              <span className="min-w-0 truncate">{getNotificationTitle(notification)}</span>
                             </p>
                             {!notification.is_read && (
                               <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
