@@ -1342,6 +1342,7 @@ export type Database = {
       cleanup_expired_notifications: { Args: never; Returns: undefined }
       cleanup_expired_phone_otps: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      cleanup_option_trade_user_notifications: { Args: never; Returns: number }
       create_savings_deposit: {
         Args: { _amount: number; _package_id: string; _user_id: string }
         Returns: Json
