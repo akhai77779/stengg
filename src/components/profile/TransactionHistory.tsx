@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Loader2, ArrowDownToLine, ArrowUpFromLine, AlertCircle, Inbox, RefreshCw } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, AlertCircle, Inbox, RefreshCw } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -149,15 +150,26 @@ export function TransactionHistory() {
 
   const depositWithdrawTransactions = transactions.filter(tx => tx.type === 'deposit' || tx.type === 'withdraw');
 
-  if (isLoading) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const TransactionSkeleton = () => (
+    <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="flex min-h-[76px] flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between md:p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-40 max-w-full" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 sm:block sm:min-w-28 sm:space-y-2 sm:text-right">
+            <Skeleton className="h-4 w-24 sm:ml-auto" />
+            <Skeleton className="h-5 w-16 rounded-full sm:ml-auto" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   const TransactionList = ({ items }: { items: Transaction[] }) => (
     <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
@@ -222,7 +234,7 @@ export function TransactionHistory() {
         <CardTitle className="text-base md:text-lg">{t('profile.depositWithdraw')}</CardTitle>
       </CardHeader>
       <CardContent className="px-3 pb-4 md:px-4">
-        {errorMessage ? <ErrorState /> : <TransactionList items={depositWithdrawTransactions} />}
+        {isLoading ? <TransactionSkeleton /> : errorMessage ? <ErrorState /> : <TransactionList items={depositWithdrawTransactions} />}
       </CardContent>
     </Card>
   );
