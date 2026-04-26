@@ -16,6 +16,18 @@ interface UserNotification {
 
 const SOUND_ENABLED_KEY = "user_notification_sound_enabled";
 
+function isTradeNotification(notification: Pick<UserNotification, "type" | "title" | "metadata">) {
+  const metadata = notification.metadata || {};
+  const event = metadata.event;
+
+  return Boolean(
+    notification.type === "option_trade" ||
+    metadata.trade_id ||
+    event === "option_trade_created" ||
+    event === "option_trade_settled"
+  );
+}
+
 
 /**
  * Play a pleasant notification sound using Web Audio API
@@ -96,12 +108,16 @@ export function useUserNotifications() {
         .from("user_notifications")
         .select("*")
         .eq("user_id", user.id)
+        .neq("type", "option_trade")
+        .is("metadata->>trade_id", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
-      const typedData = (data || []) as unknown as UserNotification[];
+      const typedData = ((data || []) as unknown as UserNotification[]).filter(
+        notification => !isTradeNotification(notification)
+      );
       
       // Track processed IDs
       typedData.forEach(n => processedIds.current.add(n.id));
@@ -137,6 +153,7 @@ export function useUserNotifications() {
         },
         (payload) => {
           const newNotification = payload.new as unknown as UserNotification;
+          if (isTradeNotification(newNotification)) return;
           
           // Avoid duplicates
           if (processedIds.current.has(newNotification.id)) return;
@@ -161,6 +178,12 @@ export function useUserNotifications() {
         },
         (payload) => {
           const updated = payload.new as unknown as UserNotification;
+          if (isTradeNotification(updated)) {
+            processedIds.current.delete(updated.id);
+            setNotifications(prev => prev.filter(n => n.id !== updated.id));
+            return;
+          }
+
           setNotifications(prev =>
             prev.map(n => (n.id === updated.id ? updated : n))
           );
