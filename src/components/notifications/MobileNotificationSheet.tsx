@@ -174,7 +174,8 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                           "text-sm",
                           !notification.is_read && "font-semibold"
                         )}>
-                          {cleanTradeResultText(notification.title, true)}
+                          {getTradeResultIcon(notification)}
+                          {getNotificationTitle(notification)}
                         </p>
                         {!notification.is_read && (
                           <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
