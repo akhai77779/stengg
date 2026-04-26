@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Loader2, ArrowDownToLine, ArrowUpFromLine, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -83,6 +82,7 @@ export function TransactionHistory() {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
+      .in('type', ['deposit', 'withdraw'])
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -103,10 +103,6 @@ export function TransactionHistory() {
         return <ArrowDownToLine className="w-4 h-4 text-green-500" />;
       case 'withdraw':
         return <ArrowUpFromLine className="w-4 h-4 text-orange-500" />;
-      case 'buy':
-        return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'sell':
-        return <TrendingDown className="w-4 h-4 text-red-500" />;
       default:
         return null;
     }
@@ -118,17 +114,12 @@ export function TransactionHistory() {
         return t('transaction.deposit');
       case 'withdraw':
         return t('transaction.withdraw');
-      case 'buy':
-        return t('transaction.buy');
-      case 'sell':
-        return t('transaction.sell');
       default:
         return type;
     }
   };
 
   const depositWithdrawTransactions = transactions.filter(tx => tx.type === 'deposit' || tx.type === 'withdraw');
-  const tradeTransactions = transactions.filter(tx => tx.type === 'buy' || tx.type === 'sell');
 
   if (isLoading) {
     return (
@@ -141,27 +132,27 @@ export function TransactionHistory() {
   }
 
   const TransactionList = ({ items }: { items: Transaction[] }) => (
-    <div className="divide-y divide-border">
+    <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6 text-sm">{t('transaction.noTransactions')}</p>
+        <p className="text-muted-foreground text-center px-3 py-8 text-sm">{t('transaction.noTransactions')}</p>
       ) : (
         items.map((tx) => (
-          <div key={tx.id} className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-muted">
+          <div key={tx.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between md:p-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="shrink-0 p-2 rounded-full bg-muted">
                 {getIcon(tx.type)}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-sm">{getTypeLabel(tx.type)}</p>
-                <p className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</p>
+                <p className="text-xs text-muted-foreground break-words">{formatDate(tx.created_at)}</p>
                 {tx.network && (
-                  <p className="text-xs text-muted-foreground">{t('transaction.network')}: {tx.network}</p>
+                  <p className="text-xs text-muted-foreground break-words">{t('transaction.network')}: {tx.network}</p>
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <p className={`font-medium ${tx.type === 'deposit' || tx.type === 'sell' ? 'text-green-500' : 'text-red-500'}`}>
-                {tx.type === 'deposit' || tx.type === 'sell' ? '+' : '-'}{formatCurrency(tx.amount)}
+            <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+              <p className={`font-medium text-sm md:text-base ${tx.type === 'deposit' ? 'text-green-500' : 'text-red-500'}`}>
+                {tx.type === 'deposit' ? '+' : '-'}{formatCurrency(tx.amount)}
               </p>
               <Badge className={`text-[10px] ${statusColors[tx.status]}`}>
                 {statusLabels[tx.status]}
@@ -175,28 +166,11 @@ export function TransactionHistory() {
 
   return (
     <Card className="bg-card border-border">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('profile.transactionHistory')}</CardTitle>
+      <CardHeader className="px-3 pb-2 pt-4 md:px-4">
+        <CardTitle className="text-base md:text-lg">{t('profile.depositWithdraw')}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="deposit-withdraw" className="w-full">
-          <TabsList className="w-full bg-muted/50 mb-4">
-            <TabsTrigger value="deposit-withdraw" className="flex-1 text-xs">
-              {t('profile.depositWithdraw')}
-            </TabsTrigger>
-            <TabsTrigger value="trade" className="flex-1 text-xs">
-              {t('profile.trade')}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="deposit-withdraw">
-            <TransactionList items={depositWithdrawTransactions} />
-          </TabsContent>
-          
-          <TabsContent value="trade">
-            <TransactionList items={tradeTransactions} />
-          </TabsContent>
-        </Tabs>
+      <CardContent className="px-3 pb-4 md:px-4">
+        <TransactionList items={depositWithdrawTransactions} />
       </CardContent>
     </Card>
   );
