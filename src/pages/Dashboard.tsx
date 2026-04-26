@@ -12,7 +12,6 @@ import {
   Newspaper, 
   Package, 
   Heart, 
-  TrendingUp,
   Loader2,
   BarChart3,
   Bell
@@ -27,7 +26,6 @@ import { DashboardAuditLogs } from '@/components/dashboard/DashboardAuditLogs';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { Marquee } from '@/components/dashboard/Marquee';
 import { AnimatedBorderCard } from '@/components/dashboard/AnimatedBorderCard';
-import { UserOptionTradeHistory } from '@/components/dashboard/UserOptionTradeHistory';
 
 interface Stats {
   totalUsers: number;
@@ -173,10 +171,6 @@ export default function Dashboard() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="option-history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              Quyền chọn
-            </TabsTrigger>
             <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Audit Logs
             </TabsTrigger>
@@ -207,10 +201,6 @@ export default function Dashboard() {
 
           <TabsContent value="transactions">
             <DashboardTransactions />
-          </TabsContent>
-
-          <TabsContent value="option-history">
-            <UserOptionTradeHistory />
           </TabsContent>
 
           <TabsContent value="audit">

@@ -22,6 +22,7 @@ import WalletDetails from "./pages/WalletDetails";
 import SecuritySettings from "./pages/SecuritySettings";
 import IdentityVerification from "./pages/IdentityVerification";
 import Dashboard from "./pages/Dashboard";
+import OptionTradeHistory from "./pages/OptionTradeHistory";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import BankAccounts from "./pages/BankAccounts";
@@ -74,6 +75,7 @@ const App = () => (
                   <Route path="/security" element={<SecuritySettings />} />
                   <Route path="/identity-verification" element={<IdentityVerification />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/option-trade-history" element={<OptionTradeHistory />} />
                   <Route path="/admin" element={<AdminRouteGuard><AdminLayout /></AdminRouteGuard>}>
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<AdminOverview />} />
