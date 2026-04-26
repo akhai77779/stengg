@@ -367,7 +367,6 @@ Deno.serve(async (req) => {
           summary: n.excerpt || null,
           image_url: n.full_cover || n.cover || null,
           category: "company",
-          views: n.view_count || 0,
           is_featured: n.is_recommend === 1,
         };
 
@@ -392,7 +391,6 @@ Deno.serve(async (req) => {
               content: newsData.content,
               summary: newsData.summary,
               image_url: newsData.image_url,
-              views: newsData.views,
               is_featured: newsData.is_featured,
             })
             .eq("id", existing.id);
@@ -449,7 +447,6 @@ Deno.serve(async (req) => {
               summary: n.excerpt || null,
               image_url: n.full_cover || n.cover || null,
               category: n.category_name || "company",
-              views: n.view_count || 0,
               is_featured: n.is_recommend === 1,
             };
 
@@ -472,7 +469,6 @@ Deno.serve(async (req) => {
                   content: newsData.content,
                   summary: newsData.summary,
                   image_url: newsData.image_url,
-                  views: newsData.views,
                   is_featured: newsData.is_featured,
                 })
                 .eq("id", existing.id);
