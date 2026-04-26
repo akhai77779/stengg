@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,15 +18,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { cleanTradeResultText, getBaseNotificationStyles, getNotificationTitle, getUserNotificationStyles, TradeResultIcon } from "./notificationDisplay";
 
 interface NotificationBellProps {
   className?: string;
 }
-
-type NotificationPreview = {
-  type: string;
-  metadata?: Record<string, unknown>;
-};
 
 export function NotificationBell({ className }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
@@ -73,70 +69,6 @@ export function NotificationBell({ className }: NotificationBellProps) {
   const handleOpenLiveChat = (roomId?: string) => {
     setOpen(false);
     navigate("/admin/live-chat");
-  };
-
-  const getTypeStyles = (type: string) => {
-    switch (type) {
-      case "success":
-        return "border-l-green-500 bg-green-500/5";
-      case "error":
-        return "border-l-red-500 bg-red-500/5";
-      case "warning":
-        return "border-l-yellow-500 bg-yellow-500/5";
-      case "admin_message":
-        return "border-l-blue-500 bg-blue-500/5";
-      case "transaction":
-        return "border-l-green-500 bg-green-500/5";
-      case "verification":
-        return "border-l-blue-500 bg-blue-500/5";
-      case "option_trade":
-        return "border-l-purple-500 bg-purple-500/5";
-      case "new_user":
-        return "border-l-orange-500 bg-orange-500/5";
-      default:
-        return "border-l-muted-foreground/50";
-    }
-  };
-
-  const getTradeResult = (notification: NotificationPreview) => {
-    const result = notification.metadata?.result;
-    const profitLoss = Number(notification.metadata?.profit_loss);
-
-    if (notification.metadata?.trade_id) {
-      if (result === "won" || (!Number.isNaN(profitLoss) && profitLoss > 0)) return "positive";
-      if (result === "lost" || (!Number.isNaN(profitLoss) && profitLoss < 0)) return "negative";
-    }
-
-    return null;
-  };
-
-  const getNotificationStyles = (notification: NotificationPreview) => {
-    const tradeResult = getTradeResult(notification);
-
-    if (tradeResult === "positive") return "border-l-secondary bg-secondary/5";
-    if (tradeResult === "negative") return "border-l-destructive bg-destructive/5";
-
-    return getTypeStyles(notification.type);
-  };
-
-  const cleanTradeResultText = (text: string) => text
-    .replace(/[🎉📉]/g, "")
-    .replace(/\b(thắng|thua|won|lost|win|lose)\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-  const getNotificationTitle = (notification: { title: string } & NotificationPreview) => {
-    if (notification.metadata?.trade_id) return "Giao dịch quyền chọn";
-    return cleanTradeResultText(notification.title);
-  };
-
-  const getTradeResultIcon = (notification: NotificationPreview) => {
-    const tradeResult = getTradeResult(notification);
-
-    if (tradeResult === "positive") return <ArrowUpCircle className="h-4 w-4 shrink-0 text-secondary" />;
-    if (tradeResult === "negative") return <ArrowDownCircle className="h-4 w-4 shrink-0 text-destructive" />;
-
-    return null;
   };
 
   const getAdminNotificationIcon = (type: string) => {
@@ -288,7 +220,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                         key={notification.id}
                         className={cn(
                           "relative p-3 border-l-4 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation",
-                          getNotificationStyles(notification),
+                          getUserNotificationStyles(notification),
                           !notification.is_read && "bg-accent/30"
                         )}
                         onClick={() => handleNotificationClick(notification.id, notification.is_read)}
@@ -300,7 +232,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                                 "text-sm",
                                 !notification.is_read && "font-semibold"
                               )}>
-                                {getTradeResultIcon(notification)}
+                                <TradeResultIcon notification={notification} />
                                 {getNotificationTitle(notification)}
                               </p>
                               {!notification.is_read && (
@@ -384,7 +316,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                         key={notification.id}
                         className={cn(
                           "relative p-3 border-l-4 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation",
-                          getTypeStyles(notification.type),
+                          getBaseNotificationStyles(notification.type),
                           !notification.read && "bg-accent/30"
                         )}
                         onClick={() => markAdminAsRead(notification.id)}
@@ -519,7 +451,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                       key={notification.id}
                       className={cn(
                         "relative p-3 sm:p-4 border-l-4 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent/70 touch-manipulation",
-                        getNotificationStyles(notification),
+                        getUserNotificationStyles(notification),
                         !notification.is_read && "bg-accent/30"
                       )}
                       onClick={() => handleNotificationClick(notification.id, notification.is_read)}
@@ -531,7 +463,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                               "text-sm",
                               !notification.is_read && "font-semibold"
                             )}>
-                              {getTradeResultIcon(notification)}
+                              <TradeResultIcon notification={notification} />
                               {getNotificationTitle(notification)}
                             </p>
                             {!notification.is_read && (
