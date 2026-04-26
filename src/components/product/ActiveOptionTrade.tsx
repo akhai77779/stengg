@@ -151,6 +151,7 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
   const currentPriceVal = currentPrice || activeTrade.entry_price;
   const priceChange = ((currentPriceVal - activeTrade.entry_price) / activeTrade.entry_price) * 100;
   const isWinning = isBuy ? priceChange > 0 : priceChange < 0;
+  const isTimeWarning = timeLeft <= 30;
 
   return (
     <Card className={cn(
@@ -170,9 +171,12 @@ export function ActiveOptionTrade({ productId, currentPrice, onSettled }: Active
             </Badge>
             <span className="font-semibold">${activeTrade.amount.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-2 text-lg font-bold">
+          <div className={cn(
+            "flex items-center gap-2 rounded-md border border-transparent px-2 py-1 text-lg font-bold transition-colors",
+            isTimeWarning && "border-destructive/40 bg-destructive/10 text-destructive"
+          )}>
             <Clock className="h-5 w-5" />
-            <span className={timeLeft <= 30 ? "text-red-500" : ""}>
+            <span>
               {formatTime(timeLeft)}
             </span>
           </div>
