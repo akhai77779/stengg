@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Loader2, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { Loader2, ArrowDownToLine, ArrowUpFromLine, AlertCircle, Inbox, RefreshCw } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -27,9 +28,32 @@ const statusColors: Record<string, string> = {
 export function TransactionHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { formatCurrency } = useCurrency();
+
+  const emptyStateCopy = language === 'vi'
+    ? {
+        title: 'Chưa có giao dịch nạp/rút',
+        description: 'Các giao dịch nạp tiền và rút tiền của bạn sẽ xuất hiện tại đây sau khi được tạo.',
+      }
+    : {
+        title: 'No deposit or withdrawal history yet',
+        description: 'Your deposit and withdrawal transactions will appear here once they are created.',
+      };
+
+  const errorStateCopy = language === 'vi'
+    ? {
+        title: 'Không thể tải lịch sử giao dịch',
+        description: 'Vui lòng kiểm tra kết nối và thử lại.',
+        retry: 'Thử lại',
+      }
+    : {
+        title: 'Could not load transaction history',
+        description: 'Please check your connection and try again.',
+        retry: 'Retry',
+      };
 
   const statusLabels: Record<string, string> = {
     pending: t('transaction.pending'),
@@ -78,6 +102,9 @@ export function TransactionHistory() {
   const fetchTransactions = async () => {
     if (!user) return;
 
+    setIsLoading(true);
+    setErrorMessage(null);
+
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -87,6 +114,7 @@ export function TransactionHistory() {
 
     if (error) {
       console.error('Error fetching transactions:', error);
+      setErrorMessage(error.message || errorStateCopy.description);
     } else {
       setTransactions(data || []);
     }
@@ -134,7 +162,15 @@ export function TransactionHistory() {
   const TransactionList = ({ items }: { items: Transaction[] }) => (
     <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-center px-3 py-8 text-sm">{t('transaction.noTransactions')}</p>
+        <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+          <div className="mb-3 rounded-full bg-muted p-3 text-muted-foreground">
+            <Inbox className="h-6 w-6" />
+          </div>
+          <p className="text-sm font-medium text-foreground">{emptyStateCopy.title}</p>
+          <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+            {emptyStateCopy.description}
+          </p>
+        </div>
       ) : (
         items.map((tx) => (
           <div key={tx.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between md:p-4">
@@ -164,13 +200,29 @@ export function TransactionHistory() {
     </div>
   );
 
+  const ErrorState = () => (
+    <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 py-10 text-center">
+      <div className="mb-3 rounded-full bg-background p-3 text-destructive">
+        <AlertCircle className="h-6 w-6" />
+      </div>
+      <p className="text-sm font-medium text-foreground">{errorStateCopy.title}</p>
+      <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+        {errorMessage || errorStateCopy.description}
+      </p>
+      <Button type="button" variant="outline" size="sm" onClick={fetchTransactions} className="mt-4 gap-2">
+        <RefreshCw className="h-4 w-4" />
+        {errorStateCopy.retry}
+      </Button>
+    </div>
+  );
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="px-3 pb-2 pt-4 md:px-4">
         <CardTitle className="text-base md:text-lg">{t('profile.depositWithdraw')}</CardTitle>
       </CardHeader>
       <CardContent className="px-3 pb-4 md:px-4">
-        <TransactionList items={depositWithdrawTransactions} />
+        {errorMessage ? <ErrorState /> : <TransactionList items={depositWithdrawTransactions} />}
       </CardContent>
     </Card>
   );
