@@ -47,6 +47,30 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
     }
   };
 
+  const getNotificationStyles = (notification: { type: string; metadata?: Record<string, unknown> }) => {
+    const result = notification.metadata?.result;
+    const profitLoss = Number(notification.metadata?.profit_loss);
+
+    if (notification.metadata?.trade_id) {
+      if (result === "won" || (!Number.isNaN(profitLoss) && profitLoss > 0)) {
+        return "border-l-green-500 bg-green-500/5";
+      }
+      if (result === "lost" || (!Number.isNaN(profitLoss) && profitLoss < 0)) {
+        return "border-l-red-500 bg-red-500/5";
+      }
+    }
+
+    return getTypeStyles(notification.type);
+  };
+
+  const cleanTradeResultText = (text: string, isTitle = false) => {
+    if (isTitle) {
+      return text.replace(/(Giao dịch)\s+(thắng|thua)/gi, "$1 quyền chọn");
+    }
+
+    return text.replace(/\s+(thắng|thua)\s+/gi, " ");
+  };
+
   const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
     if (!isRead) {
       await markAsRead(notificationId);
@@ -116,7 +140,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                   key={notification.id}
                   className={cn(
                     "relative p-4 border-l-4 cursor-pointer transition-colors active:bg-accent/70",
-                    getTypeStyles(notification.type),
+                    getNotificationStyles(notification),
                     !notification.is_read && "bg-accent/30"
                   )}
                   onClick={() => handleNotificationClick(notification.id, notification.is_read)}
@@ -128,14 +152,14 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                           "text-sm",
                           !notification.is_read && "font-semibold"
                         )}>
-                          {notification.title}
+                          {cleanTradeResultText(notification.title, true)}
                         </p>
                         {!notification.is_read && (
                           <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {notification.message}
+                        {cleanTradeResultText(notification.message)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1.5">
                         {formatDistanceToNow(new Date(notification.created_at), {
