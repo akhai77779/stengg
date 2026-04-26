@@ -102,7 +102,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                   key={notification.id}
                   className={cn(
                     "relative p-4 border-l-4 cursor-pointer transition-colors active:bg-accent/70",
-                    getNotificationStyles(notification),
+                    getUserNotificationStyles(notification),
                     !notification.is_read && "bg-accent/30"
                   )}
                   onClick={() => handleNotificationClick(notification.id, notification.is_read)}
@@ -114,7 +114,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
                           "text-sm",
                           !notification.is_read && "font-semibold"
                         )}>
-                          {getTradeResultIcon(notification)}
+                          <TradeResultIcon notification={notification} />
                           {getNotificationTitle(notification)}
                         </p>
                         {!notification.is_read && (
