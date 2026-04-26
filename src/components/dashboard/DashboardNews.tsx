@@ -28,7 +28,6 @@ interface News {
   image_url: string | null;
   category: NewsCategory;
   is_featured: boolean;
-  views: number;
   created_at: string;
 }
 
