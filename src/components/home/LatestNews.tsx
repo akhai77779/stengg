@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Calendar, Eye } from 'lucide-react';
+import { ArrowRight, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -17,7 +17,6 @@ interface News {
   summary: string | null;
   image_url: string | null;
   category: NewsCategory;
-  views: number;
   created_at: string;
 }
 
@@ -48,7 +47,7 @@ export function LatestNews() {
   const fetchNews = async () => {
     const { data, error } = await supabase
       .from('news')
-      .select('id, title, summary, image_url, category, views, created_at')
+      .select('id, title, summary, image_url, category, created_at')
       .order('created_at', { ascending: false })
       .limit(6);
 
@@ -68,7 +67,6 @@ export function LatestNews() {
       summary: 'Giải pháp công nghệ thông minh giúp tối ưu hóa quản lý đô thị hiện đại.',
       image_url: 'https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=400&h=250&fit=crop',
       category: 'product',
-      views: 156,
       created_at: new Date().toISOString(),
     },
     {
@@ -77,7 +75,6 @@ export function LatestNews() {
       summary: 'Sự kiện quy tụ hơn 1000 nhân viên từ các chi nhánh trên toàn cầu.',
       image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop',
       category: 'event',
-      views: 234,
       created_at: new Date().toISOString(),
     },
     {
@@ -86,7 +83,6 @@ export function LatestNews() {
       summary: 'ST Engineering quyên góp hỗ trợ giáo dục cho trẻ em vùng cao.',
       image_url: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=400&h=250&fit=crop',
       category: 'charity',
-      views: 189,
       created_at: new Date().toISOString(),
     },
   ];
@@ -165,14 +161,10 @@ export function LatestNews() {
                     )}
                   </CardContent>
 
-                  <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between text-xs text-muted-foreground">
+                  <CardFooter className="px-4 pb-4 pt-0 flex items-center text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: vi })}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      {item.views}
                     </span>
                   </CardFooter>
                 </Card>

@@ -3,13 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { NewsComments } from '@/components/news/NewsComments';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Calendar, Eye, ArrowLeft, Loader2 } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
 type NewsCategory = Database['public']['Enums']['news_category'];
@@ -21,7 +20,6 @@ interface NewsItem {
   content: string;
   image_url: string | null;
   category: NewsCategory;
-  views: number;
   created_at: string;
   author_id: string | null;
 }
@@ -82,11 +80,6 @@ export default function NewsDetail() {
       setNotFound(true);
     } else {
       setNews(data);
-
-      await supabase
-        .from('news')
-        .update({ views: data.views + 1 })
-        .eq('id', id);
     }
 
     setIsLoading(false);
@@ -170,10 +163,6 @@ export default function NewsDetail() {
             <Calendar className="w-4 h-4" />
             {format(new Date(news.created_at), "dd MMMM, yyyy", { locale: vi })}
           </span>
-          <span className="flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            {news.views + 1} lượt xem
-          </span>
         </div>
 
         {news.summary && (
@@ -191,8 +180,6 @@ export default function NewsDetail() {
             </p>
           ))}
         </div>
-
-        <NewsComments newsId={news.id} />
 
         <div className="mt-12 pt-8 border-t border-border">
           <Button asChild>

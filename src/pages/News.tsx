@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { vi, enUS, zhCN, th, ja, ko, id as idLocale, ms, type Locale } from 'date-fns/locale';
-import { Calendar, Eye, Search, Loader2 } from 'lucide-react';
+import { Calendar, Search, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,6 @@ interface News {
   summary: string | null;
   image_url: string | null;
   category: NewsCategory;
-  views: number;
   created_at: string;
 }
 
@@ -81,7 +80,7 @@ export default function News() {
     setIsLoading(true);
     let query = supabase
       .from('news')
-      .select('id, title, summary, image_url, category, views, created_at')
+      .select('id, title, summary, image_url, category, created_at')
       .order('created_at', { ascending: false });
 
     if (selectedCategory !== 'all') {
@@ -97,26 +96,6 @@ export default function News() {
     }
     setIsLoading(false);
   };
-
-  // Tự động tăng views ngẫu nhiên để trông sống động hơn (chỉ hiển thị, không ghi DB)
-  useEffect(() => {
-    if (news.length === 0) return;
-
-    const interval = setInterval(() => {
-      setNews((prev) =>
-        prev.map((item) => {
-          // ~40% xác suất mỗi item được tăng trong tick này
-          if (Math.random() < 0.4) {
-            const increment = Math.floor(Math.random() * 3) + 1; // +1..+3
-            return { ...item, views: item.views + increment };
-          }
-          return item;
-        })
-      );
-    }, 4000); // mỗi 4 giây
-
-    return () => clearInterval(interval);
-  }, [news.length]);
 
   const filteredNews = news.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -224,14 +203,10 @@ export default function News() {
                     )}
                   </CardContent>
 
-                  <CardFooter className="px-3 md:px-4 pb-3 md:pb-4 pt-0 flex items-center justify-between text-xs text-muted-foreground">
+                  <CardFooter className="px-3 md:px-4 pb-3 md:pb-4 pt-0 flex items-center text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: dateLocales[language] || vi })}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      {item.views} {t('news.views')}
                     </span>
                   </CardFooter>
                 </Card>
