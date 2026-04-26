@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Check, CheckCheck, Volume2, VolumeX, X, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
+import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -274,7 +274,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                               }}
                               title="Xóa thông báo"
                             >
-                              <X className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -298,7 +298,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     className="h-7 text-xs text-muted-foreground hover:text-destructive touch-manipulation"
                     onClick={clearAdminNotifications}
                   >
-                    <X className="h-3 w-3 mr-1" />
+                    <Trash2 className="h-3 w-3 mr-1" />
                     Xóa tất cả
                   </Button>
                 )}
@@ -505,7 +505,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                             }}
                             title="Xóa thông báo"
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>

@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2, X, Clock, CheckCircle } from 'lucide-react';
+import { Loader2, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OptionsTradeSheetProps {
@@ -227,11 +227,8 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
     <>
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-3xl safe-area-padding-bottom">
-          <SheetHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
+          <SheetHeader className="pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 touch-action-manipulation">
-              <X className="h-5 w-5" />
-            </Button>
           </SheetHeader>
 
           <div className="space-y-5 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
