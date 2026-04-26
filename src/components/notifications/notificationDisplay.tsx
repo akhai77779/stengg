@@ -3,7 +3,17 @@ import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 export type NotificationPreview = {
   type: string;
   title?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
+};
+
+const hasTradeContext = (notification: NotificationPreview) => {
+  const title = notification.title || "";
+
+  return Boolean(
+    notification.metadata?.trade_id ||
+    notification.type === "option_trade" ||
+    /giao dịch|lệnh/i.test(title)
+  );
 };
 
 export const getBaseNotificationStyles = (type: string) => {
@@ -32,7 +42,7 @@ export const getTradeResult = (notification: NotificationPreview) => {
   const result = notification.metadata?.result;
   const profitLoss = Number(notification.metadata?.profit_loss);
 
-  if (!notification.metadata?.trade_id) return null;
+  if (!hasTradeContext(notification)) return null;
   if (result === "won" || (!Number.isNaN(profitLoss) && profitLoss > 0)) return "positive";
   if (result === "lost" || (!Number.isNaN(profitLoss) && profitLoss < 0)) return "negative";
 
@@ -55,8 +65,9 @@ export const cleanTradeResultText = (text: string) => text
   .trim();
 
 export const getNotificationTitle = (notification: NotificationPreview) => {
-  if (notification.metadata?.trade_id) return "Giao dịch quyền chọn";
-  return cleanTradeResultText(notification.title || "");
+  if (hasTradeContext(notification)) return "Giao dịch quyền chọn";
+
+  return cleanTradeResultText(notification.title || "") || "Thông báo";
 };
 
 export function TradeResultIcon({ notification }: { notification: NotificationPreview }) {
