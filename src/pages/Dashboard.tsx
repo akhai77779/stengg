@@ -12,7 +12,6 @@ import {
   Newspaper, 
   Package, 
   Heart, 
-  Eye, 
   TrendingUp,
   Loader2,
   BarChart3,
@@ -35,7 +34,6 @@ interface Stats {
   totalNews: number;
   totalProducts: number;
   totalCharity: number;
-  totalViews: number;
 }
 
 export default function Dashboard() {
@@ -44,7 +42,6 @@ export default function Dashboard() {
     totalNews: 0,
     totalProducts: 0,
     totalCharity: 0,
-    totalViews: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -71,19 +68,16 @@ export default function Dashboard() {
     try {
       const [usersResult, newsResult, productsResult, charityResult] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('news').select('id, views', { count: 'exact' }),
+        supabase.from('news').select('id', { count: 'exact', head: true }),
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('charity_programs').select('id', { count: 'exact', head: true }),
       ]);
-
-      const totalViews = newsResult.data?.reduce((sum, n) => sum + (n.views || 0), 0) || 0;
 
       setStats({
         totalUsers: usersResult.count || 0,
         totalNews: newsResult.count || 0,
         totalProducts: productsResult.count || 0,
         totalCharity: charityResult.count || 0,
-        totalViews,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -108,7 +102,6 @@ export default function Dashboard() {
     { label: 'Tin tức', value: stats.totalNews, icon: Newspaper, color: 'text-green-400' },
     { label: 'Sản phẩm', value: stats.totalProducts, icon: Package, color: 'text-purple-400' },
     { label: 'Từ thiện', value: stats.totalCharity, icon: Heart, color: 'text-pink-400' },
-    { label: 'Lượt xem', value: stats.totalViews, icon: Eye, color: 'text-yellow-400' },
   ];
 
   return (
@@ -132,7 +125,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards with Animated Border */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {statCards.map((stat, index) => (
             <AnimatedBorderCard key={stat.label}>
               <Card className="bg-card border-0">
