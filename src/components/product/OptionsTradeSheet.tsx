@@ -228,9 +228,9 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
-          className="left-0 right-0 bottom-0 flex h-auto w-dvw max-w-none max-h-[90dvh] translate-x-0 flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          className="left-0 right-0 bottom-0 box-border flex h-auto w-screen max-w-[100vw] max-h-[90dvh] translate-x-0 flex-col rounded-t-3xl px-5 sm:px-6 !overflow-hidden safe-area-inset-bottom"
         >
-          <SheetHeader className="shrink-0 pb-4 pr-10 border-b border-border text-left">
+          <SheetHeader className="min-w-0 shrink-0 pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
           </SheetHeader>
 
@@ -264,10 +264,10 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             </div>
 
             {/* Balance and Fee */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className="text-muted-foreground">{t('options.availableBalance')}</span>
-                <span className="font-semibold text-primary">
+                <span className="min-w-0 truncate font-semibold text-primary">
                   {balanceLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
                   ) : (
@@ -275,7 +275,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                   )}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground">{t('options.handlingFee')}</span>
                 <span className="font-medium">{(FEE_RATE * 100).toFixed(1)}%</span>
               </div>
