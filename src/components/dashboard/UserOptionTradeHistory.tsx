@@ -143,7 +143,7 @@ export function UserOptionTradeHistory() {
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium">{product?.name || "Sản phẩm"}</p>
                           {product?.symbol && <Badge variant="outline">{product.symbol}</Badge>}
-                          <Badge variant="secondary">{isUp ? "UP" : "DOWN"}</Badge>
+                          <Badge variant="secondary">{isUp ? "Lệnh Mua" : "Lệnh Bán"}</Badge>
                           <Badge variant={trade.status === "active" ? "outline" : profitLoss < 0 ? "destructive" : "default"}>{getStatusLabel(trade)}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
