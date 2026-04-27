@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { forwardRef, useState, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,10 @@ const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
 const FEE_RATE = 0.002;
 const MIN_AMOUNT = 200;
 
-export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection = 'buy', onSuccess }: OptionsTradeSheetProps) {
+export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetProps>(function OptionsTradeSheet(
+  { isOpen, onClose, product, initialDirection = 'buy', onSuccess },
+  ref
+) {
   const [amount, setAmount] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<DurationOption>(DURATION_OPTIONS[0]);
   const [direction, setDirection] = useState<'buy' | 'sell'>(initialDirection);
@@ -224,13 +227,13 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
   };
 
   return (
-    <>
+    <div ref={ref}>
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
-          className="inset-x-0 flex h-auto w-full max-w-[100dvw] max-h-[90vh] flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          className="left-0 right-0 bottom-0 box-border flex h-auto w-screen max-w-[100vw] max-h-[90dvh] translate-x-0 flex-col rounded-t-3xl px-5 sm:px-6 !overflow-hidden safe-area-inset-bottom"
         >
-          <SheetHeader className="shrink-0 pb-4 pr-10 border-b border-border text-left">
+          <SheetHeader className="min-w-0 shrink-0 pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
           </SheetHeader>
 
@@ -264,10 +267,10 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             </div>
 
             {/* Balance and Fee */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className="text-muted-foreground">{t('options.availableBalance')}</span>
-                <span className="font-semibold text-primary">
+                <span className="min-w-0 truncate font-semibold text-primary">
                   {balanceLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
                   ) : (
@@ -275,7 +278,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
                   )}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground">{t('options.handlingFee')}</span>
                 <span className="font-medium">{(FEE_RATE * 100).toFixed(1)}%</span>
               </div>
@@ -293,19 +296,19 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t('options.deliveryTime')}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="grid min-w-0 grid-cols-3 gap-2">
                 {DURATION_OPTIONS.map((opt) => (
                   <button
                     key={opt.seconds}
                     onClick={() => setSelectedDuration(opt)}
                     className={cn(
-                      "flex-1 py-4 px-2 rounded-lg transition-all min-h-[64px] touch-action-manipulation",
+                      "min-w-0 py-4 px-1 rounded-lg transition-all min-h-[64px] touch-action-manipulation",
                       selectedDuration.seconds === opt.seconds
                         ? "bg-cyan-500/20 border-2 border-cyan-500"
                         : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/30 active:bg-muted"
                     )}
                   >
-                    <div className="flex items-center justify-center gap-1 text-sm font-medium">
+                    <div className="flex min-w-0 items-center justify-center gap-1 text-sm font-medium">
                       <Clock className="h-4 w-4" />
                       {opt.label}
                     </div>
@@ -343,14 +346,14 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             </div>
 
             {/* Quick Amount Buttons - Mobile optimized */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <div className="flex max-w-full gap-2 overflow-x-auto scrollbar-hide pb-1">
               {QUICK_AMOUNTS.map((amt) => (
                 <Button
                   key={amt}
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "flex-1 min-w-[64px] min-h-[44px] rounded-lg touch-action-manipulation",
+                    "shrink-0 min-w-[64px] min-h-[44px] rounded-lg touch-action-manipulation",
                     amountNum === amt && "border-cyan-500 bg-cyan-500/10 text-cyan-400"
                   )}
                   onClick={() => setAmount(String(amt))}
@@ -456,6 +459,6 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
           <CheckCircle className="h-5 w-5 text-green-500" />
         </div>
       )}
-    </>
+    </div>
   );
-}
+});
