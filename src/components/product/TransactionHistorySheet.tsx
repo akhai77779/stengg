@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ interface OptionTrade {
 
 export function TransactionHistorySheet({ isOpen, onClose, productId }: TransactionHistorySheetProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [trades, setTrades] = useState<OptionTrade[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -115,7 +117,7 @@ export function TransactionHistorySheet({ isOpen, onClose, productId }: Transact
                     )}
                     <div>
                       <span className={`font-medium ${trade.direction === "buy" ? "text-green-500" : "text-red-500"}`}>
-                        {trade.direction === "buy" ? "Buy Up" : "Buy Down"}
+                        {trade.direction === "buy" ? t('options.buyUp') : t('options.buyDown')}
                       </span>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(trade.created_at), "dd/MM/yyyy HH:mm")}
