@@ -152,10 +152,13 @@ export function TransactionHistory() {
 
   const sampleFormattedAmount = formatCurrency(1234.56);
   const sampleFormattedDate = formatDate(new Date().toISOString());
-  const sampleStatusLabel = statusLabels.pending || 'Pending';
+  const widestStatusLabel = Object.values(statusLabels).reduce(
+    (widest, label) => (label.length > widest.length ? label : widest),
+    ''
+  );
   const amountSkeletonWidth = `${Math.min(Math.max(sampleFormattedAmount.length, 8), 18)}ch`;
   const dateSkeletonWidth = `${Math.min(Math.max(sampleFormattedDate.length, 14), 28)}ch`;
-  const statusSkeletonWidth = `${Math.min(Math.max(sampleStatusLabel.length + 2, 8), 14)}ch`;
+  const statusSkeletonWidth = `${Math.min(Math.max(widestStatusLabel.length + 2, 8), 18)}ch`;
 
   const TransactionSkeleton = () => (
     <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
