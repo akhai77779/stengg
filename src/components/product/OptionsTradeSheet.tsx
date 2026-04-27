@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { forwardRef, useState, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,10 @@ const QUICK_AMOUNTS = [200, 500, 1000, 5000, 10000];
 const FEE_RATE = 0.002;
 const MIN_AMOUNT = 200;
 
-export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection = 'buy', onSuccess }: OptionsTradeSheetProps) {
+export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetProps>(function OptionsTradeSheet(
+  { isOpen, onClose, product, initialDirection = 'buy', onSuccess },
+  ref
+) {
   const [amount, setAmount] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<DurationOption>(DURATION_OPTIONS[0]);
   const [direction, setDirection] = useState<'buy' | 'sell'>(initialDirection);
@@ -224,7 +227,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
   };
 
   return (
-    <>
+    <div ref={ref}>
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
@@ -456,6 +459,6 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
           <CheckCircle className="h-5 w-5 text-green-500" />
         </div>
       )}
-    </>
+    </div>
   );
-}
+});
