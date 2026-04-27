@@ -11,7 +11,6 @@ import { ActiveOptionTrade } from "@/components/product/ActiveOptionTrade";
 import { AnimatedPrice, AnimatedStat } from "@/components/product/AnimatedPrice";
 import { MiniPriceChart } from "@/components/product/MiniPriceChart";
 import { useAuth } from "@/hooks/useAuth";
-import { useAutoSync } from "@/hooks/useAutoSync";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CandlestickChart, OHLCData } from "@/components/charts/CandlestickChart";
@@ -315,13 +314,6 @@ const ProductDetail = () => {
     enabled: !!user && !!id && isValidUUID(id),
     onTradeUpdate: fetchActivePositionCount,
     debounceMs: 300,
-  });
-
-  // Auto-sync external data every 15 seconds (reduced since realtime handles price updates)
-  useAutoSync({ 
-    enabled: !!user && isValidUUID(id),
-    interval: 15000,
-    onSuccess: () => {}
   });
 
   useEffect(() => {

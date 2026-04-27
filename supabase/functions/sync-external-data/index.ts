@@ -133,6 +133,34 @@ interface OptionTimeResponse {
   data?: OptionTimeItem[];
 }
 
+async function fetchJsonWithTimeout<T>(url: string, timeoutMs = 3500): Promise<T | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "ST-Engineering-Sync/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.warn(`${url} returned ${response.status}: ${response.statusText}`);
+      return null;
+    }
+
+    return await response.json() as T;
+  } catch (err) {
+    console.warn(`External API unavailable: ${url}`, err instanceof Error ? err.message.substring(0, 200) : "Unknown");
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("Origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -215,39 +243,16 @@ Deno.serve(async (req) => {
 
     // Try to fetch from external API - gracefully handle DNS/network failures
     console.log("Fetching data from external API:", EXTERNAL_API_URL);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(EXTERNAL_API_URL, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "ST-Engineering-Sync/1.0",
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const externalData: ExternalApiResponse = await response.json();
-        console.log("API response code:", externalData.code, "message:", externalData.message);
-        const dataContainer = externalData.data;
-        if (dataContainer) {
-          homeList = dataContainer.homeList || [];
-          noticeList = dataContainer.noticeList || [];
-          optionList = dataContainer.optionList || [];
-          wilsonlink = dataContainer.wilsonlink;
-          externalApiAvailable = true;
-          console.log(`Found: ${homeList.length} banners, ${optionList.length} products, ${noticeList.length} news`);
-        }
-      } else {
-        console.warn(`External API returned ${response.status}: ${response.statusText}`);
-      }
-    } catch (fetchErr) {
-      console.warn("External API not reachable (DNS/network error):", fetchErr instanceof Error ? fetchErr.message.substring(0, 200) : "Unknown");
-      // Continue with empty lists - will still process getBetCoinList and other APIs below
+    const externalData = await fetchJsonWithTimeout<ExternalApiResponse>(EXTERNAL_API_URL);
+    const dataContainer = externalData?.data;
+    if (dataContainer) {
+      console.log("API response code:", externalData.code, "message:", externalData.message);
+      homeList = dataContainer.homeList || [];
+      noticeList = dataContainer.noticeList || [];
+      optionList = dataContainer.optionList || [];
+      wilsonlink = dataContainer.wilsonlink;
+      externalApiAvailable = true;
+      console.log(`Found: ${homeList.length} banners, ${optionList.length} products, ${noticeList.length} news`);
     }
 
     console.log(`Found: ${homeList.length} banners (homeList), ${optionList.length} products (optionList), ${noticeList.length} news (noticeList)`);
@@ -425,16 +430,8 @@ Deno.serve(async (req) => {
     // Fetch additional news from getNews API
     console.log("Fetching additional news from:", EXTERNAL_NEWS_API_URL);
     try {
-      const newsResponse = await fetch(EXTERNAL_NEWS_API_URL, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "ST-Engineering-Sync/1.0",
-        },
-      });
-
-      if (newsResponse.ok) {
-        const newsApiData: NewsApiResponse = await newsResponse.json();
+      const newsApiData = await fetchJsonWithTimeout<NewsApiResponse>(EXTERNAL_NEWS_API_URL);
+      if (newsApiData) {
         const newsList = newsApiData.data?.list || [];
         console.log(`Found ${newsList.length} additional news from getNews API`);
 
@@ -498,8 +495,6 @@ Deno.serve(async (req) => {
             results.news.errors++;
           }
         }
-      } else {
-        console.warn(`getNews API returned ${newsResponse.status}`);
       }
     } catch (newsErr) {
       console.error("Error fetching from getNews API:", newsErr);
@@ -508,16 +503,8 @@ Deno.serve(async (req) => {
     // Fetch products from getBetCoinList API
     console.log("Fetching products from:", EXTERNAL_COIN_LIST_API_URL);
     try {
-      const coinListResponse = await fetch(EXTERNAL_COIN_LIST_API_URL, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "ST-Engineering-Sync/1.0",
-        },
-      });
-
-      if (coinListResponse.ok) {
-        const coinListData: BetCoinListResponse = await coinListResponse.json();
+      const coinListData = await fetchJsonWithTimeout<BetCoinListResponse>(EXTERNAL_COIN_LIST_API_URL);
+      if (coinListData) {
         const coinList = coinListData.data || [];
         console.log(`Found ${coinList.length} products from getBetCoinList API`);
 
@@ -609,8 +596,6 @@ Deno.serve(async (req) => {
             results.products.errors++;
           }
         }
-      } else {
-        console.warn(`getBetCoinList API returned ${coinListResponse.status}`);
       }
     } catch (coinErr) {
       console.error("Error fetching from getBetCoinList API:", coinErr);
@@ -619,16 +604,8 @@ Deno.serve(async (req) => {
     // Fetch option times from getOptionTime API and save to app_settings
     console.log("Fetching option times from:", EXTERNAL_OPTION_TIME_API_URL);
     try {
-      const optionTimeResponse = await fetch(EXTERNAL_OPTION_TIME_API_URL, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "ST-Engineering-Sync/1.0",
-        },
-      });
-
-      if (optionTimeResponse.ok) {
-        const optionTimeData: OptionTimeResponse = await optionTimeResponse.json();
+      const optionTimeData = await fetchJsonWithTimeout<OptionTimeResponse>(EXTERNAL_OPTION_TIME_API_URL);
+      if (optionTimeData) {
         const optionTimes = optionTimeData.data || [];
         console.log(`Found ${optionTimes.length} option times`);
 
@@ -640,8 +617,6 @@ Deno.serve(async (req) => {
             value: { times: optionTimes },
           }, { onConflict: "key" });
         console.log("Saved option times to app_settings");
-      } else {
-        console.warn(`getOptionTime API returned ${optionTimeResponse.status}`);
       }
     } catch (optionErr) {
       console.error("Error fetching from getOptionTime API:", optionErr);
@@ -654,9 +629,9 @@ Deno.serve(async (req) => {
           .from("app_settings")
           .upsert({
             key: "live_chat_url",
-            value: { url: dataContainer.wilsonlink.kefu_link },
+            value: { url: wilsonlink.kefu_link },
           }, { onConflict: "key" });
-        console.log("Updated live_chat_url:", dataContainer.wilsonlink.kefu_link);
+        console.log("Updated live_chat_url:", wilsonlink.kefu_link);
       } catch {
         // Ignore
       }
