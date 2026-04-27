@@ -228,7 +228,7 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
-          className="inset-x-0 flex h-auto w-full max-w-[100dvw] max-h-[90vh] flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          className="left-0 right-0 bottom-0 flex h-auto w-dvw max-w-none max-h-[90dvh] translate-x-0 flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
         >
           <SheetHeader className="shrink-0 pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
