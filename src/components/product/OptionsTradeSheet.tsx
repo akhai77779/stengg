@@ -226,7 +226,11 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
   return (
     <>
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-3xl safe-area-padding-bottom">
+        <SheetContent
+          side="bottom"
+          className="h-auto max-h-[90vh] rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          style={{ left: '2px', right: '2px', width: 'auto' }}
+        >
           <SheetHeader className="pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
           </SheetHeader>
