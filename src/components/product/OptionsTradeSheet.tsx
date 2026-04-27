@@ -228,26 +228,26 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
-          className="inset-x-0 flex h-auto w-full max-h-[90vh] flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          className="inset-x-0 flex h-auto w-full max-w-[100dvw] max-h-[90vh] flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
         >
           <SheetHeader className="shrink-0 pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain py-4 pr-1 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="min-h-0 min-w-0 w-full max-w-full flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain py-4 pr-1 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {/* Product Info */}
-            <div className="flex items-center justify-between">
+            <div className="flex min-w-0 items-center justify-between gap-3">
               <span className="text-muted-foreground">{t('options.productName')}</span>
-              <span className="font-semibold">{product.symbol || product.name}</span>
+              <span className="min-w-0 truncate text-right font-semibold">{product.symbol || product.name}</span>
             </div>
 
             {/* Buy/Sell Toggle and Price */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className="text-muted-foreground">{t('options.buyingAmount')}</span>
                 <span className="text-muted-foreground/70">${amountNum.toLocaleString()}</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 <span className={cn(
                   "font-medium",
                   direction === 'buy' ? "text-green-500" : "text-red-500"
