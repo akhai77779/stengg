@@ -293,19 +293,19 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t('options.deliveryTime')}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="grid min-w-0 grid-cols-3 gap-2">
                 {DURATION_OPTIONS.map((opt) => (
                   <button
                     key={opt.seconds}
                     onClick={() => setSelectedDuration(opt)}
                     className={cn(
-                      "flex-1 py-4 px-2 rounded-lg transition-all min-h-[64px] touch-action-manipulation",
+                      "min-w-0 py-4 px-1 rounded-lg transition-all min-h-[64px] touch-action-manipulation",
                       selectedDuration.seconds === opt.seconds
                         ? "bg-cyan-500/20 border-2 border-cyan-500"
                         : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/30 active:bg-muted"
                     )}
                   >
-                    <div className="flex items-center justify-center gap-1 text-sm font-medium">
+                    <div className="flex min-w-0 items-center justify-center gap-1 text-sm font-medium">
                       <Clock className="h-4 w-4" />
                       {opt.label}
                     </div>
@@ -343,14 +343,14 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
             </div>
 
             {/* Quick Amount Buttons - Mobile optimized */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <div className="flex max-w-full gap-2 overflow-x-auto scrollbar-hide pb-1">
               {QUICK_AMOUNTS.map((amt) => (
                 <Button
                   key={amt}
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "flex-1 min-w-[64px] min-h-[44px] rounded-lg touch-action-manipulation",
+                    "shrink-0 min-w-[64px] min-h-[44px] rounded-lg touch-action-manipulation",
                     amountNum === amt && "border-cyan-500 bg-cyan-500/10 text-cyan-400"
                   )}
                   onClick={() => setAmount(String(amt))}
