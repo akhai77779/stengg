@@ -228,13 +228,13 @@ export function OptionsTradeSheet({ isOpen, onClose, product, initialDirection =
       <Sheet open={isOpen && !showSuccessDialog} onOpenChange={onClose}>
         <SheetContent
           side="bottom"
-          className="inset-x-0 h-auto w-full max-h-[90vh] rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
+          className="inset-x-0 flex h-auto w-full max-h-[90vh] flex-col rounded-t-3xl !overflow-hidden safe-area-inset-bottom"
         >
-          <SheetHeader className="pb-4 pr-10 border-b border-border text-left">
+          <SheetHeader className="shrink-0 pb-4 pr-10 border-b border-border text-left">
             <SheetTitle className="text-lg">{t('options.limitedTime')}</SheetTitle>
           </SheetHeader>
 
-          <div className="space-y-5 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain py-4 pr-1 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {/* Product Info */}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t('options.productName')}</span>
