@@ -150,6 +150,13 @@ export function TransactionHistory() {
 
   const depositWithdrawTransactions = transactions.filter(tx => tx.type === 'deposit' || tx.type === 'withdraw');
 
+  const sampleFormattedAmount = formatCurrency(1234.56);
+  const sampleFormattedDate = formatDate(new Date().toISOString());
+  const sampleStatusLabel = statusLabels.pending || 'Pending';
+  const amountSkeletonWidth = `${Math.min(Math.max(sampleFormattedAmount.length, 8), 18)}ch`;
+  const dateSkeletonWidth = `${Math.min(Math.max(sampleFormattedDate.length, 14), 28)}ch`;
+  const statusSkeletonWidth = `${Math.min(Math.max(sampleStatusLabel.length + 2, 8), 14)}ch`;
+
   const TransactionSkeleton = () => (
     <div className="divide-y divide-border overflow-hidden rounded-md border border-border/60">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -158,13 +165,13 @@ export function TransactionHistory() {
             <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2 pt-0.5">
               <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-40 max-w-full" />
+              <Skeleton className="h-3 max-w-full" style={{ width: dateSkeletonWidth }} />
               <Skeleton className="h-3 w-24" />
             </div>
           </div>
           <div className="flex items-center justify-between gap-3 sm:block sm:min-w-28 sm:space-y-2 sm:text-right">
-            <Skeleton className="h-4 w-24 sm:ml-auto" />
-            <Skeleton className="h-5 w-16 rounded-full sm:ml-auto" />
+            <Skeleton className="h-4 sm:ml-auto" style={{ width: amountSkeletonWidth }} />
+            <Skeleton className="h-5 rounded-full sm:ml-auto" style={{ width: statusSkeletonWidth }} />
           </div>
         </div>
       ))}
