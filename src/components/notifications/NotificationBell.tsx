@@ -1,4 +1,4 @@
-import { forwardRef, useState, useMemo } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,21 +17,32 @@ import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cleanTradeResultText, getBaseNotificationStyles, getNotificationTitle, getUserNotificationStyles, TradeResultIcon } from "./notificationDisplay";
 
 interface NotificationBellProps {
   className?: string;
 }
 
+type NotificationTab = "user" | "admin" | "livechat";
+
+const NOTIFICATION_TAB_STORAGE_KEY = "stengg.notification.activeTab";
+
+const isNotificationTab = (value: string | null): value is NotificationTab =>
+  value === "user" || value === "admin" || value === "livechat";
+
 export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellProps>(function NotificationBell(
   { className },
   ref
 ) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"user" | "admin" | "livechat">("user");
+  const [activeTab, setActiveTab] = useState<NotificationTab>(() => {
+    const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
+    return isNotificationTab(storedTab) ? storedTab : "user";
+  });
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const {
     notifications: userNotifications,
@@ -63,6 +74,32 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
   }, [userUnreadCount, adminUnreadCount, liveChatUnread, isAdmin]);
 
   const hasUnread = totalUnreadCount > 0;
+
+  const routeSyncedTab = useMemo<NotificationTab>(() => {
+    if (!isAdmin) return "user";
+    if (location.pathname.startsWith("/admin/live-chat")) return "livechat";
+    if (location.pathname.startsWith("/admin")) return "admin";
+    return "user";
+  }, [isAdmin, location.pathname]);
+
+  const updateActiveTab = useCallback((nextTab: NotificationTab) => {
+    setActiveTab(nextTab);
+    window.localStorage.setItem(NOTIFICATION_TAB_STORAGE_KEY, nextTab);
+  }, []);
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen && isAdmin) {
+      const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
+      setActiveTab(isNotificationTab(storedTab) ? storedTab : routeSyncedTab);
+    }
+    setOpen(nextOpen);
+  }, [isAdmin, routeSyncedTab]);
+
+  useEffect(() => {
+    if (!isAdmin && activeTab !== "user") {
+      updateActiveTab("user");
+    }
+  }, [activeTab, isAdmin, updateActiveTab]);
 
   // Get rooms with unread messages
   const roomsWithUnread = useMemo(() => {
@@ -105,7 +142,7 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
   }, [adminNotifications]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           ref={ref}
@@ -164,28 +201,28 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
 
         {/* Content - Show tabs for admin, simple list for regular users */}
         {isAdmin ? (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "user" | "admin" | "livechat")} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-10 rounded-none border-b">
-              <TabsTrigger value="user" className="text-xs data-[state=active]:bg-accent relative px-2">
+          <Tabs value={activeTab} onValueChange={(v) => updateActiveTab(v as NotificationTab)} className="w-full">
+            <TabsList className="grid h-auto min-h-11 w-full grid-cols-3 rounded-none border-b p-1">
+              <TabsTrigger value="user" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Cá nhân
                 {userUnreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px]">
                     {userUnreadCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="admin" className="text-xs data-[state=active]:bg-accent relative px-2">
+              <TabsTrigger value="admin" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Hệ thống
                 {adminUnreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px]">
                     {adminUnreadCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="livechat" className="text-xs data-[state=active]:bg-accent relative px-2">
+              <TabsTrigger value="livechat" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Chat
                 {liveChatUnread > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px] animate-pulse">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px] animate-pulse">
                     {liveChatUnread}
                   </Badge>
                 )}
