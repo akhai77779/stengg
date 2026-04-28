@@ -140,6 +140,7 @@ export function useSharedProductRealtime({
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [isLoading, setIsLoading] = useState(true);
   const [updateCount, setUpdateCount] = useState(0);
+  const [subscriptionKey, setSubscriptionKey] = useState(0);
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRowRef = useRef<PriceHistoryRow | null>(null);
   const lastUpdateRef = useRef(0);
@@ -185,6 +186,7 @@ export function useSharedProductRealtime({
     }
 
     let mounted = true;
+    setStatus('connecting');
     setIsLoading(true);
 
     const fetchInitial = async () => {
@@ -247,7 +249,7 @@ export function useSharedProductRealtime({
       if (channel) supabase.removeChannel(channel);
       channel = null;
     };
-  }, [enabled, productId, queueRow]);
+  }, [enabled, productId, queueRow, subscriptionKey]);
 
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
@@ -268,7 +270,7 @@ export function useSharedProductRealtime({
     status,
     stats: { updateCount, lastUpdateTime: updateCount ? Date.now() : null, reconnectCount: 0 },
     isConnected: status === 'connected',
-    reconnect: () => setStatus('connecting'),
+    reconnect: () => setSubscriptionKey(prev => prev + 1),
     channelName: `${SHARED_PRODUCT_CHANNEL_PREFIX}-${productId}`,
   };
 }
