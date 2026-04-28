@@ -18,7 +18,8 @@ import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/comp
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
-import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
+import { useUserTradesRealtime } from "@/hooks/useProductRealtime";
+import { useSharedProductRealtime } from "@/hooks/useSharedProductRealtime";
 import { format } from "date-fns";
 
 // Simple in-memory cache for candle data
@@ -123,15 +124,31 @@ const ProductDetail = () => {
   const lastCandleTimeRef = useRef<string | null>(null);
   const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const effectiveCandleData = candleData;
+  const sharedRealtime = useSharedProductRealtime({
+    productId: id || '',
+    timeframe,
+    enabled: !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+    throttleMs: THROTTLE_MS[timeframe] || 200,
+  });
+  const effectiveCandleData = sharedRealtime.candles;
+  const displayPrice = sharedRealtime.latestPrice ?? product?.price ?? null;
+  const realtimeStatus = sharedRealtime.status;
+  const realtimeStats = sharedRealtime.stats;
+  const reconnectRealtime = sharedRealtime.reconnect;
+  const isConnected = sharedRealtime.isConnected;
 
-  // Get latest price from effective candle data (synced with chart)
-  const latestCandlePrice = useMemo(() => {
-    if (effectiveCandleData.length === 0) return null;
-    return effectiveCandleData[effectiveCandleData.length - 1].close;
-  }, [effectiveCandleData]);
+  useEffect(() => {
+    if (sharedRealtime.product) {
+      setProduct(prev => prev ? { ...prev, ...sharedRealtime.product } : prev);
+    }
+  }, [sharedRealtime.product]);
 
-  const displayPrice = latestCandlePrice ?? product?.price ?? null;
+  useEffect(() => {
+    setChartData(sharedRealtime.lineData);
+    setHighPrice(sharedRealtime.highPrice);
+    setLowPrice(sharedRealtime.lowPrice);
+    setPriceHistoryLoading(sharedRealtime.isLoading);
+  }, [sharedRealtime.highPrice, sharedRealtime.isLoading, sharedRealtime.lineData, sharedRealtime.lowPrice]);
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
@@ -280,22 +297,6 @@ const ProductDetail = () => {
     if (newProduct.high_24h) setHighPrice(newProduct.high_24h);
     if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
   }, []);
-
-  // Use optimized realtime hook for product data
-  const { 
-    status: realtimeStatus, 
-    stats: realtimeStats, 
-    reconnect: reconnectRealtime,
-    isConnected 
-  } = useProductRealtime({
-    productId: id || '',
-    enabled: !!id && isValidUUID(id),
-    onCandleUpdate: handleCandleUpdate,
-    onProductUpdate: handleProductUpdate,
-    throttleMs: THROTTLE_MS[timeframe] || 200,
-    reconnectDelay: 2000,
-    maxReconnectAttempts: 5,
-  });
 
   // Use optimized realtime hook for user trades
   useUserTradesRealtime({
