@@ -143,6 +143,13 @@ const ProductDetail = () => {
     }
   }, [sharedRealtime.product]);
 
+  useEffect(() => {
+    setChartData(sharedRealtime.lineData);
+    setHighPrice(sharedRealtime.highPrice);
+    setLowPrice(sharedRealtime.lowPrice);
+    setPriceHistoryLoading(sharedRealtime.isLoading);
+  }, [sharedRealtime.highPrice, sharedRealtime.isLoading, sharedRealtime.lineData, sharedRealtime.lowPrice]);
+
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
     if (!str) return false;
