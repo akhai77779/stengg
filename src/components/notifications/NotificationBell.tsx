@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { forwardRef, useState, useMemo } from "react";
 import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,10 @@ interface NotificationBellProps {
   className?: string;
 }
 
-export function NotificationBell({ className }: NotificationBellProps) {
+export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellProps>(function NotificationBell(
+  { className },
+  ref
+) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"user" | "admin" | "livechat">("user");
   const { isAdmin } = useAuth();
@@ -105,6 +108,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={ref}
           variant="ghost"
           size="icon"
           className={cn("relative h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation active:scale-95 transition-transform", className)}
@@ -527,4 +531,4 @@ export function NotificationBell({ className }: NotificationBellProps) {
       </PopoverContent>
     </Popover>
   );
-}
+});
