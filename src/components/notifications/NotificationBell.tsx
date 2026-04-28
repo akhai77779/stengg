@@ -1,4 +1,4 @@
-import { forwardRef, useState, useMemo } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,21 +17,32 @@ import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cleanTradeResultText, getBaseNotificationStyles, getNotificationTitle, getUserNotificationStyles, TradeResultIcon } from "./notificationDisplay";
 
 interface NotificationBellProps {
   className?: string;
 }
 
+type NotificationTab = "user" | "admin" | "livechat";
+
+const NOTIFICATION_TAB_STORAGE_KEY = "stengg.notification.activeTab";
+
+const isNotificationTab = (value: string | null): value is NotificationTab =>
+  value === "user" || value === "admin" || value === "livechat";
+
 export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellProps>(function NotificationBell(
   { className },
   ref
 ) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"user" | "admin" | "livechat">("user");
+  const [activeTab, setActiveTab] = useState<NotificationTab>(() => {
+    const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
+    return isNotificationTab(storedTab) ? storedTab : "user";
+  });
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const {
     notifications: userNotifications,
@@ -63,6 +74,32 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
   }, [userUnreadCount, adminUnreadCount, liveChatUnread, isAdmin]);
 
   const hasUnread = totalUnreadCount > 0;
+
+  const routeSyncedTab = useMemo<NotificationTab>(() => {
+    if (!isAdmin) return "user";
+    if (location.pathname.startsWith("/admin/live-chat")) return "livechat";
+    if (location.pathname.startsWith("/admin")) return "admin";
+    return "user";
+  }, [isAdmin, location.pathname]);
+
+  const updateActiveTab = useCallback((nextTab: NotificationTab) => {
+    setActiveTab(nextTab);
+    window.localStorage.setItem(NOTIFICATION_TAB_STORAGE_KEY, nextTab);
+  }, []);
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen && isAdmin) {
+      const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
+      setActiveTab(isNotificationTab(storedTab) ? storedTab : routeSyncedTab);
+    }
+    setOpen(nextOpen);
+  }, [isAdmin, routeSyncedTab]);
+
+  useEffect(() => {
+    if (!isAdmin && activeTab !== "user") {
+      updateActiveTab("user");
+    }
+  }, [activeTab, isAdmin, updateActiveTab]);
 
   // Get rooms with unread messages
   const roomsWithUnread = useMemo(() => {
