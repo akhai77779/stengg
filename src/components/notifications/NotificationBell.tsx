@@ -142,7 +142,7 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
   }, [adminNotifications]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           ref={ref}
@@ -201,28 +201,28 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
 
         {/* Content - Show tabs for admin, simple list for regular users */}
         {isAdmin ? (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "user" | "admin" | "livechat")} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-10 rounded-none border-b">
-              <TabsTrigger value="user" className="text-xs data-[state=active]:bg-accent relative px-2">
+          <Tabs value={activeTab} onValueChange={(v) => updateActiveTab(v as NotificationTab)} className="w-full">
+            <TabsList className="grid h-auto min-h-11 w-full grid-cols-3 rounded-none border-b p-1">
+              <TabsTrigger value="user" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Cá nhân
                 {userUnreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px]">
                     {userUnreadCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="admin" className="text-xs data-[state=active]:bg-accent relative px-2">
+              <TabsTrigger value="admin" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Hệ thống
                 {adminUnreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px]">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px]">
                     {adminUnreadCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="livechat" className="text-xs data-[state=active]:bg-accent relative px-2">
+              <TabsTrigger value="livechat" className="relative min-w-0 gap-1 px-1.5 py-2 text-xs data-[state=active]:bg-accent">
                 Chat
                 {liveChatUnread > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-[16px] px-1 text-[10px] animate-pulse">
+                  <Badge variant="destructive" className="h-4 min-w-[16px] shrink-0 px-1 text-[10px] animate-pulse">
                     {liveChatUnread}
                   </Badge>
                 )}
