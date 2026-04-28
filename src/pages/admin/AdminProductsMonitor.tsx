@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { useMarketEngine } from '@/hooks/useMarketEngine';
 import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
 import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
+import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_TIMEFRAME_MAP: Record<TimeInterval, SharedTimeframe> = {
   '1M': '1m',
@@ -51,6 +52,7 @@ export default function AdminProductsMonitor() {
     // Default to true if never explicitly set
     return stored === null ? true : stored === 'true';
   });
+  const [dbProductIdsBySymbol, setDbProductIdsBySymbol] = useState<Record<string, string>>({});
 
   const {
     products,
@@ -79,6 +81,18 @@ export default function AdminProductsMonitor() {
     3000
   );
 
+  useEffect(() => {
+    const fetchDbProducts = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('id, symbol')
+        .eq('status', 'available');
+      if (!data) return;
+      setDbProductIdsBySymbol(Object.fromEntries(data.map(p => [p.symbol?.toUpperCase() || '', p.id])));
+    };
+    fetchDbProducts();
+  }, []);
+
   const toggleDbSync = useCallback(() => {
     setDbSyncEnabled(prev => {
       const next = !prev;
@@ -101,8 +115,11 @@ export default function AdminProductsMonitor() {
 
   const selectedDbProductId = useMemo(() => {
     if (!effectiveProductId) return '';
-    return syncMappings.find(mapping => mapping.localId === effectiveProductId)?.dbId || '';
-  }, [effectiveProductId, syncMappings]);
+    const mappedId = syncMappings.find(mapping => mapping.localId === effectiveProductId)?.dbId;
+    if (mappedId) return mappedId;
+    const symbol = products.find(p => p.id === effectiveProductId)?.symbol?.toUpperCase() || '';
+    return dbProductIdsBySymbol[symbol] || '';
+  }, [dbProductIdsBySymbol, effectiveProductId, products, syncMappings]);
 
   const sharedRealtime = useSharedProductRealtime({
     productId: selectedDbProductId,
