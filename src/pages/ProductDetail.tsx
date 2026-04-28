@@ -18,7 +18,8 @@ import { ChartIndicators, IndicatorConfig, defaultIndicatorConfig } from "@/comp
 import { TransactionHistorySheet } from "@/components/product/TransactionHistorySheet";
 import { CandleCountdown } from "@/components/charts/CandleCountdown";
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
-import { useProductRealtime, useUserTradesRealtime, ConnectionStatus } from "@/hooks/useProductRealtime";
+import { useUserTradesRealtime } from "@/hooks/useProductRealtime";
+import { useSharedProductRealtime } from "@/hooks/useSharedProductRealtime";
 import { format } from "date-fns";
 
 // Simple in-memory cache for candle data
@@ -123,15 +124,18 @@ const ProductDetail = () => {
   const lastCandleTimeRef = useRef<string | null>(null);
   const fallbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const effectiveCandleData = candleData;
-
-  // Get latest price from effective candle data (synced with chart)
-  const latestCandlePrice = useMemo(() => {
-    if (effectiveCandleData.length === 0) return null;
-    return effectiveCandleData[effectiveCandleData.length - 1].close;
-  }, [effectiveCandleData]);
-
-  const displayPrice = latestCandlePrice ?? product?.price ?? null;
+  const sharedRealtime = useSharedProductRealtime({
+    productId: id || '',
+    timeframe,
+    enabled: !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+    throttleMs: THROTTLE_MS[timeframe] || 200,
+  });
+  const effectiveCandleData = sharedRealtime.candles;
+  const displayPrice = sharedRealtime.latestPrice ?? product?.price ?? null;
+  const realtimeStatus = sharedRealtime.status;
+  const realtimeStats = sharedRealtime.stats;
+  const reconnectRealtime = sharedRealtime.reconnect;
+  const isConnected = sharedRealtime.isConnected;
 
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
