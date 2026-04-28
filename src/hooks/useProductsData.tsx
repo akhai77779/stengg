@@ -105,7 +105,7 @@ export function useProductsData(userId: string | undefined) {
     const productIds = productIdsKey.split(',').filter(Boolean);
     const channels = productIds.map(productId => supabase
       .channel(`${SHARED_PRODUCT_CHANNEL_PREFIX}-${productId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history', filter: `product_id=eq.${productId}` }, (payload) => {
         const row = payload.new as CandleRow & { recorded_at: string };
         if (row?.product_id !== productId) return;
         setProducts(prev => prev.map(p => {
