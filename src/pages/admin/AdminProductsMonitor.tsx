@@ -23,10 +23,20 @@ import { ShareButton } from '@/components/charts/ShareButton';
 import { ShockEventPanel } from '@/components/admin/ShockEventPanel';
 import { SnapshotManager } from '@/components/admin/SnapshotManager';
 
-import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
+import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { useMarketEngine } from '@/hooks/useMarketEngine';
 import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
+import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
+
+const ADMIN_TIMEFRAME_MAP: Record<TimeInterval, SharedTimeframe> = {
+  '1M': '1m',
+  '5M': '5m',
+  '15M': '15m',
+  '30M': '30m',
+  '1H': '1h',
+  '1D': '1d',
+};
 
 export default function AdminProductsMonitor() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
@@ -89,12 +99,22 @@ export default function AdminProductsMonitor() {
     return products.find(p => p.id === effectiveProductId) || null;
   }, [products, effectiveProductId]);
 
+  const selectedDbProductId = useMemo(() => {
+    if (!effectiveProductId) return '';
+    return syncMappings.find(mapping => mapping.localId === effectiveProductId)?.dbId || '';
+  }, [effectiveProductId, syncMappings]);
+
+  const sharedRealtime = useSharedProductRealtime({
+    productId: selectedDbProductId,
+    timeframe: ADMIN_TIMEFRAME_MAP[timeInterval],
+    enabled: !!selectedDbProductId,
+    throttleMs: 150,
+  });
+
   const displayCandles = useMemo(() => {
-    if (!effectiveProductId) return [];
-    const baseCandles = getCandles(effectiveProductId);
-    if (timeInterval === '1M') return baseCandles;
-    return aggregateCandles(baseCandles, timeInterval);
-  }, [getCandles, effectiveProductId, timeInterval]);
+    if (sharedRealtime.engineCandles.length > 0) return sharedRealtime.engineCandles;
+    return effectiveProductId ? getCandles(effectiveProductId) : [];
+  }, [effectiveProductId, getCandles, sharedRealtime.engineCandles]);
 
   const chartOHLCData: OHLCData[] = useMemo(() => {
     return displayCandles.map(c => ({
@@ -117,7 +137,7 @@ export default function AdminProductsMonitor() {
     };
   }, [displayCandles]);
 
-  const currentPrice = effectiveProductId ? getCurrentPrice(effectiveProductId) : 0;
+  const currentPrice = sharedRealtime.latestPrice ?? (effectiveProductId ? getCurrentPrice(effectiveProductId) : 0);
   const activeShock = effectiveProductId ? getActiveShock(effectiveProductId) : null;
   const activeShockCount = shockEvents.filter(e => !e.isComplete).length;
 
