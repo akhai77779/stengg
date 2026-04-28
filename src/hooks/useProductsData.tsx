@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { SHARED_PRODUCT_CHANNEL_PREFIX } from '@/hooks/useSharedProductRealtime';
 
 export interface CandleRow {
   open_price: number;
@@ -7,6 +8,7 @@ export interface CandleRow {
   low_price: number;
   close_price: number;
   product_id: string;
+  recorded_at?: string;
 }
 
 export interface Product {
@@ -100,15 +102,13 @@ export function useProductsData(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
-      .channel('products-price-history')
+      .channel(`${SHARED_PRODUCT_CHANNEL_PREFIX}-list`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history' }, (payload) => {
         const row = payload.new as CandleRow & { recorded_at: string };
         if (!row?.product_id) return;
         setProducts(prev => prev.map(p => {
           if (p.id !== row.product_id) return p;
-          const existing = p.candles.findIndex((c: CandleRow & { recorded_at?: string }) =>
-            (c as unknown as { recorded_at: string }).recorded_at === row.recorded_at
-          );
+          const existing = p.candles.findIndex(c => c.recorded_at === row.recorded_at);
           const updated = existing >= 0
             ? p.candles.map((c, i) => i === existing ? row : c)
             : [...p.candles.slice(-29), row];
