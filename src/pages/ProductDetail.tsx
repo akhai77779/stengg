@@ -285,22 +285,6 @@ const ProductDetail = () => {
     if (newProduct.low_24h) setLowPrice(newProduct.low_24h);
   }, []);
 
-  // Use optimized realtime hook for product data
-  const { 
-    status: realtimeStatus, 
-    stats: realtimeStats, 
-    reconnect: reconnectRealtime,
-    isConnected 
-  } = useProductRealtime({
-    productId: id || '',
-    enabled: !!id && isValidUUID(id),
-    onCandleUpdate: handleCandleUpdate,
-    onProductUpdate: handleProductUpdate,
-    throttleMs: THROTTLE_MS[timeframe] || 200,
-    reconnectDelay: 2000,
-    maxReconnectAttempts: 5,
-  });
-
   // Use optimized realtime hook for user trades
   useUserTradesRealtime({
     userId: user?.id || '',
