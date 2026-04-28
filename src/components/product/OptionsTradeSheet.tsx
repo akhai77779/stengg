@@ -127,22 +127,6 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
       return;
     }
 
-    // Re-check for active trades before processing
-    const { count } = await supabase
-      .from('option_trades')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('status', 'active');
-
-    if ((count || 0) > 0) {
-      toast({ 
-        title: t('options.pendingOrder'), 
-        variant: 'destructive' 
-      });
-      setHasActiveTrade(true);
-      return;
-    }
-
     if (amountNum < currentMinAmount) {
       toast({ 
         title: t('options.invalidAmount'), 
@@ -382,7 +366,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
                   : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
-              disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
+              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
               onClick={handleTrade}
             >
               {isLoading ? (
