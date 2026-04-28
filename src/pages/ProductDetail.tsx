@@ -137,6 +137,12 @@ const ProductDetail = () => {
   const reconnectRealtime = sharedRealtime.reconnect;
   const isConnected = sharedRealtime.isConnected;
 
+  useEffect(() => {
+    if (sharedRealtime.product) {
+      setProduct(prev => prev ? { ...prev, ...sharedRealtime.product } : prev);
+    }
+  }, [sharedRealtime.product]);
+
   // Validate UUID format
   const isValidUUID = useCallback((str: string | undefined): boolean => {
     if (!str) return false;
