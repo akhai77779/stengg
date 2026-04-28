@@ -85,6 +85,16 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
   }, [user]);
 
   useEffect(() => {
+    if (!isOpen || !user) return;
+
+    const interval = window.setInterval(() => {
+      void checkActiveTrade();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [isOpen, user, checkActiveTrade]);
+
+  useEffect(() => {
     if (isOpen && user) {
       setOptimisticBalance(null);
       refetchBalance();
@@ -133,6 +143,15 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
   const handleTrade = async () => {
     if (!user) {
       toast({ title: t('options.pleaseLogin'), variant: 'destructive' });
+      return;
+    }
+
+    if (hasActiveTrade) {
+      toast({
+        title: t('options.pendingOrder'),
+        variant: 'destructive',
+      });
+      void checkActiveTrade();
       return;
     }
 
@@ -382,7 +401,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
                   : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
-              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
+              disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
               onClick={handleTrade}
             >
               {isLoading ? (
