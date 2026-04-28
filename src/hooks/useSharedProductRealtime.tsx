@@ -188,6 +188,8 @@ export function useSharedProductRealtime({
     let mounted = true;
     setStatus('connecting');
     setIsLoading(true);
+    setRows([]);
+    setProduct(null);
 
     const fetchInitial = async () => {
       const since = new Date(Date.now() - LOOKBACK_MS[timeframe]).toISOString();
