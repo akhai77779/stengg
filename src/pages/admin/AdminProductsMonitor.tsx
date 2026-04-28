@@ -23,7 +23,7 @@ import { ShareButton } from '@/components/charts/ShareButton';
 import { ShockEventPanel } from '@/components/admin/ShockEventPanel';
 import { SnapshotManager } from '@/components/admin/SnapshotManager';
 
-import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
+import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { useMarketEngine } from '@/hooks/useMarketEngine';
 import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
@@ -130,8 +130,10 @@ export default function AdminProductsMonitor() {
 
   const displayCandles = useMemo(() => {
     if (sharedRealtime.engineCandles.length > 0) return sharedRealtime.engineCandles;
-    return effectiveProductId ? getCandles(effectiveProductId) : [];
-  }, [effectiveProductId, getCandles, sharedRealtime.engineCandles]);
+    if (!effectiveProductId) return [];
+    const baseCandles = getCandles(effectiveProductId);
+    return timeInterval === '1M' ? baseCandles : aggregateCandles(baseCandles, timeInterval);
+  }, [effectiveProductId, getCandles, sharedRealtime.engineCandles, timeInterval]);
 
   const chartOHLCData: OHLCData[] = useMemo(() => {
     return displayCandles.map(c => ({
