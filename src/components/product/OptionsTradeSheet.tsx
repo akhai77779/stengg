@@ -54,6 +54,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
   const [checkingActiveTrade, setCheckingActiveTrade] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [optimisticBalance, setOptimisticBalance] = useState<number | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -62,6 +63,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
   const price = product.price || 0;
   const amountNum = parseFloat(amount) || 0;
   const currentMinAmount = selectedDuration.minAmount;
+  const effectiveBalance = optimisticBalance ?? balance;
   const estimatedProfit = amountNum * selectedDuration.profitRate;
   const priceEquivalent = amountNum > 0 && price > 0 ? (amountNum / price).toFixed(4) : '0';
 
@@ -84,10 +86,17 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
 
   useEffect(() => {
     if (isOpen && user) {
+      setOptimisticBalance(null);
       refetchBalance();
       checkActiveTrade();
     }
   }, [isOpen, user, refetchBalance, checkActiveTrade]);
+
+  useEffect(() => {
+    if (balance !== null) {
+      setOptimisticBalance(null);
+    }
+  }, [balance]);
 
   // Sync direction when sheet opens with new initialDirection
   useEffect(() => {
@@ -136,10 +145,10 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
       return;
     }
 
-    if (balance !== null && amountNum > balance) {
+    if (effectiveBalance !== null && amountNum > effectiveBalance) {
       toast({ 
         title: t('options.insufficientBalance'), 
-        description: t('options.needAmount', { need: amountNum.toLocaleString(), have: balance.toLocaleString() }),
+        description: t('options.needAmount', { need: amountNum.toLocaleString(), have: effectiveBalance.toLocaleString() }),
         variant: 'destructive' 
       });
       return;
@@ -162,7 +171,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
 
       if (error) throw error;
 
-      const result = data as { success: boolean; error?: string; trade_id?: string };
+      const result = data as { success: boolean; error?: string; trade_id?: string; new_balance?: number };
 
       if (!result.success) {
         toast({
@@ -172,6 +181,13 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
         });
         return;
       }
+
+      if (typeof result.new_balance === 'number') {
+        setOptimisticBalance(result.new_balance);
+      }
+      setHasActiveTrade(true);
+      void refetchBalance();
+      void checkActiveTrade();
 
       // Show success dialog with countdown
       setCountdown(selectedDuration.seconds);
@@ -258,7 +274,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   {balanceLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
                   ) : (
-                    formatCurrency(balance || 0)
+                    formatCurrency(effectiveBalance || 0)
                   )}
                 </span>
               </div>
@@ -366,7 +382,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
                   : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
-              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
+              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
               onClick={handleTrade}
             >
               {isLoading ? (
