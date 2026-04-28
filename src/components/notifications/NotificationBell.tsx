@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2, DollarSign, IdCard, TrendingUp, UserPlus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +31,7 @@ const NOTIFICATION_TAB_STORAGE_KEY = "stengg.notification.activeTab";
 const isNotificationTab = (value: string | null): value is NotificationTab =>
   value === "user" || value === "admin" || value === "livechat";
 
-export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellProps>(function NotificationBell(
-  { className },
-  ref
-) {
+export function NotificationBell({ className }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NotificationTab>(() => {
     const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
@@ -145,7 +142,6 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
-          ref={ref}
           variant="ghost"
           size="icon"
           className={cn("relative h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation active:scale-95 transition-transform", className)}
@@ -568,4 +564,4 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
       </PopoverContent>
     </Popover>
   );
-});
+}
