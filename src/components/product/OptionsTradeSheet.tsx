@@ -274,7 +274,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   {balanceLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
                   ) : (
-                    formatCurrency(balance || 0)
+                    formatCurrency(effectiveBalance || 0)
                   )}
                 </span>
               </div>
@@ -382,7 +382,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
                   : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
-              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (balance !== null && amountNum > balance)}
+              disabled={isLoading || checkingActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
               onClick={handleTrade}
             >
               {isLoading ? (
