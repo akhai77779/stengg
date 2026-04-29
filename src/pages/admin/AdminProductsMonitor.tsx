@@ -383,8 +383,6 @@ export default function AdminProductsMonitor() {
         </div>
       </div>
     </div>
-  );
-
   ) : loadingContent;
 
   return isFullscreen && isReady ? content : <Layout>{content}</Layout>;
