@@ -19,8 +19,7 @@ interface SyncStats {
 /**
  * Syncs market engine candle data to the database (price_history + products tables).
  * Maps local product IDs to DB UUIDs by matching symbols.
- * Auto-seeds 60 historical candles on first enable so mini-charts display immediately.
- * Runs every `intervalMs` when enabled.
+ * Runs every `intervalMs` when enabled without deleting or reseeding history.
  */
 export function useEngineSyncToDb(
   engines: Record<string, EngineState>,
@@ -29,7 +28,7 @@ export function useEngineSyncToDb(
 ) {
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isSeeding] = useState(false);
+  const isSeeding = false;
   const [stats, setStats] = useState<SyncStats>({
     lastSyncAt: null,
     candlesSynced: 0,
@@ -38,7 +37,6 @@ export function useEngineSyncToDb(
   });
   const mappingsRef = useRef<ProductMapping[]>([]);
   const isSyncingRef = useRef(false);
-  const lastSyncedMinuteRef = useRef<string | null>(null);
 
   // Fetch DB products and build mappings
   useEffect(() => {
@@ -205,27 +203,15 @@ export function useEngineSyncToDb(
     }
   }, [engines]);
 
-  // Auto-seed when mappings are ready, then start periodic sync
+  // Start periodic sync when mappings are ready.
   useEffect(() => {
     if (!enabled || mappings.length === 0) return;
 
-    // Seed first, then sync
-    const initSync = async () => {
-      await seedHistoricalCandles();
-      syncToDb();
-    };
-    initSync();
+    syncToDb();
 
     const interval = setInterval(syncToDb, intervalMs);
     return () => clearInterval(interval);
-  }, [enabled, mappings.length, intervalMs, syncToDb, seedHistoricalCandles]);
-
-  // Reset seed flag when sync is disabled
-  useEffect(() => {
-    if (!enabled) {
-      hasSeededRef.current = false;
-    }
-  }, [enabled]);
+  }, [enabled, mappings.length, intervalMs, syncToDb]);
 
   return { mappings, isSyncing, isSeeding, stats, syncNow: syncToDb };
 }
