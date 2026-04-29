@@ -137,13 +137,14 @@ const sendDesktopNotification = (title: string, body: string) => {
   }
 };
 
-export function useAdminNotifications() {
+export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
   const [pendingTransactionCount, setPendingTransactionCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const [pendingOptionTradeCount, setPendingOptionTradeCount] = useState(0);
   const [newUserCount, setNewUserCount] = useState(0);
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const isInitialLoad = useRef(true);
+  const processedAdminNotificationKeys = useRef<Set<string>>(new Set());
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -158,17 +159,24 @@ export function useAdminNotifications() {
   const addNotification = useCallback((
     type: 'transaction' | 'verification' | 'option_trade' | 'new_user',
     title: string,
-    description: string
+    description: string,
+    dedupeKey?: string,
+    timestamp: Date = new Date()
   ) => {
+    const key = dedupeKey || `${type}:${title}:${description}`;
+    if (processedAdminNotificationKeys.current.has(key)) return false;
+    processedAdminNotificationKeys.current.add(key);
+
     const newNotification: NotificationItem = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${type}-${key}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       title,
       description,
-      timestamp: new Date(),
+      timestamp,
       read: false,
     };
     setNotificationHistory(prev => [newNotification, ...prev]);
+    return true;
   }, []);
 
   // Mark notification as read
