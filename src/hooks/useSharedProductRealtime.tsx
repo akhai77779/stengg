@@ -171,8 +171,14 @@ export function useSharedProductRealtime({
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRowRef = useRef<PriceHistoryRow | null>(null);
   const lastUpdateRef = useRef(0);
+  const anchorPriceRef = useRef<number | null>(null);
+  const latestRealRowAtRef = useRef<string | null>(null);
 
   const mergeRow = useCallback((row: PriceHistoryRow) => {
+    if (!row.synthetic) {
+      anchorPriceRef.current = Number(row.close_price);
+      latestRealRowAtRef.current = row.recorded_at;
+    }
     setRows(prev => {
       const map = new Map(prev.map(item => [item.recorded_at, item]));
       map.set(row.recorded_at, row);
@@ -232,6 +238,9 @@ export function useSharedProductRealtime({
 
       if (!error && data && data.length > 0) {
         setRows(data as PriceHistoryRow[]);
+        const last = data[data.length - 1] as PriceHistoryRow;
+        anchorPriceRef.current = Number(last.close_price);
+        latestRealRowAtRef.current = last.recorded_at;
       } else {
         const { data: fallback } = await supabase
           .from('price_history')
@@ -239,7 +248,15 @@ export function useSharedProductRealtime({
           .eq('product_id', productId)
           .order('recorded_at', { ascending: false })
           .limit(300);
-        if (mounted) setRows(((fallback || []) as PriceHistoryRow[]).reverse());
+        if (mounted) {
+          const fallbackRows = ((fallback || []) as PriceHistoryRow[]).reverse();
+          setRows(fallbackRows);
+          const last = fallbackRows[fallbackRows.length - 1];
+          if (last) {
+            anchorPriceRef.current = Number(last.close_price);
+            latestRealRowAtRef.current = last.recorded_at;
+          }
+        }
       }
 
       const { data: productRow } = await supabase
@@ -247,7 +264,10 @@ export function useSharedProductRealtime({
         .select('id, name, symbol, price, high_24h, low_24h, price_change, volume, turnover')
         .eq('id', productId)
         .maybeSingle();
-      if (mounted && productRow) setProduct(productRow as ProductPayload);
+      if (mounted && productRow) {
+        setProduct(productRow as ProductPayload);
+        if (!anchorPriceRef.current && productRow.price) anchorPriceRef.current = Number(productRow.price);
+      }
       if (mounted) setIsLoading(false);
     };
 
