@@ -194,10 +194,24 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
   // Get unread count
   const unreadNotificationCount = notificationHistory.filter(n => !n.read).length;
 
+  const buildOptionTradeNotification = useCallback((trade: PendingOptionTrade) => {
+    const direction = trade.direction === 'buy' ? '📈 Mua' : trade.direction === 'sell' ? '📉 Bán' : trade.direction;
+    const amount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Number(trade.amount || 0));
+    return {
+      title: '⚡ Option Trade mới',
+      description: `Đặt lệnh ${direction} với ${amount} • ${trade.status}`,
+    };
+  }, []);
+
   const fetchPendingCounts = useCallback(async () => {
     if (!user || !isAdmin) return;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
     
-    const [txResult, verifyResult, optionTradeResult] = await Promise.all([
+    const [txResult, verifyResult, optionTradeResult, todayOptionTradesResult] = await Promise.all([
       supabase
         .from('transactions')
         .select('id', { count: 'exact', head: true })
@@ -209,13 +223,26 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
       supabase
         .from('option_trades')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'active')
+        .eq('status', 'active'),
+      supabase
+        .from('option_trades')
+        .select('id, user_id, product_id, amount, direction, status, created_at')
+        .gte('created_at', startOfDay.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50)
     ]);
     
     setPendingTransactionCount(txResult.count || 0);
     setPendingVerificationCount(verifyResult.count || 0);
     setPendingOptionTradeCount(optionTradeResult.count || 0);
-  }, [user, isAdmin]);
+
+    if (todayOptionTradesResult.data) {
+      (todayOptionTradesResult.data as PendingOptionTrade[]).reverse().forEach((trade) => {
+        const { title, description } = buildOptionTradeNotification(trade);
+        addNotification('option_trade', title, description, `option_trade:${trade.id}`, new Date(trade.created_at));
+      });
+    }
+  }, [user, isAdmin, addNotification, buildOptionTradeNotification]);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
