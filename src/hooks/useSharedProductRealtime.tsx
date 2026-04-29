@@ -300,6 +300,24 @@ export function useSharedProductRealtime({
     };
   }, [enabled, productId, queueRow, subscriptionKey]);
 
+  useEffect(() => {
+    if (!enabled || !productId) return;
+
+    const interval = setInterval(() => {
+      const anchorPrice = anchorPriceRef.current ?? product?.price ?? null;
+      if (!anchorPrice || anchorPrice <= 0) return;
+
+      const latestRealAt = latestRealRowAtRef.current ? new Date(latestRealRowAtRef.current).getTime() : 0;
+      const isRealtimeStale = !latestRealAt || Date.now() - latestRealAt > 10000;
+      if (!isRealtimeStale) return;
+
+      mergeRow(buildSyntheticLiveRow(productId, anchorPrice));
+      setStatus(current => current === 'connected' ? current : 'connected');
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [enabled, mergeRow, product?.price, productId]);
+
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
   const lineData = useMemo(() => ohlcToLineData(candles, timeframe), [candles, timeframe]);
