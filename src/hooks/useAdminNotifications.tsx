@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ interface PendingVerification {
 interface PendingOptionTrade {
   id: string;
   user_id: string;
+  product_id?: string;
   amount: number;
   direction: string;
   status: string;
@@ -44,6 +45,21 @@ export interface NotificationItem {
   timestamp: Date;
   read: boolean;
 }
+
+interface AdminNotificationsValue {
+  pendingCount: number;
+  pendingTransactionCount: number;
+  pendingVerificationCount: number;
+  pendingOptionTradeCount: number;
+  newUserCount: number;
+  notificationHistory: NotificationItem[];
+  unreadNotificationCount: number;
+  markAsRead: (id: string) => void;
+  clearAllNotifications: () => void;
+  refetch: () => Promise<void>;
+}
+
+const AdminNotificationsContext = createContext<AdminNotificationsValue | null>(null);
 
 // Create notification sound using Web Audio API
 const playNotificationSound = () => {
