@@ -170,20 +170,16 @@ export default function AdminProductsMonitor() {
     localStorage.setItem('admin_monitor_timeframe', interval);
   }, []);
 
-  if (!isReady) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="flex flex-col items-center gap-3">
-            <Activity className="w-8 h-8 animate-pulse text-primary" />
-            <p className="text-muted-foreground">Loading market engine...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const loadingContent = (
+    <div className="flex items-center justify-center h-[60vh]">
+      <div className="flex flex-col items-center gap-3">
+        <Activity className="w-8 h-8 animate-pulse text-primary" />
+        <p className="text-muted-foreground">Loading market engine...</p>
+      </div>
+    </div>
+  );
 
-  const content = (
+  const content = isReady ? (
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -389,5 +385,7 @@ export default function AdminProductsMonitor() {
     </div>
   );
 
-  return isFullscreen ? content : <Layout>{content}</Layout>;
+  ) : loadingContent;
+
+  return isFullscreen && isReady ? content : <Layout>{content}</Layout>;
 }
