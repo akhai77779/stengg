@@ -369,25 +369,18 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
         },
         (payload) => {
           const newTrade = payload.new as PendingOptionTrade;
-          const direction = newTrade.direction === 'up' ? '📈 Lên' : '📉 Xuống';
-          const amount = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-          }).format(newTrade.amount);
-
-          const title = '⚡ Option Trade mới';
-          const description = `Đặt lệnh ${direction} với ${amount}`;
+          const { title, description } = buildOptionTradeNotification(newTrade);
 
           // Add to history
-          addNotification('option_trade', title, description);
+          const added = addNotification('option_trade', title, description, `option_trade:${newTrade.id}`, new Date(newTrade.created_at));
 
           // Play notification sound and send desktop notification (only after initial load)
-          if (!isInitialLoad.current) {
+          if (added && !isInitialLoad.current) {
             playNotificationSound();
             sendDesktopNotification(title, description);
           }
 
-          toast({ title, description });
+          if (added) toast({ title, description });
           if (newTrade.status === 'active') {
             setPendingOptionTradeCount(prev => prev + 1);
           }
@@ -449,12 +442,12 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
       supabase.removeChannel(optionTradeChannel);
       supabase.removeChannel(userChannel);
     };
-  }, [user, isAdmin, toast, fetchPendingCounts, addNotification]);
+  }, [user, isAdmin, toast, fetchPendingCounts, addNotification, buildOptionTradeNotification]);
 
   // Total pending count for backward compatibility
   const pendingCount = pendingTransactionCount + pendingVerificationCount;
 
-  return { 
+  const value: AdminNotificationsValue = { 
     pendingCount,
     pendingTransactionCount, 
     pendingVerificationCount,
@@ -466,4 +459,25 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
     clearAllNotifications,
     refetch: fetchPendingCounts 
   };
+
+  return <AdminNotificationsContext.Provider value={value}>{children}</AdminNotificationsContext.Provider>;
+}
+
+export function useAdminNotifications() {
+  const context = useContext(AdminNotificationsContext);
+  if (!context) {
+    return {
+      pendingCount: 0,
+      pendingTransactionCount: 0,
+      pendingVerificationCount: 0,
+      pendingOptionTradeCount: 0,
+      newUserCount: 0,
+      notificationHistory: [],
+      unreadNotificationCount: 0,
+      markAsRead: () => undefined,
+      clearAllNotifications: () => undefined,
+      refetch: async () => undefined,
+    } satisfies AdminNotificationsValue;
+  }
+  return context;
 }
