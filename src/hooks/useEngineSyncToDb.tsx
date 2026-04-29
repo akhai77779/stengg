@@ -19,6 +19,7 @@ interface SyncStats {
 /**
  * Syncs market engine candle data to the database (price_history + products tables).
  * Maps local product IDs to DB UUIDs by matching symbols.
+ * Auto-seeds 60 historical candles on first enable so mini-charts display immediately.
  * Runs every `intervalMs` when enabled.
  */
 export function useEngineSyncToDb(
@@ -28,7 +29,7 @@ export function useEngineSyncToDb(
 ) {
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isSeeding] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [stats, setStats] = useState<SyncStats>({
     lastSyncAt: null,
     candlesSynced: 0,
@@ -37,6 +38,7 @@ export function useEngineSyncToDb(
   });
   const mappingsRef = useRef<ProductMapping[]>([]);
   const isSyncingRef = useRef(false);
+  const hasSeededRef = useRef(false);
 
   // Fetch DB products and build mappings
   useEffect(() => {
@@ -77,6 +79,79 @@ export function useEngineSyncToDb(
 
     fetchMappings();
   }, [enabled]);
+
+  // Full reseed: delete old price_history and replace with ALL engine candles
+  // This ensures user charts always match admin engine data exactly
+  const seedHistoricalCandles = useCallback(async () => {
+    if (hasSeededRef.current || mappingsRef.current.length === 0) return;
+    setIsSeeding(true);
+
+    let totalSeeded = 0;
+
+    try {
+      for (const mapping of mappingsRef.current) {
+        const engine = engines[mapping.localId];
+        if (!engine || engine.candles.length < 2) continue;
+
+        // Delete all existing price_history for this product to avoid stale data
+        const { error: deleteError } = await supabase
+          .from('price_history')
+          .delete()
+          .eq('product_id', mapping.dbId);
+
+        if (deleteError) {
+          console.error(`[EngineSync:Seed] Delete error for ${mapping.symbol}:`, deleteError.message);
+          continue;
+        }
+
+        // Seed ALL engine candles (up to last 1440 = 24h of 1M data)
+        const candlesToSeed = engine.candles.slice(-1440);
+        const now = new Date();
+        
+        // Insert in batches of 200 to avoid payload limits
+        const BATCH_SIZE = 200;
+        for (let batchStart = 0; batchStart < candlesToSeed.length; batchStart += BATCH_SIZE) {
+          const batch = candlesToSeed.slice(batchStart, batchStart + BATCH_SIZE);
+          const records = batch.map((c, i) => {
+            const absoluteIndex = batchStart + i;
+            const minutesAgo = candlesToSeed.length - 1 - absoluteIndex;
+            const recordedAt = new Date(now.getTime() - minutesAgo * 60000);
+            recordedAt.setSeconds(0, 0);
+            return {
+              product_id: mapping.dbId,
+              recorded_at: recordedAt.toISOString(),
+              open_price: c.open,
+              high_price: c.high,
+              low_price: c.low,
+              close_price: c.close,
+              volume: c.volume,
+            };
+          });
+
+          const { error: insertError } = await supabase
+            .from('price_history')
+            .upsert(records, { onConflict: 'product_id,recorded_at', ignoreDuplicates: true });
+
+          if (insertError) {
+            console.error(`[EngineSync:Seed] Insert error for ${mapping.symbol} batch ${batchStart}:`, insertError.message);
+          } else {
+            totalSeeded += records.length;
+          }
+        }
+
+        console.log(`[EngineSync:Seed] Seeded ${candlesToSeed.length} candles for ${mapping.symbol}`);
+      }
+
+      if (totalSeeded > 0) {
+        console.log(`[EngineSync:Seed] ✅ Full reseed: ${totalSeeded} total candles`);
+        hasSeededRef.current = true;
+      }
+    } catch (err) {
+      console.error('[EngineSync:Seed] Error:', err);
+    } finally {
+      setIsSeeding(false);
+    }
+  }, [engines]);
 
   // Sync function
   const syncToDb = useCallback(async () => {
@@ -203,14 +278,27 @@ export function useEngineSyncToDb(
     }
   }, [engines]);
 
-  // Start periodic sync without deleting or reseeding existing public price history
+  // Auto-seed when mappings are ready, then start periodic sync
   useEffect(() => {
     if (!enabled || mappings.length === 0) return;
 
-    syncToDb();
+    // Seed first, then sync
+    const initSync = async () => {
+      await seedHistoricalCandles();
+      syncToDb();
+    };
+    initSync();
+
     const interval = setInterval(syncToDb, intervalMs);
     return () => clearInterval(interval);
-  }, [enabled, mappings.length, intervalMs, syncToDb]);
+  }, [enabled, mappings.length, intervalMs, syncToDb, seedHistoricalCandles]);
+
+  // Reset seed flag when sync is disabled
+  useEffect(() => {
+    if (!enabled) {
+      hasSeededRef.current = false;
+    }
+  }, [enabled]);
 
   return { mappings, isSyncing, isSeeding, stats, syncNow: syncToDb };
 }
