@@ -189,6 +189,7 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
   // Clear all notifications
   const clearAllNotifications = useCallback(() => {
     setNotificationHistory([]);
+    processedAdminNotificationKeys.current.clear();
   }, []);
 
   // Get unread count
@@ -381,7 +382,7 @@ export function AdminNotificationsProvider({ children }: { children: ReactNode }
           }
 
           if (added) toast({ title, description });
-          if (newTrade.status === 'active') {
+          if (added && newTrade.status === 'active') {
             setPendingOptionTradeCount(prev => prev + 1);
           }
         }
