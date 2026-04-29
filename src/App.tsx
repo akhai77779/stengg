@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AdminNotificationsProvider } from "@/hooks/useAdminNotifications";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
@@ -60,8 +61,9 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <AuthProvider>
-                <MobileSupportButton />
-                <Routes>
+                <AdminNotificationsProvider>
+                  <MobileSupportButton />
+                  <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
@@ -102,7 +104,8 @@ const App = () => (
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
-                </Routes>
+                  </Routes>
+                </AdminNotificationsProvider>
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>

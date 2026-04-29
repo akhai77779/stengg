@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ interface PendingVerification {
 interface PendingOptionTrade {
   id: string;
   user_id: string;
+  product_id?: string;
   amount: number;
   direction: string;
   status: string;
@@ -44,6 +45,21 @@ export interface NotificationItem {
   timestamp: Date;
   read: boolean;
 }
+
+interface AdminNotificationsValue {
+  pendingCount: number;
+  pendingTransactionCount: number;
+  pendingVerificationCount: number;
+  pendingOptionTradeCount: number;
+  newUserCount: number;
+  notificationHistory: NotificationItem[];
+  unreadNotificationCount: number;
+  markAsRead: (id: string) => void;
+  clearAllNotifications: () => void;
+  refetch: () => Promise<void>;
+}
+
+const AdminNotificationsContext = createContext<AdminNotificationsValue | null>(null);
 
 // Create notification sound using Web Audio API
 const playNotificationSound = () => {
@@ -121,13 +137,14 @@ const sendDesktopNotification = (title: string, body: string) => {
   }
 };
 
-export function useAdminNotifications() {
+export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
   const [pendingTransactionCount, setPendingTransactionCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const [pendingOptionTradeCount, setPendingOptionTradeCount] = useState(0);
   const [newUserCount, setNewUserCount] = useState(0);
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const isInitialLoad = useRef(true);
+  const processedAdminNotificationKeys = useRef<Set<string>>(new Set());
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -142,17 +159,24 @@ export function useAdminNotifications() {
   const addNotification = useCallback((
     type: 'transaction' | 'verification' | 'option_trade' | 'new_user',
     title: string,
-    description: string
+    description: string,
+    dedupeKey?: string,
+    timestamp: Date = new Date()
   ) => {
+    const key = dedupeKey || `${type}:${title}:${description}`;
+    if (processedAdminNotificationKeys.current.has(key)) return false;
+    processedAdminNotificationKeys.current.add(key);
+
     const newNotification: NotificationItem = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${type}-${key}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       title,
       description,
-      timestamp: new Date(),
+      timestamp,
       read: false,
     };
     setNotificationHistory(prev => [newNotification, ...prev]);
+    return true;
   }, []);
 
   // Mark notification as read
@@ -165,15 +189,30 @@ export function useAdminNotifications() {
   // Clear all notifications
   const clearAllNotifications = useCallback(() => {
     setNotificationHistory([]);
+    processedAdminNotificationKeys.current.clear();
   }, []);
 
   // Get unread count
   const unreadNotificationCount = notificationHistory.filter(n => !n.read).length;
 
+  const buildOptionTradeNotification = useCallback((trade: PendingOptionTrade) => {
+    const direction = trade.direction === 'buy' ? '📈 Mua' : trade.direction === 'sell' ? '📉 Bán' : trade.direction;
+    const amount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Number(trade.amount || 0));
+    return {
+      title: '⚡ Option Trade mới',
+      description: `Đặt lệnh ${direction} với ${amount} • ${trade.status}`,
+    };
+  }, []);
+
   const fetchPendingCounts = useCallback(async () => {
     if (!user || !isAdmin) return;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
     
-    const [txResult, verifyResult, optionTradeResult] = await Promise.all([
+    const [txResult, verifyResult, optionTradeResult, todayOptionTradesResult] = await Promise.all([
       supabase
         .from('transactions')
         .select('id', { count: 'exact', head: true })
@@ -185,13 +224,26 @@ export function useAdminNotifications() {
       supabase
         .from('option_trades')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'active')
+        .eq('status', 'active'),
+      supabase
+        .from('option_trades')
+        .select('id, user_id, product_id, amount, direction, status, created_at')
+        .gte('created_at', startOfDay.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50)
     ]);
     
     setPendingTransactionCount(txResult.count || 0);
     setPendingVerificationCount(verifyResult.count || 0);
     setPendingOptionTradeCount(optionTradeResult.count || 0);
-  }, [user, isAdmin]);
+
+    if (todayOptionTradesResult.data) {
+      (todayOptionTradesResult.data as PendingOptionTrade[]).reverse().forEach((trade) => {
+        const { title, description } = buildOptionTradeNotification(trade);
+        addNotification('option_trade', title, description, `option_trade:${trade.id}`, new Date(trade.created_at));
+      });
+    }
+  }, [user, isAdmin, addNotification, buildOptionTradeNotification]);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
@@ -318,26 +370,19 @@ export function useAdminNotifications() {
         },
         (payload) => {
           const newTrade = payload.new as PendingOptionTrade;
-          const direction = newTrade.direction === 'up' ? '📈 Lên' : '📉 Xuống';
-          const amount = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-          }).format(newTrade.amount);
-
-          const title = '⚡ Option Trade mới';
-          const description = `Đặt lệnh ${direction} với ${amount}`;
+          const { title, description } = buildOptionTradeNotification(newTrade);
 
           // Add to history
-          addNotification('option_trade', title, description);
+          const added = addNotification('option_trade', title, description, `option_trade:${newTrade.id}`, new Date(newTrade.created_at));
 
           // Play notification sound and send desktop notification (only after initial load)
-          if (!isInitialLoad.current) {
+          if (added && !isInitialLoad.current) {
             playNotificationSound();
             sendDesktopNotification(title, description);
           }
 
-          toast({ title, description });
-          if (newTrade.status === 'active') {
+          if (added) toast({ title, description });
+          if (added && newTrade.status === 'active') {
             setPendingOptionTradeCount(prev => prev + 1);
           }
         }
@@ -398,12 +443,12 @@ export function useAdminNotifications() {
       supabase.removeChannel(optionTradeChannel);
       supabase.removeChannel(userChannel);
     };
-  }, [user, isAdmin, toast, fetchPendingCounts, addNotification]);
+  }, [user, isAdmin, toast, fetchPendingCounts, addNotification, buildOptionTradeNotification]);
 
   // Total pending count for backward compatibility
   const pendingCount = pendingTransactionCount + pendingVerificationCount;
 
-  return { 
+  const value: AdminNotificationsValue = { 
     pendingCount,
     pendingTransactionCount, 
     pendingVerificationCount,
@@ -415,4 +460,25 @@ export function useAdminNotifications() {
     clearAllNotifications,
     refetch: fetchPendingCounts 
   };
+
+  return <AdminNotificationsContext.Provider value={value}>{children}</AdminNotificationsContext.Provider>;
+}
+
+export function useAdminNotifications() {
+  const context = useContext(AdminNotificationsContext);
+  if (!context) {
+    return {
+      pendingCount: 0,
+      pendingTransactionCount: 0,
+      pendingVerificationCount: 0,
+      pendingOptionTradeCount: 0,
+      newUserCount: 0,
+      notificationHistory: [],
+      unreadNotificationCount: 0,
+      markAsRead: () => undefined,
+      clearAllNotifications: () => undefined,
+      refetch: async () => undefined,
+    } satisfies AdminNotificationsValue;
+  }
+  return context;
 }
