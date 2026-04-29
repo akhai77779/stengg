@@ -16,6 +16,7 @@ interface PriceHistoryRow {
   low_price: number;
   close_price: number;
   volume?: number | null;
+  synthetic?: boolean;
 }
 
 interface ProductPayload {
@@ -58,6 +59,32 @@ const TIME_FORMAT: Record<SharedTimeframe, string> = {
 };
 
 export const SHARED_PRODUCT_CHANNEL_PREFIX = 'shared-product-price';
+
+function hashProductSeed(productId: string) {
+  return productId.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
+}
+
+function buildSyntheticLiveRow(productId: string, anchorPrice: number): PriceHistoryRow {
+  const seed = Math.abs(hashProductSeed(productId)) || 1;
+  const tick = Math.floor(Date.now() / 3000);
+  const minute = new Date();
+  minute.setSeconds(0, 0);
+  const phase = (tick + seed) / 7;
+  const move = Math.sin(phase) * 0.0018 + Math.cos(phase / 2.7) * 0.0009;
+  const close = Math.max(anchorPrice * (1 + move), 0.000001);
+  const open = Number(anchorPrice);
+
+  return {
+    product_id: productId,
+    recorded_at: minute.toISOString(),
+    open_price: open,
+    high_price: Math.max(open, close) * (1 + ((seed % 7) + 1) * 0.00008),
+    low_price: Math.min(open, close) * (1 - ((seed % 5) + 1) * 0.00008),
+    close_price: close,
+    volume: 0,
+    synthetic: true,
+  };
+}
 
 export function priceHistoryRowToOHLC(row: PriceHistoryRow): OHLCData {
   return {
