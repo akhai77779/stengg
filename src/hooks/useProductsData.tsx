@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { SHARED_PRODUCT_CHANNEL_PREFIX } from '@/hooks/useSharedProductRealtime';
 
 export interface CandleRow {
   open_price: number;
@@ -33,7 +32,6 @@ export interface ProductWithChart extends Product {
 export function useProductsData(userId: string | undefined) {
   const [products, setProducts] = useState<ProductWithChart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const productIdsKey = useMemo(() => products.map(p => p.id).sort().join(','), [products]);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -98,28 +96,6 @@ export function useProductsData(userId: string | undefined) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
-
-  // Realtime: price history updates
-  useEffect(() => {
-    if (!userId || !productIdsKey) return;
-    const productIds = productIdsKey.split(',').filter(Boolean);
-    const channels = productIds.map(productId => supabase
-      .channel(`${SHARED_PRODUCT_CHANNEL_PREFIX}-${productId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history', filter: `product_id=eq.${productId}` }, (payload) => {
-        const row = payload.new as CandleRow & { recorded_at: string };
-        if (row?.product_id !== productId) return;
-        setProducts(prev => prev.map(p => {
-          if (p.id !== row.product_id) return p;
-          const existing = p.candles.findIndex(c => c.recorded_at === row.recorded_at);
-          const updated = existing >= 0
-            ? p.candles.map((c, i) => i === existing ? row : c)
-            : [...p.candles.slice(-29), row];
-          return { ...p, candles: updated };
-        }));
-      })
-      .subscribe());
-    return () => { channels.forEach(channel => supabase.removeChannel(channel)); };
-  }, [productIdsKey, userId]);
 
   return { products, isLoading };
 }
