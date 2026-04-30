@@ -63,7 +63,7 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
               <img
                 src={product.image_url}
                 alt=""
-                className="w-full h-full object-cover opacity-35"
+                className="w-full h-full object-cover opacity-80"
                 loading="lazy"
                 style={{
                   maskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
@@ -113,7 +113,7 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
               <img
                 src={product.image_url}
                 alt=""
-                className="w-full h-full object-cover opacity-40 mask-image-fade"
+                className="w-full h-full object-cover opacity-85 mask-image-fade"
                 loading="lazy"
                 style={{
                   maskImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',

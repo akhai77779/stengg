@@ -193,7 +193,7 @@ export default function AdminLayout() {
               <NotificationBell />
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-4 md:p-6">
+            <div className="rounded-xl border border-border bg-card md:p-6 p-0 font-bold opacity-100">
               <Outlet />
             </div>
           </div>
