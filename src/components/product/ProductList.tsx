@@ -21,9 +21,9 @@ interface LiveProductCardProps {
 function LiveProductCard({ product, formatPrice, formatVolume, formatChange }: LiveProductCardProps) {
   const realtime = useSharedProductRealtime({
     productId: product.id,
-    timeframe: '1m',
+    timeframe: '30m',
     enabled: !!product.id,
-    throttleMs: 150,
+    throttleMs: 300,
   });
 
   const liveProduct = useMemo<ProductWithChart>(() => {
