@@ -1,33 +1,37 @@
-Nguyên nhân chính: thông báo admin hiện chỉ sống trong bộ nhớ của hook `useAdminNotifications` và phụ thuộc vào realtime INSERT từ bảng `option_trades`. Có 2 điểm dễ làm admin “không thấy thông báo”:
+Mình đã kiểm tra luồng hiện tại và thấy backend vẫn có dữ liệu giá mới từ `/admin/products-monitor`:
 
-1. Chuông thông báo gọi `useAdminNotifications()` thêm một lần riêng, trong khi `AdminLayout` cũng gọi hook này. Hai instance không chia sẻ cùng history, nên badge/sidebar và popup chuông có thể lệch nhau.
-2. Hệ thống đã xóa trigger thông báo giao dịch quyền chọn cũ trên bảng `option_trades` và đang chặn các notification kiểu `option_trade` trong `user_notifications`. Việc này đúng với yêu cầu trước đó là không tạo thông báo giao dịch cho user, nhưng cũng có nghĩa admin chỉ còn dựa vào realtime client-side; nếu admin vừa mở sau đó, reload trang, hoặc realtime không bắt được event thì lịch sử thông báo sẽ trống.
+- `products.updated_at` và `price_history.recorded_at` có cập nhật gần đây.
+- `/admin/products-monitor` đang sync dữ liệu engine vào `products` và `price_history` mỗi khoảng 3 giây.
+- Vấn đề nằm ở phía `/products`: `useProductsData` đang đọc và subscribe realtime trực tiếp, nhưng phần chart mini chỉ append theo `recorded_at`. Vì admin upsert cùng cây nến 1 phút nhiều lần, cùng `recorded_at` được UPDATE liên tục. Nếu realtime UPDATE bị chậm/rớt, UI list có thể không thể hiện cảm giác “live”; đồng thời không có fallback synthetic/polling như `useSharedProductRealtime` ở trang chi tiết.
 
 Kế hoạch sửa:
 
-1. Tạo nguồn thông báo admin dùng chung
-   - Tách trạng thái/thực thi `useAdminNotifications` ra một `AdminNotificationsProvider` hoặc shared store.
-   - `AdminLayout`, `NotificationBell`, và các nơi khác sẽ dùng cùng một instance thay vì mỗi component tự subscribe riêng.
-   - Kết quả: badge “Option Trades” và tab “Hệ thống” trong chuông hiển thị cùng dữ liệu.
+1. Chuẩn hóa `/products` dùng cùng nguồn live với trang chi tiết
+   - Tạo một hook/card live riêng cho từng sản phẩm trên list, dùng `useSharedProductRealtime` với `timeframe: '1m'`.
+   - Mỗi card sẽ lấy `latestPrice`, `highPrice`, `lowPrice`, `product.price_change`, và `candles` trực tiếp từ shared realtime thay vì chỉ phụ thuộc snapshot ban đầu trong `useProductsData`.
+   - Khi realtime không có tick mới >10s, hook hiện tại đã có synthetic live row để card vẫn chuyển động nhẹ theo anchor price.
 
-2. Bổ sung fallback fetch cho giao dịch mới trong ngày
-   - Khi admin mở app hoặc mở admin layout, ngoài realtime count sẽ query các lệnh `option_trades` mới trong ngày.
-   - Tạo notification history từ các lệnh đó nếu chưa có trong bộ nhớ.
-   - Kết quả: admin vẫn thấy lệnh user đã đặt gần đây dù bỏ lỡ realtime hoặc vừa refresh trang.
+2. Giữ `useProductsData` chỉ làm dữ liệu nền cho danh sách
+   - `useProductsData` vẫn fetch danh sách sản phẩm, ảnh, tên, symbol, volume/turnover và candles ban đầu.
+   - Product card sẽ merge dữ liệu nền + live data để tránh màn hình trống và vẫn có realtime khi có cập nhật.
 
-3. Giữ realtime thông báo ngay lập tức
-   - Giữ subscription INSERT/UPDATE trên `option_trades` để admin nhận toast, âm thanh và desktop notification khi user vừa đặt lệnh.
-   - Thêm chống trùng notification bằng trade id, tránh một lệnh hiện nhiều lần khi vừa fetch fallback vừa nhận realtime.
+3. Sửa chart mini ở `/products` nhận data live đúng kiểu
+   - Chuyển `sharedRealtime.candles` thành format `{ open, high, low, close }` cho `MiniCandleChart`.
+   - Ưu tiên candle live; nếu chưa tải xong thì fallback về `product.candles` ban đầu.
 
-4. Hiển thị thông tin rõ hơn cho admin
-   - Notification option trade sẽ có: hướng Mua/Bán, số tiền, trạng thái active, thời gian tạo.
-   - Nếu có thể lấy kèm product/user từ query fallback thì thêm tên sản phẩm và user để admin dễ nhận biết.
+4. Tránh lỗi hook order
+   - Không gọi hook trong vòng lặp thường hoặc điều kiện không ổn định trong cùng component list.
+   - Tách thành component con như `LiveProductCard`, mỗi card tự gọi hook một cách cố định theo lifecycle riêng.
+   - Không thêm early return trước hook.
 
-5. Kiểm tra cấu hình realtime nếu cần
-   - Trong DB hiện query publication không trả về bảng realtime, dù migrations có từng add `option_trades`. Khi được duyệt triển khai, tôi sẽ xác minh lại bằng lệnh migration/read-only phù hợp.
-   - Nếu bảng `option_trades` chưa nằm trong publication realtime thực tế, sẽ thêm migration an toàn để bật realtime lại cho bảng này.
+5. Thêm trạng thái live nhỏ trên card nếu cần
+   - Hiển thị nhẹ trạng thái `LIVE`/kết nối bằng dot xanh hoặc dùng animation giá hiện có (`AnimatedPrice`) để người dùng thấy giá đang chạy.
+   - Không phá style hiện tại của Products page.
 
-Không thay đổi:
-- Không bật lại thông báo giao dịch cho user trong `user_notifications`.
-- Không xóa trigger chặn notification trade của user, vì trước đó hệ thống đã cố ý chặn loại thông báo này.
-- Không thay đổi logic đặt lệnh hoặc khóa nhiều lệnh cùng lúc.
+File dự kiến chỉnh:
+
+- `src/components/product/ProductList.tsx`
+- `src/components/product/ProductCard.tsx` hoặc thêm component con mới trong cùng khu vực product
+- Có thể chỉnh nhẹ type trong `src/hooks/useProductsData.tsx` nếu cần, nhưng không đổi schema database.
+
+Không cần migration database vì realtime publication và dữ liệu `price_history/products` đã tồn tại và đang có cập nhật.
