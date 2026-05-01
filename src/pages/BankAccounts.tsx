@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert, Check, ChevronsUpDown } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Layout } from "@/components/layout/Layout";
+import { VIETNAM_BANKS } from "@/data/vietnamBanks";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -47,6 +58,7 @@ export default function BankAccountsPage() {
   
   // Form states
   const [bankName, setBankName] = useState("");
+  const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [branch, setBranch] = useState("");
@@ -282,13 +294,61 @@ export default function BankAccountsPage() {
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="bankName"
-                    placeholder="VD: Ngân hàng TMCP Kỹ thương Việt Nam (TCB)"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    className="bg-muted/50 border-border text-sm md:text-base"
-                  />
+                  <Popover open={bankPickerOpen} onOpenChange={setBankPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="bankName"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={bankPickerOpen}
+                        className={cn(
+                          "w-full justify-between bg-muted/50 border-border text-sm md:text-base font-normal h-10",
+                          !bankName && "text-muted-foreground"
+                        )}
+                      >
+                        <span className="truncate text-left">
+                          {bankName || "Chọn ngân hàng..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[100]"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
+                          <CommandGroup>
+                            {VIETNAM_BANKS.map((bank) => (
+                              <CommandItem
+                                key={bank.code}
+                                value={`${bank.shortName} ${bank.name}`}
+                                onSelect={() => {
+                                  setBankName(bank.name);
+                                  setBankPickerOpen(false);
+                                }}
+                              >
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium text-sm">{bank.shortName}</span>
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {bank.name}
+                                  </span>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-2 h-4 w-4",
+                                    bankName === bank.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
