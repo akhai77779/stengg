@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert, Check, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert, Check, ChevronsUpDown, Wallet } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Layout } from "@/components/layout/Layout";
 import { VIETNAM_BANKS } from "@/data/vietnamBanks";
+import { COUNTRIES_CURRENCIES } from "@/data/countriesCurrencies";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -55,6 +56,17 @@ export default function BankAccountsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasWithdrawalPassword, setHasWithdrawalPassword] = useState<boolean | null>(null);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [showCountryStep, setShowCountryStep] = useState(false);
+  const [showCryptoSoon, setShowCryptoSoon] = useState(false);
+
+  // Lưu lựa chọn quốc gia / tiền tệ gần nhất
+  const RECENT_COUNTRY_KEY = "recent_country_code";
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>(() => {
+    if (typeof window === "undefined") return "VN";
+    return localStorage.getItem(RECENT_COUNTRY_KEY) || "VN";
+  });
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const selectedCountry = COUNTRIES_CURRENCIES.find(c => c.countryCode === selectedCountryCode) || COUNTRIES_CURRENCIES[0];
   
   // Form states — khôi phục ngân hàng đã chọn lần trước từ localStorage
   const RECENT_BANK_KEY = "recent_bank_name";
@@ -71,6 +83,26 @@ export default function BankAccountsPage() {
   const isSelectMode = location.state?.selectMode === true;
   const savedCountry = location.state?.savedCountry;
   const savedCurrency = location.state?.savedCurrency;
+
+  const hasBankAccount = accounts.length > 0;
+
+  const handleOpenLinkFlow = () => {
+    if (hasWithdrawalPassword === false) {
+      setShowPasswordPrompt(true);
+      return;
+    }
+    setShowCountryStep(true);
+  };
+
+  const handleConfirmCountry = () => {
+    try {
+      localStorage.setItem(RECENT_COUNTRY_KEY, selectedCountryCode);
+    } catch {
+      // ignore
+    }
+    setShowCountryStep(false);
+    setShowAddForm(true);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -113,6 +145,12 @@ export default function BankAccountsPage() {
 
   const handleAddAccount = async () => {
     if (!user) return;
+
+    if (accounts.length > 0) {
+      toast.error("Bạn chỉ có thể liên kết 1 tài khoản ngân hàng");
+      setShowAddForm(false);
+      return;
+    }
 
     if (!bankName.trim()) {
       toast.error("Vui lòng nhập tên ngân hàng");
@@ -273,20 +311,128 @@ export default function BankAccountsPage() {
 
           {/* Add Button */}
           <div className="mt-6 md:mt-8">
-            <Button
-              onClick={() => {
-                if (hasWithdrawalPassword === false) {
-                  setShowPasswordPrompt(true);
-                  return;
-                }
-                setShowAddForm(true);
-              }}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-h-[48px] md:min-h-[52px] rounded-lg text-sm md:text-base"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Liên kết tài khoản ngân hàng
-            </Button>
+            {hasBankAccount ? (
+              <Button
+                onClick={() => setShowCryptoSoon(true)}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-h-[48px] md:min-h-[52px] rounded-lg text-sm md:text-base"
+              >
+                <Wallet className="w-5 h-5 mr-2" />
+                Thêm địa chỉ ví tiền điện tử (USDT)
+              </Button>
+            ) : (
+              <Button
+                onClick={handleOpenLinkFlow}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-h-[48px] md:min-h-[52px] rounded-lg text-sm md:text-base"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Liên kết tài khoản ngân hàng
+              </Button>
+            )}
+            {hasBankAccount && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Bạn chỉ có thể liên kết 1 tài khoản ngân hàng. Để thay đổi, vui lòng liên hệ hỗ trợ.
+              </p>
+            )}
           </div>
+
+          {/* Country & Currency Step Dialog */}
+          <Dialog open={showCountryStep} onOpenChange={setShowCountryStep}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Chọn quốc gia & loại tiền tệ</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <p className="text-sm text-muted-foreground">
+                  Vui lòng chọn quốc gia và loại tiền tệ trước khi liên kết tài khoản ngân hàng.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Quốc gia / Tiền tệ <span className="text-destructive">*</span>
+                  </Label>
+                  <Popover open={countryPickerOpen} onOpenChange={setCountryPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryPickerOpen}
+                        className="w-full justify-between bg-muted/50 border-border text-sm font-normal h-10"
+                      >
+                        <span className="truncate text-left flex items-center gap-2">
+                          <span className="text-base">{selectedCountry.flag}</span>
+                          <span>{selectedCountry.countryName}</span>
+                          <span className="text-muted-foreground">— {selectedCountry.currencyCode}</span>
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[100]"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                          <CommandGroup>
+                            {COUNTRIES_CURRENCIES.map((c) => (
+                              <CommandItem
+                                key={c.countryCode}
+                                value={`${c.countryName} ${c.currencyCode} ${c.currencyName}`}
+                                onSelect={() => {
+                                  setSelectedCountryCode(c.countryCode);
+                                  setCountryPickerOpen(false);
+                                }}
+                              >
+                                <span className="text-base mr-2">{c.flag}</span>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium text-sm">{c.countryName}</span>
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {c.currencyCode} — {c.currencyName}
+                                  </span>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-2 h-4 w-4",
+                                    selectedCountryCode === c.countryCode ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setShowCountryStep(false)}>
+                  Huỷ
+                </Button>
+                <Button onClick={handleConfirmCountry}>
+                  Tiếp tục
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Crypto Wallet Coming Soon Dialog */}
+          <Dialog open={showCryptoSoon} onOpenChange={setShowCryptoSoon}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-primary" />
+                  Thêm ví tiền điện tử (USDT)
+                </DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Tính năng liên kết ví tiền điện tử (USDT) đang được phát triển và sẽ sớm ra mắt. Vui lòng quay lại sau.
+              </p>
+              <DialogFooter>
+                <Button onClick={() => setShowCryptoSoon(false)}>Đã hiểu</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Add Account Sheet */}
           <Sheet open={showAddForm} onOpenChange={setShowAddForm}>
@@ -296,6 +442,32 @@ export default function BankAccountsPage() {
               </SheetHeader>
               
               <div className="space-y-4 pb-6">
+                {/* Country/Currency summary (read-only, đã chọn ở bước trước) */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] md:text-xs text-muted-foreground">
+                    Quốc gia & Tiền tệ
+                  </Label>
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-2 truncate">
+                      <span className="text-base">{selectedCountry.flag}</span>
+                      <span className="truncate">{selectedCountry.countryName}</span>
+                      <span className="text-muted-foreground">— {selectedCountry.currencyCode}</span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setShowCountryStep(true);
+                      }}
+                    >
+                      Đổi
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
