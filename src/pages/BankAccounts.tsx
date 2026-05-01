@@ -56,8 +56,12 @@ export default function BankAccountsPage() {
   const [hasWithdrawalPassword, setHasWithdrawalPassword] = useState<boolean | null>(null);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   
-  // Form states
-  const [bankName, setBankName] = useState("");
+  // Form states — khôi phục ngân hàng đã chọn lần trước từ localStorage
+  const RECENT_BANK_KEY = "recent_bank_name";
+  const [bankName, setBankName] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(RECENT_BANK_KEY) || "";
+  });
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
@@ -173,7 +177,9 @@ export default function BankAccountsPage() {
   };
 
   const resetForm = () => {
-    setBankName("");
+    // Giữ lại ngân hàng gần đây để lần sau mở form vẫn còn
+    const recent = localStorage.getItem(RECENT_BANK_KEY) || "";
+    setBankName(recent);
     setAccountNumber("");
     setAccountHolder("");
     setBranch("");
@@ -327,6 +333,11 @@ export default function BankAccountsPage() {
                                 value={`${bank.shortName} ${bank.name}`}
                                 onSelect={() => {
                                   setBankName(bank.name);
+                                  try {
+                                    localStorage.setItem(RECENT_BANK_KEY, bank.name);
+                                  } catch {
+                                    // ignore storage errors
+                                  }
                                   setBankPickerOpen(false);
                                 }}
                               >
