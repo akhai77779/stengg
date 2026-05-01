@@ -58,6 +58,24 @@ const TIME_FORMAT: Record<SharedTimeframe, string> = {
   '1d': 'MM/dd',
 };
 
+const MIN_AGGREGATED_CANDLES: Record<SharedTimeframe, number> = {
+  '1m': 30,
+  '5m': 24,
+  '15m': 24,
+  '30m': 24,
+  '1h': 24,
+  '1d': 10,
+};
+
+const FALLBACK_ROW_LIMIT: Record<SharedTimeframe, number> = {
+  '1m': 360,
+  '5m': 600,
+  '15m': 900,
+  '30m': 1000,
+  '1h': 1000,
+  '1d': 1000,
+};
+
 export const SHARED_PRODUCT_CHANNEL_PREFIX = 'shared-product-price';
 
 function hashProductSeed(productId: string) {
@@ -236,9 +254,26 @@ export function useSharedProductRealtime({
 
       if (!mounted) return;
 
-      if (!error && data && data.length > 0) {
-        setRows(data as PriceHistoryRow[]);
-        const last = data[data.length - 1] as PriceHistoryRow;
+      let initialRows = (!error && data ? data : []) as PriceHistoryRow[];
+      const aggregatedCount = initialRows.length ? aggregateOHLCData(initialRows, timeframe).length : 0;
+
+      if (initialRows.length > 0 && aggregatedCount < MIN_AGGREGATED_CANDLES[timeframe]) {
+        const { data: fallback } = await supabase
+          .from('price_history')
+          .select('product_id, recorded_at, open_price, high_price, low_price, close_price, volume')
+          .eq('product_id', productId)
+          .order('recorded_at', { ascending: false })
+          .limit(FALLBACK_ROW_LIMIT[timeframe]);
+
+        const fallbackRows = ((fallback || []) as PriceHistoryRow[]).reverse();
+        if (fallbackRows.length > initialRows.length) {
+          initialRows = fallbackRows;
+        }
+      }
+
+      if (initialRows.length > 0) {
+        setRows(initialRows);
+        const last = initialRows[initialRows.length - 1];
         anchorPriceRef.current = Number(last.close_price);
         latestRealRowAtRef.current = last.recorded_at;
       } else {
@@ -247,7 +282,7 @@ export function useSharedProductRealtime({
           .select('product_id, recorded_at, open_price, high_price, low_price, close_price, volume')
           .eq('product_id', productId)
           .order('recorded_at', { ascending: false })
-          .limit(300);
+          .limit(FALLBACK_ROW_LIMIT[timeframe]);
         if (mounted) {
           const fallbackRows = ((fallback || []) as PriceHistoryRow[]).reverse();
           setRows(fallbackRows);

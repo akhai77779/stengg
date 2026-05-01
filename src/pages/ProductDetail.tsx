@@ -379,6 +379,22 @@ const ProductDetail = () => {
         "1h": 3 * 24 * 60 * 60 * 1000,    // 3 days → ~72 candles
         "1d": 60 * 24 * 60 * 60 * 1000,   // 60 days → ~60 candles
       };
+      const minCandles: Record<string, number> = {
+        "1m": 30,
+        "5m": 24,
+        "15m": 24,
+        "30m": 24,
+        "1h": 24,
+        "1d": 10,
+      };
+      const fallbackLimit: Record<string, number> = {
+        "1m": 360,
+        "5m": 600,
+        "15m": 900,
+        "30m": 1000,
+        "1h": 1000,
+        "1d": 1000,
+      };
       const since = new Date(now.getTime() - (lookbackMs[tf] || lookbackMs["30m"])).toISOString();
 
       const { data: rows, error } = await supabase
@@ -397,14 +413,16 @@ const ProductDetail = () => {
         return;
       }
 
-      if (!rows || rows.length === 0) {
+      const recentCandles = rows && rows.length > 0 ? aggregateCandles(rows, tf) : [];
+
+      if (!rows || rows.length === 0 || recentCandles.length < minCandles[tf]) {
         // Fallback: get latest 200 records regardless of time
         const { data: fallbackRows } = await supabase
           .from("price_history")
           .select("recorded_at, open_price, high_price, low_price, close_price")
           .eq("product_id", id)
           .order("recorded_at", { ascending: false })
-          .limit(200);
+          .limit(fallbackLimit[tf]);
 
         if (fallbackRows && fallbackRows.length > 0) {
           const sorted = fallbackRows.reverse();
