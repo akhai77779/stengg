@@ -349,60 +349,39 @@ export default function BankAccountsPage() {
                   <Label className="text-xs text-muted-foreground">
                     Quốc gia / Tiền tệ <span className="text-destructive">*</span>
                   </Label>
-                  <Popover open={countryPickerOpen} onOpenChange={setCountryPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={countryPickerOpen}
-                        className="w-full justify-between bg-muted/50 border-border text-sm font-normal h-10"
-                      >
-                        <span className="truncate text-left flex items-center gap-2">
-                          <span className="text-base">{selectedCountry.flag}</span>
-                          <span>{selectedCountry.countryName}</span>
-                          <span className="text-muted-foreground">— {selectedCountry.currencyCode}</span>
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[200]"
-                      align="start"
-                    >
-                      <Command>
-                        <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>Không tìm thấy.</CommandEmpty>
-                          <CommandGroup>
-                            {COUNTRIES_CURRENCIES.map((c) => (
-                              <CommandItem
-                                key={c.countryCode}
-                                value={`${c.countryName} ${c.currencyCode} ${c.currencyName}`}
-                                onSelect={() => {
-                                  setSelectedCountryCode(c.countryCode);
-                                  setCountryPickerOpen(false);
-                                }}
-                              >
-                                <span className="text-base mr-2">{c.flag}</span>
-                                <div className="flex flex-col flex-1 min-w-0">
-                                  <span className="font-medium text-sm">{c.countryName}</span>
-                                  <span className="text-xs text-muted-foreground truncate">
-                                    {c.currencyCode} — {c.currencyName}
-                                  </span>
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-2 h-4 w-4",
-                                    selectedCountryCode === c.countryCode ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
+                    <Command>
+                      <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
+                      <CommandList className="max-h-64">
+                        <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                        <CommandGroup>
+                          {COUNTRIES_CURRENCIES.map((c) => (
+                            <CommandItem
+                              key={c.countryCode}
+                              value={`${c.countryName} ${c.currencyCode} ${c.currencyName}`}
+                              onSelect={() => {
+                                setSelectedCountryCode(c.countryCode);
+                              }}
+                            >
+                              <span className="text-base mr-2">{c.flag}</span>
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium text-sm">{c.countryName}</span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {c.currencyCode} — {c.currencyName}
+                                </span>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-2 h-4 w-4",
+                                  selectedCountryCode === c.countryCode ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </div>
                 </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
