@@ -451,66 +451,48 @@ export default function BankAccountsPage() {
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
-                  <Popover open={bankPickerOpen} onOpenChange={setBankPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="bankName"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={bankPickerOpen}
-                        className={cn(
-                          "w-full justify-between bg-muted/50 border-border text-sm md:text-base font-normal h-10",
-                          !bankName && "text-muted-foreground"
-                        )}
-                      >
-                        <span className="truncate text-left">
-                          {bankName || "Chọn ngân hàng..."}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[100]"
-                      align="start"
-                    >
-                      <Command>
-                        <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
-                          <CommandGroup>
-                            {VIETNAM_BANKS.map((bank) => (
-                              <CommandItem
-                                key={bank.code}
-                                value={`${bank.shortName} ${bank.name}`}
-                                onSelect={() => {
-                                  setBankName(bank.name);
-                                  try {
-                                    localStorage.setItem(RECENT_BANK_KEY, bank.name);
-                                  } catch {
-                                    // ignore storage errors
-                                  }
-                                  setBankPickerOpen(false);
-                                }}
-                              >
-                                <div className="flex flex-col flex-1 min-w-0">
-                                  <span className="font-medium text-sm">{bank.shortName}</span>
-                                  <span className="text-xs text-muted-foreground truncate">
-                                    {bank.name}
-                                  </span>
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-2 h-4 w-4",
-                                    bankName === bank.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
+                    <Command>
+                      <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
+                      <CommandList className="max-h-56">
+                        <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
+                        <CommandGroup>
+                          {VIETNAM_BANKS.map((bank) => (
+                            <CommandItem
+                              key={bank.code}
+                              value={`${bank.shortName} ${bank.name}`}
+                              onSelect={() => {
+                                setBankName(bank.name);
+                                try {
+                                  localStorage.setItem(RECENT_BANK_KEY, bank.name);
+                                } catch {
+                                  // ignore storage errors
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium text-sm">{bank.shortName}</span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {bank.name}
+                                </span>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-2 h-4 w-4",
+                                  bankName === bank.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </div>
+                  {bankName && (
+                    <p className="text-xs text-muted-foreground">
+                      Đã chọn: <span className="text-foreground font-medium">{bankName}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
