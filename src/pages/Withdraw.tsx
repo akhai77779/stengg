@@ -434,10 +434,10 @@ export default function WithdrawPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Converted amount in selected currency */}
-                  {currency && amountNum > 0 && (
+                  {/* USD input → VND equivalent (tỷ giá từ cài đặt) */}
+                  {amountNum > 0 && (
                     <div className="text-right text-xs md:text-sm text-muted-foreground mt-1">
-                      ≈ {convertCurrency(amountNum, 'USD', 'VND').toLocaleString('vi-VN')} {currency.toUpperCase()}
+                      ≈ {convertCurrency(amountNum, 'USD', 'VND').toLocaleString('vi-VN')} VND
                     </div>
                   )}
                 </div>
@@ -459,9 +459,9 @@ export default function WithdrawPage() {
                   <Label className="text-xs md:text-sm text-primary mb-2 block">Phí xử lý</Label>
                   <div className="flex items-center justify-between">
                     <span className="text-sm md:text-base text-foreground">{processingFee.toFixed(2)}</span>
-                    {currency && processingFee > 0 && (
+                    {processingFee > 0 && (
                       <span className="text-xs md:text-sm text-muted-foreground">
-                        USD ≈ {convertCurrency(processingFee, 'USD', 'VND').toLocaleString('vi-VN')} {currency.toUpperCase()}
+                        ≈ {convertCurrency(processingFee, 'USD', 'VND').toLocaleString('vi-VN')} VND
                       </span>
                     )}
                   </div>
