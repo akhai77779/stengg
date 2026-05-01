@@ -366,7 +366,7 @@ export default function BankAccountsPage() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[100]"
+                      className="w-[--radix-popover-trigger-width] p-0 bg-popover z-[200]"
                       align="start"
                     >
                       <Command>
