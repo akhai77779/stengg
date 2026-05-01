@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('withdrawal_password_hash')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error('Error fetching profile:', fetchError);
@@ -111,6 +111,14 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: 'Withdrawal password already exists. Use change action instead.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Ensure a profiles row exists (upsert) before updating
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({ id: userId }, { onConflict: 'id' });
+      if (upsertError) {
+        console.error('Error ensuring profile row:', upsertError);
       }
 
       // Hash password with bcrypt (includes automatic salt) - using sync version for Edge Functions
@@ -155,7 +163,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('withdrawal_password_hash')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error('Error fetching profile:', fetchError);
@@ -217,7 +225,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('withdrawal_password_hash')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error('Error fetching profile:', fetchError);
