@@ -146,6 +146,12 @@ export default function BankAccountsPage() {
   const handleAddAccount = async () => {
     if (!user) return;
 
+    if (accounts.length > 0) {
+      toast.error("Bạn chỉ có thể liên kết 1 tài khoản ngân hàng");
+      setShowAddForm(false);
+      return;
+    }
+
     if (!bankName.trim()) {
       toast.error("Vui lòng nhập tên ngân hàng");
       return;
