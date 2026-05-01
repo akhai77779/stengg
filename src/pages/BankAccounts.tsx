@@ -337,22 +337,22 @@ export default function BankAccountsPage() {
 
           {/* Country & Currency Step Dialog */}
           <Dialog open={showCountryStep} onOpenChange={setShowCountryStep}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="w-[calc(100%-1rem)] max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
-                <DialogTitle>Chọn quốc gia & loại tiền tệ</DialogTitle>
+                <DialogTitle className="text-base sm:text-lg">Chọn quốc gia & loại tiền tệ</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-2">
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-3 py-2 flex-1 min-h-0 flex flex-col">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Vui lòng chọn quốc gia và loại tiền tệ trước khi liên kết tài khoản ngân hàng.
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1 min-h-0 flex flex-col">
                   <Label className="text-xs text-muted-foreground">
                     Quốc gia / Tiền tệ <span className="text-destructive">*</span>
                   </Label>
-                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
+                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex-1 min-h-0 flex flex-col">
                     <Command>
                       <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
-                      <CommandList className="max-h-64">
+                      <CommandList className="max-h-[40vh] sm:max-h-80">
                         <CommandEmpty>Không tìm thấy.</CommandEmpty>
                         <CommandGroup>
                           {COUNTRIES_CURRENCIES.map((c) => (
@@ -362,6 +362,7 @@ export default function BankAccountsPage() {
                               onSelect={() => {
                                 setSelectedCountryCode(c.countryCode);
                               }}
+                              className="cursor-pointer py-2"
                             >
                               <span className="text-base mr-2">{c.flag}</span>
                               <div className="flex flex-col flex-1 min-w-0">
@@ -382,13 +383,19 @@ export default function BankAccountsPage() {
                       </CommandList>
                     </Command>
                   </div>
+                  <div className="flex items-center gap-2 rounded-md bg-muted/20 px-3 py-2 text-xs sm:text-sm">
+                    <span className="text-muted-foreground">Đã chọn:</span>
+                    <span className="text-base">{selectedCountry.flag}</span>
+                    <span className="font-medium truncate">{selectedCountry.countryName}</span>
+                    <span className="text-muted-foreground">— {selectedCountry.currencyCode}</span>
+                  </div>
                 </div>
               </div>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setShowCountryStep(false)}>
+              <DialogFooter className="flex-row gap-2 sm:gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowCountryStep(false)} className="flex-1 sm:flex-none">
                   Huỷ
                 </Button>
-                <Button onClick={handleConfirmCountry}>
+                <Button onClick={handleConfirmCountry} className="flex-1 sm:flex-none">
                   Tiếp tục
                 </Button>
               </DialogFooter>
@@ -413,14 +420,64 @@ export default function BankAccountsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Add Account Sheet */}
+          {/* Add Account — Sheet on mobile, Dialog on desktop */}
+          {/* Mobile: bottom sheet */}
           <Sheet open={showAddForm} onOpenChange={setShowAddForm}>
-            <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-2xl bg-background">
-              <SheetHeader className="text-center pb-4">
-                <SheetTitle className="text-base md:text-lg font-semibold">Thêm tài khoản ngân hàng</SheetTitle>
+            <SheetContent
+              side="bottom"
+              className="md:hidden h-[90vh] max-h-[90vh] rounded-t-2xl bg-background flex flex-col p-4"
+            >
+              <SheetHeader className="text-center pb-3 shrink-0">
+                <SheetTitle className="text-base font-semibold">Thêm tài khoản ngân hàng</SheetTitle>
               </SheetHeader>
-              
-              <div className="space-y-4 pb-6">
+              <div className="space-y-4 pb-6 overflow-y-auto flex-1 -mx-1 px-1">
+                {renderAddForm()}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Desktop: centered dialog */}
+          <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+            <DialogContent className="hidden md:flex max-w-lg max-h-[85vh] flex-col p-6">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-semibold">Thêm tài khoản ngân hàng</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2 overflow-y-auto flex-1 -mx-1 px-1">
+                {renderAddForm()}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Withdrawal Password Required Dialog */}
+      <Dialog open={showPasswordPrompt} onOpenChange={setShowPasswordPrompt}>
+        <DialogContent className="w-[calc(100%-1rem)] max-w-md p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <ShieldAlert className="w-5 h-5 text-destructive" />
+              Yêu cầu tạo mật khẩu rút tiền
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Bạn cần tạo mật khẩu rút tiền trước khi liên kết tài khoản ngân hàng. Vui lòng đến trang Bảo mật để thiết lập.
+          </p>
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setShowPasswordPrompt(false)} className="flex-1 sm:flex-none">
+              Để sau
+            </Button>
+            <Button onClick={() => navigate('/security')} className="flex-1 sm:flex-none">
+              Đến trang Bảo mật
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Layout>
+  );
+
+  function renderAddForm() {
+    return (
+      <>
                 {/* Country/Currency summary (read-only, đã chọn ở bước trước) */}
                 <div className="space-y-2">
                   <Label className="text-[10px] md:text-xs text-muted-foreground">
@@ -454,7 +511,7 @@ export default function BankAccountsPage() {
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
                     <Command>
                       <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
-                      <CommandList className="max-h-56">
+                      <CommandList className="max-h-48 md:max-h-64">
                         <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
                         <CommandGroup>
                           {VIETNAM_BANKS.map((bank) => (
@@ -469,6 +526,7 @@ export default function BankAccountsPage() {
                                   // ignore storage errors
                                 }
                               }}
+                              className="cursor-pointer py-2"
                             >
                               <div className="flex flex-col flex-1 min-w-0">
                                 <span className="font-medium text-sm">{bank.shortName}</span>
@@ -548,34 +606,7 @@ export default function BankAccountsPage() {
                     "Xác nhận thêm tài khoản"
                   )}
                 </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-
-      {/* Withdrawal Password Required Dialog */}
-      <Dialog open={showPasswordPrompt} onOpenChange={setShowPasswordPrompt}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-destructive" />
-              Yêu cầu tạo mật khẩu rút tiền
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Bạn cần tạo mật khẩu rút tiền trước khi liên kết tài khoản ngân hàng. Vui lòng đến trang Bảo mật để thiết lập.
-          </p>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowPasswordPrompt(false)}>
-              Để sau
-            </Button>
-            <Button onClick={() => navigate('/security')}>
-              Đến trang Bảo mật
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Layout>
-  );
+      </>
+    );
+  }
 }
