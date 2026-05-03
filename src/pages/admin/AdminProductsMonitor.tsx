@@ -129,10 +129,12 @@ export default function AdminProductsMonitor() {
   });
 
   const displayCandles = useMemo(() => {
-    if (sharedRealtime.engineCandles.length > 0) return sharedRealtime.engineCandles;
-    if (!effectiveProductId) return [];
-    const baseCandles = getCandles(effectiveProductId);
-    return timeInterval === '1M' ? baseCandles : aggregateCandles(baseCandles, timeInterval);
+    if (effectiveProductId) {
+      const baseCandles = getCandles(effectiveProductId);
+      const localCandles = timeInterval === '1M' ? baseCandles : aggregateCandles(baseCandles, timeInterval);
+      if (localCandles.length > 0) return localCandles;
+    }
+    return sharedRealtime.engineCandles;
   }, [effectiveProductId, getCandles, sharedRealtime.engineCandles, timeInterval]);
 
   const chartOHLCData: OHLCData[] = useMemo(() => {
@@ -156,7 +158,8 @@ export default function AdminProductsMonitor() {
     };
   }, [displayCandles]);
 
-  const currentPrice = sharedRealtime.latestPrice ?? (effectiveProductId ? getCurrentPrice(effectiveProductId) : 0);
+  const localPrice = effectiveProductId ? getCurrentPrice(effectiveProductId) : 0;
+  const currentPrice = localPrice || sharedRealtime.latestPrice || 0;
   const activeShock = effectiveProductId ? getActiveShock(effectiveProductId) : null;
   const activeShockCount = shockEvents.filter(e => !e.isComplete).length;
 

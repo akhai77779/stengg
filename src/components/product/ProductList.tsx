@@ -44,7 +44,7 @@ function LiveProductCard({ product, formatPrice, formatVolume, formatChange }: L
       price_change: realtime.product?.price_change ?? product.price_change,
       volume: realtime.product?.volume ?? product.volume,
       turnover: realtime.product?.turnover ?? product.turnover,
-      candles: liveCandles.length >= 2 ? liveCandles : product.candles,
+      candles: liveCandles,
     };
   }, [product, realtime.candles, realtime.highPrice, realtime.latestPrice, realtime.lowPrice, realtime.product]);
 
