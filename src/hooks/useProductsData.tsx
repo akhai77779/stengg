@@ -47,36 +47,6 @@ export function useProductsData(userId: string | undefined) {
 
     setProducts(data.map(p => ({ ...p, candles: [] })));
     setIsLoading(false);
-
-    const productIds = data.map(p => p.id);
-    if (productIds.length === 0) return;
-
-    // Fetch 30 most recent candles per product in parallel to ensure even coverage
-    const candlePromises = productIds.map(pid =>
-      supabase
-        .from('price_history')
-        .select('product_id, open_price, high_price, low_price, close_price, recorded_at')
-        .eq('product_id', pid)
-        .order('recorded_at', { ascending: false })
-        .limit(30)
-    );
-    const candleResults = await Promise.all(candlePromises);
-    const allCandles = candleResults.flatMap(r => r.data || []);
-
-    if (!allCandles) return;
-
-    const candleMap: Record<string, CandleRow[]> = {};
-    for (const c of allCandles) {
-      if (!candleMap[c.product_id]) candleMap[c.product_id] = [];
-      if (candleMap[c.product_id].length < 30) {
-        candleMap[c.product_id].push(c as CandleRow);
-      }
-    }
-    for (const id of Object.keys(candleMap)) {
-      candleMap[id].reverse();
-    }
-
-    setProducts(data.map(p => ({ ...p, candles: candleMap[p.id] || [] })));
   }, []);
 
   useEffect(() => {
