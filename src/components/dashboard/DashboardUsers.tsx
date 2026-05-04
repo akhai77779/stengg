@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil } from 'lucide-react';
+import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -108,6 +108,13 @@ export function DashboardUsers() {
   // Bank accounts for selected user
   const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
+
+  // Bank account add/edit dialog
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
+  const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', account_holder: '', branch: '' });
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [deletingBankId, setDeletingBankId] = useState<string | null>(null);
 
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
@@ -216,6 +223,66 @@ export function DashboardUsers() {
       setUserBankAccounts(data || []);
     }
     setIsLoadingBankAccounts(false);
+  };
+
+  const openAddBankDialog = () => {
+    setEditingBank(null);
+    setBankForm({ bank_name: '', account_number: '', account_holder: '', branch: '' });
+    setBankDialogOpen(true);
+  };
+
+  const openEditBankDialog = (account: BankAccount) => {
+    setEditingBank(account);
+    setBankForm({
+      bank_name: account.bank_name,
+      account_number: account.account_number,
+      account_holder: account.account_holder,
+      branch: account.branch || '',
+    });
+    setBankDialogOpen(true);
+  };
+
+  const handleSaveBankAccount = async () => {
+    if (!selectedUser) return;
+    if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
+      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng nhập đầy đủ tên ngân hàng, số tài khoản và chủ tài khoản.' });
+      return;
+    }
+    setIsSavingBank(true);
+    const payload = {
+      bank_name: bankForm.bank_name.trim(),
+      account_number: bankForm.account_number.trim(),
+      account_holder: bankForm.account_holder.trim().toUpperCase(),
+      branch: bankForm.branch.trim() || null,
+    };
+    let error;
+    if (editingBank) {
+      ({ error } = await supabase.from('bank_accounts').update(payload).eq('id', editingBank.id));
+    } else {
+      ({ error } = await supabase.from('bank_accounts').insert({ ...payload, user_id: selectedUser.id }));
+    }
+    setIsSavingBank(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể lưu tài khoản ngân hàng.' });
+      return;
+    }
+    toast({ title: 'Thành công', description: editingBank ? 'Đã cập nhật tài khoản ngân hàng.' : 'Đã thêm tài khoản ngân hàng.' });
+    setBankDialogOpen(false);
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
+  const handleDeleteBankAccount = async (account: BankAccount) => {
+    if (!selectedUser) return;
+    if (!window.confirm(`Xóa tài khoản ${account.bank_name} - ${account.account_number}?`)) return;
+    setDeletingBankId(account.id);
+    const { error } = await supabase.from('bank_accounts').delete().eq('id', account.id);
+    setDeletingBankId(null);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể xóa tài khoản.' });
+      return;
+    }
+    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
+    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleShowUserDetail = (profile: Profile) => {
@@ -1035,10 +1102,16 @@ export function DashboardUsers() {
 
               {/* Bank Accounts Section */}
               <div className="border-t pt-4">
-                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  Tài khoản ngân hàng đã lưu
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-muted-foreground text-sm flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Tài khoản ngân hàng đã lưu
+                  </p>
+                  <Button size="sm" variant="outline" onClick={openAddBankDialog} className="h-7 px-2 text-xs">
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Thêm
+                  </Button>
+                </div>
                 {isLoadingBankAccounts ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -1048,19 +1121,39 @@ export function DashboardUsers() {
                 ) : (
                   <div className="space-y-2">
                     {userBankAccounts.map((account) => (
-                      <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm">
-                        <div className="font-medium">{account.bank_name}</div>
-                        <div className="text-muted-foreground">
-                          STK: <span className="font-mono">{account.account_number}</span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          Chủ TK: {account.account_holder}
-                        </div>
-                        {account.branch && (
-                          <div className="text-muted-foreground text-xs">
-                            Chi nhánh: {account.branch}
+                      <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">{account.bank_name}</div>
+                          <div className="text-muted-foreground">
+                            STK: <span className="font-mono">{account.account_number}</span>
                           </div>
-                        )}
+                          <div className="text-muted-foreground">
+                            Chủ TK: {account.account_holder}
+                          </div>
+                          {account.branch && (
+                            <div className="text-muted-foreground text-xs">
+                              Chi nhánh: {account.branch}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditBankDialog(account)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteBankAccount(account)}
+                            disabled={deletingBankId === account.id}
+                          >
+                            {deletingBankId === account.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1625,6 +1718,63 @@ export function DashboardUsers() {
             <Button onClick={handleEditUser} disabled={isEditingUser}>
               {isEditingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bank Account Add/Edit Dialog (admin) */}
+      <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingBank ? 'Sửa tài khoản ngân hàng' : 'Thêm tài khoản ngân hàng'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUser?.full_name || selectedUser?.email || selectedUser?.phone || 'Người dùng'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Tên ngân hàng *</Label>
+              <Input
+                value={bankForm.bank_name}
+                onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })}
+                placeholder="VD: Vietcombank"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Số tài khoản *</Label>
+              <Input
+                value={bankForm.account_number}
+                onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })}
+                placeholder="VD: 1234567890"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chủ tài khoản *</Label>
+              <Input
+                value={bankForm.account_holder}
+                onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })}
+                placeholder="VIẾT HOA, KHÔNG DẤU"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chi nhánh (tuỳ chọn)</Label>
+              <Input
+                value={bankForm.branch}
+                onChange={(e) => setBankForm({ ...bankForm, branch: e.target.value })}
+                placeholder="VD: CN HCM"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBankDialogOpen(false)} disabled={isSavingBank}>
+              Hủy
+            </Button>
+            <Button onClick={handleSaveBankAccount} disabled={isSavingBank}>
+              {isSavingBank ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {editingBank ? 'Cập nhật' : 'Thêm'}
             </Button>
           </DialogFooter>
         </DialogContent>
