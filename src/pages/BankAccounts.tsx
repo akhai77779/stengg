@@ -23,12 +23,6 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -337,7 +331,11 @@ export default function BankAccountsPage() {
 
           {/* Country & Currency Step Dialog */}
           <Dialog open={showCountryStep} onOpenChange={setShowCountryStep}>
-            <DialogContent className="w-[calc(100%-1rem)] max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogContent
+              className="w-[calc(100%-1rem)] max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-hidden flex flex-col"
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
+            >
               <DialogHeader>
                 <DialogTitle className="text-base sm:text-lg">Chọn quốc gia & loại tiền tệ</DialogTitle>
               </DialogHeader>
@@ -423,29 +421,28 @@ export default function BankAccountsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Add Account — Sheet on mobile, Dialog on desktop */}
-          {/* Mobile: bottom sheet */}
-          <Sheet open={showAddForm} onOpenChange={setShowAddForm}>
-            <SheetContent
-              side="bottom"
-              className="md:hidden h-[90vh] max-h-[90vh] rounded-t-2xl bg-background flex flex-col p-4"
-            >
-              <SheetHeader className="text-center pb-3 shrink-0">
-                <SheetTitle className="text-base font-semibold">Thêm tài khoản ngân hàng</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 pb-6 overflow-y-auto flex-1 -mx-1 px-1">
-                {renderAddForm()}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Desktop: centered dialog */}
+          {/* Add Account — single responsive Dialog (bottom-sheet on mobile, centered on desktop) */}
           <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-            <DialogContent className="hidden md:flex max-w-lg max-h-[85vh] flex-col p-6">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-semibold">Thêm tài khoản ngân hàng</DialogTitle>
+            <DialogContent
+              className="flex flex-col p-4 sm:p-6 gap-3
+                         w-screen max-w-none h-[90vh] max-h-[90vh] rounded-t-2xl rounded-b-none
+                         left-0 right-0 top-auto bottom-0 translate-x-0 translate-y-0
+                         data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom
+                         md:left-[50%] md:top-[50%] md:bottom-auto md:right-auto
+                         md:translate-x-[-50%] md:translate-y-[-50%]
+                         md:w-full md:max-w-lg md:h-auto md:max-h-[85vh] md:rounded-lg"
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
+            >
+              <DialogHeader className="shrink-0">
+                <DialogTitle className="text-base md:text-lg font-semibold text-center md:text-left">
+                  Thêm tài khoản ngân hàng
+                </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-2 overflow-y-auto flex-1 -mx-1 px-1">
+              <div
+                className="space-y-4 overflow-y-auto overscroll-contain flex-1 -mx-1 px-1 pb-2"
+                style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+              >
                 {renderAddForm()}
               </div>
             </DialogContent>
