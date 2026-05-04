@@ -25,6 +25,7 @@ import {
   UserCheck,
   MessageCircle,
   LayoutDashboard,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -69,6 +70,7 @@ function AdminSidebar({ onNavigate, pendingVerificationCount, pendingTransaction
       { to: "/admin/audit-logs", label: t('admin.auditLogs'), icon: ClipboardList },
       { to: "/admin/users", label: t('admin.users'), icon: Users, badgeKey: 'new_user' },
       { to: "/admin/settings", label: t('admin.settings'), icon: Settings },
+      { to: "/admin/data-health", label: "Data Health", icon: Activity },
     ],
     [t]
   );
