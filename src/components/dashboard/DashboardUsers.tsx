@@ -1102,10 +1102,16 @@ export function DashboardUsers() {
 
               {/* Bank Accounts Section */}
               <div className="border-t pt-4">
-                <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  Tài khoản ngân hàng đã lưu
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-muted-foreground text-sm flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Tài khoản ngân hàng đã lưu
+                  </p>
+                  <Button size="sm" variant="outline" onClick={openAddBankDialog} className="h-7 px-2 text-xs">
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Thêm
+                  </Button>
+                </div>
                 {isLoadingBankAccounts ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -1115,19 +1121,39 @@ export function DashboardUsers() {
                 ) : (
                   <div className="space-y-2">
                     {userBankAccounts.map((account) => (
-                      <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm">
-                        <div className="font-medium">{account.bank_name}</div>
-                        <div className="text-muted-foreground">
-                          STK: <span className="font-mono">{account.account_number}</span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          Chủ TK: {account.account_holder}
-                        </div>
-                        {account.branch && (
-                          <div className="text-muted-foreground text-xs">
-                            Chi nhánh: {account.branch}
+                      <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">{account.bank_name}</div>
+                          <div className="text-muted-foreground">
+                            STK: <span className="font-mono">{account.account_number}</span>
                           </div>
-                        )}
+                          <div className="text-muted-foreground">
+                            Chủ TK: {account.account_holder}
+                          </div>
+                          {account.branch && (
+                            <div className="text-muted-foreground text-xs">
+                              Chi nhánh: {account.branch}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditBankDialog(account)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteBankAccount(account)}
+                            disabled={deletingBankId === account.id}
+                          >
+                            {deletingBankId === account.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
