@@ -75,6 +75,7 @@ export default function BankAccountsPage() {
     return localStorage.getItem(RECENT_BANK_KEY) || "";
   });
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [branch, setBranch] = useState("");
@@ -351,16 +352,26 @@ export default function BankAccountsPage() {
                   </Label>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex-1 min-h-0 flex flex-col">
                     <Command>
-                      <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
+                      <CommandInput
+                        value={countrySearch}
+                        onChange={(event) => setCountrySearch(event.target.value)}
+                        placeholder="Tìm quốc gia hoặc tiền tệ..."
+                        className="h-9"
+                      />
                       <CommandList className="max-h-[40vh] sm:max-h-80">
                         <CommandEmpty>Không tìm thấy.</CommandEmpty>
                         <CommandGroup>
-                          {COUNTRIES_CURRENCIES.map((c) => (
+                          {COUNTRIES_CURRENCIES.filter((c) =>
+                            `${c.countryName} ${c.currencyCode} ${c.currencyName}`
+                              .toLowerCase()
+                              .includes(countrySearch.toLowerCase())
+                          ).map((c) => (
                             <CommandItem
                               key={c.countryCode}
                               value={`${c.countryName} ${c.currencyCode} ${c.currencyName}`}
                               onSelect={() => {
                                 setSelectedCountryCode(c.countryCode);
+                                setCountrySearch("");
                               }}
                               className="cursor-pointer py-2"
                             >
@@ -510,11 +521,20 @@ export default function BankAccountsPage() {
                   </Label>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
                     <Command>
-                      <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
+                      <CommandInput
+                        value={bankName}
+                        onChange={(event) => setBankName(event.target.value)}
+                        placeholder="Tìm ngân hàng..."
+                        className="h-9"
+                      />
                       <CommandList className="max-h-48 md:max-h-64">
                         <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
                         <CommandGroup>
-                          {VIETNAM_BANKS.map((bank) => (
+                          {VIETNAM_BANKS.filter((bank) =>
+                            `${bank.shortName} ${bank.name}`
+                              .toLowerCase()
+                              .includes(bankName.toLowerCase())
+                          ).map((bank) => (
                             <CommandItem
                               key={bank.code}
                               value={`${bank.shortName} ${bank.name}`}
