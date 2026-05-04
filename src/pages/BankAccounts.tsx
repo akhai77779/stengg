@@ -350,9 +350,12 @@ export default function BankAccountsPage() {
                     Quốc gia / Tiền tệ <span className="text-destructive">*</span>
                   </Label>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex-1 min-h-0 flex flex-col">
-                    <Command>
+                    <Command shouldFilter={true}>
                       <CommandInput placeholder="Tìm quốc gia hoặc tiền tệ..." className="h-9" />
-                      <CommandList className="max-h-[40vh] sm:max-h-80">
+                      <CommandList
+                        className="max-h-[40vh] sm:max-h-80 overflow-y-auto overscroll-contain"
+                        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+                      >
                         <CommandEmpty>Không tìm thấy.</CommandEmpty>
                         <CommandGroup>
                           {COUNTRIES_CURRENCIES.map((c) => (
@@ -509,9 +512,12 @@ export default function BankAccountsPage() {
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
-                    <Command>
+                    <Command shouldFilter={true}>
                       <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
-                      <CommandList className="max-h-48 md:max-h-64">
+                      <CommandList
+                        className="max-h-[260px] md:max-h-64 overflow-y-auto overscroll-contain"
+                        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+                      >
                         <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
                         <CommandGroup>
                           {VIETNAM_BANKS.map((bank) => (
