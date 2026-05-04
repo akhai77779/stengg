@@ -331,7 +331,11 @@ export default function BankAccountsPage() {
 
           {/* Country & Currency Step Dialog */}
           <Dialog open={showCountryStep} onOpenChange={setShowCountryStep}>
-            <DialogContent className="w-[calc(100%-1rem)] max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogContent
+              className="w-[calc(100%-1rem)] max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-hidden flex flex-col"
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
+            >
               <DialogHeader>
                 <DialogTitle className="text-base sm:text-lg">Chọn quốc gia & loại tiền tệ</DialogTitle>
               </DialogHeader>
@@ -427,6 +431,8 @@ export default function BankAccountsPage() {
                          md:left-[50%] md:top-[50%] md:bottom-auto md:right-auto
                          md:translate-x-[-50%] md:translate-y-[-50%]
                          md:w-full md:max-w-lg md:h-auto md:max-h-[85vh] md:rounded-lg"
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
             >
               <DialogHeader className="shrink-0">
                 <DialogTitle className="text-base md:text-lg font-semibold text-center md:text-left">
