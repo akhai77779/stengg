@@ -1722,6 +1722,63 @@ export function DashboardUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Account Add/Edit Dialog (admin) */}
+      <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingBank ? 'Sửa tài khoản ngân hàng' : 'Thêm tài khoản ngân hàng'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUser?.full_name || selectedUser?.email || selectedUser?.phone || 'Người dùng'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Tên ngân hàng *</Label>
+              <Input
+                value={bankForm.bank_name}
+                onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })}
+                placeholder="VD: Vietcombank"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Số tài khoản *</Label>
+              <Input
+                value={bankForm.account_number}
+                onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })}
+                placeholder="VD: 1234567890"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chủ tài khoản *</Label>
+              <Input
+                value={bankForm.account_holder}
+                onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })}
+                placeholder="VIẾT HOA, KHÔNG DẤU"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chi nhánh (tuỳ chọn)</Label>
+              <Input
+                value={bankForm.branch}
+                onChange={(e) => setBankForm({ ...bankForm, branch: e.target.value })}
+                placeholder="VD: CN HCM"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBankDialogOpen(false)} disabled={isSavingBank}>
+              Hủy
+            </Button>
+            <Button onClick={handleSaveBankAccount} disabled={isSavingBank}>
+              {isSavingBank ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {editingBank ? 'Cập nhật' : 'Thêm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
