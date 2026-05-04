@@ -109,6 +109,13 @@ export function DashboardUsers() {
   const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
 
+  // Bank account add/edit dialog
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
+  const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', account_holder: '', branch: '' });
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [deletingBankId, setDeletingBankId] = useState<string | null>(null);
+
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
   const [userVerification, setUserVerification] = useState<IdentityVerification | null>(null);
