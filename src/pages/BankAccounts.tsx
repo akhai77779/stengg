@@ -354,7 +354,7 @@ export default function BankAccountsPage() {
                     <Command>
                       <CommandInput
                         value={countrySearch}
-                        onChange={(event) => setCountrySearch(event.target.value)}
+                        onValueChange={(value) => setCountrySearch(value)}
                         placeholder="Tìm quốc gia hoặc tiền tệ..."
                         className="h-9"
                       />
@@ -523,7 +523,7 @@ export default function BankAccountsPage() {
                     <Command>
                       <CommandInput
                         value={bankName}
-                        onChange={(event) => setBankName(event.target.value)}
+                        onValueChange={(value) => setBankName(value)}
                         placeholder="Tìm ngân hàng..."
                         className="h-9"
                       />
