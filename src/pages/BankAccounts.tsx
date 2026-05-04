@@ -509,9 +509,12 @@ export default function BankAccountsPage() {
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
-                    <Command>
+                    <Command shouldFilter={true}>
                       <CommandInput placeholder="Tìm ngân hàng..." className="h-9" />
-                      <CommandList className="max-h-48 md:max-h-64">
+                      <CommandList
+                        className="max-h-[260px] md:max-h-64 overflow-y-auto overscroll-contain"
+                        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+                      >
                         <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
                         <CommandGroup>
                           {VIETNAM_BANKS.map((bank) => (
