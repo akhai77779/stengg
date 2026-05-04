@@ -225,6 +225,66 @@ export function DashboardUsers() {
     setIsLoadingBankAccounts(false);
   };
 
+  const openAddBankDialog = () => {
+    setEditingBank(null);
+    setBankForm({ bank_name: '', account_number: '', account_holder: '', branch: '' });
+    setBankDialogOpen(true);
+  };
+
+  const openEditBankDialog = (account: BankAccount) => {
+    setEditingBank(account);
+    setBankForm({
+      bank_name: account.bank_name,
+      account_number: account.account_number,
+      account_holder: account.account_holder,
+      branch: account.branch || '',
+    });
+    setBankDialogOpen(true);
+  };
+
+  const handleSaveBankAccount = async () => {
+    if (!selectedUser) return;
+    if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
+      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng nhập đầy đủ tên ngân hàng, số tài khoản và chủ tài khoản.' });
+      return;
+    }
+    setIsSavingBank(true);
+    const payload = {
+      bank_name: bankForm.bank_name.trim(),
+      account_number: bankForm.account_number.trim(),
+      account_holder: bankForm.account_holder.trim().toUpperCase(),
+      branch: bankForm.branch.trim() || null,
+    };
+    let error;
+    if (editingBank) {
+      ({ error } = await supabase.from('bank_accounts').update(payload).eq('id', editingBank.id));
+    } else {
+      ({ error } = await supabase.from('bank_accounts').insert({ ...payload, user_id: selectedUser.id }));
+    }
+    setIsSavingBank(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể lưu tài khoản ngân hàng.' });
+      return;
+    }
+    toast({ title: 'Thành công', description: editingBank ? 'Đã cập nhật tài khoản ngân hàng.' : 'Đã thêm tài khoản ngân hàng.' });
+    setBankDialogOpen(false);
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
+  const handleDeleteBankAccount = async (account: BankAccount) => {
+    if (!selectedUser) return;
+    if (!window.confirm(`Xóa tài khoản ${account.bank_name} - ${account.account_number}?`)) return;
+    setDeletingBankId(account.id);
+    const { error } = await supabase.from('bank_accounts').delete().eq('id', account.id);
+    setDeletingBankId(null);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể xóa tài khoản.' });
+      return;
+    }
+    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
   const handleShowUserDetail = (profile: Profile) => {
     setSelectedUser(profile);
     setShowDetailDialog(true);
