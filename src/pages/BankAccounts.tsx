@@ -521,34 +521,35 @@ export default function BankAccountsPage() {
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
-                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden">
+                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex flex-col">
                     <Command>
                       <CommandInput
-                        value={bankName}
-                        onValueChange={(value) => setBankName(value)}
+                        value={bankSearch}
+                        onValueChange={(value) => setBankSearch(value)}
                         placeholder="Tìm ngân hàng..."
                         className="h-9"
                       />
-                      <CommandList className="max-h-48 md:max-h-64">
+                      <CommandList className="max-h-[40vh] md:max-h-64 overscroll-contain">
                         <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
                         <CommandGroup>
                           {VIETNAM_BANKS.filter((bank) =>
                             `${bank.shortName} ${bank.name}`
                               .toLowerCase()
-                              .includes(bankName.toLowerCase())
+                              .includes(bankSearch.toLowerCase())
                           ).map((bank) => (
                             <CommandItem
                               key={bank.code}
                               value={`${bank.shortName} ${bank.name}`}
                               onSelect={() => {
                                 setBankName(bank.name);
+                                setBankSearch("");
                                 try {
                                   localStorage.setItem(RECENT_BANK_KEY, bank.name);
                                 } catch {
                                   // ignore storage errors
                                 }
                               }}
-                              className="cursor-pointer py-2"
+                              className="cursor-pointer py-3 touch-manipulation"
                             >
                               <div className="flex flex-col flex-1 min-w-0">
                                 <span className="font-medium text-sm">{bank.shortName}</span>
@@ -569,9 +570,20 @@ export default function BankAccountsPage() {
                     </Command>
                   </div>
                   {bankName && (
-                    <p className="text-xs text-muted-foreground">
-                      Đã chọn: <span className="text-foreground font-medium">{bankName}</span>
-                    </p>
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs">
+                      <span className="truncate">
+                        Đã chọn: <span className="text-foreground font-medium">{bankName}</span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs shrink-0"
+                        onClick={() => setBankName("")}
+                      >
+                        Xoá
+                      </Button>
+                    </div>
                   )}
                 </div>
 
