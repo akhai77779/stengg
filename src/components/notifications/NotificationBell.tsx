@@ -89,8 +89,11 @@ export function NotificationBell({ className }: NotificationBellProps) {
       const storedTab = window.localStorage.getItem(NOTIFICATION_TAB_STORAGE_KEY);
       setActiveTab(isNotificationTab(storedTab) ? storedTab : routeSyncedTab);
     }
+    if (nextOpen && userUnreadCount > 0) {
+      markAllUserAsRead();
+    }
     setOpen(nextOpen);
-  }, [isAdmin, routeSyncedTab]);
+  }, [isAdmin, routeSyncedTab, userUnreadCount, markAllUserAsRead]);
 
   useEffect(() => {
     if (!isAdmin && activeTab !== "user") {
@@ -558,7 +561,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
         <Separator />
         <div className="p-2 text-center">
           <p className="text-xs text-muted-foreground">
-            {isAdmin ? "Thông báo tổng hợp: Cá nhân + Hệ thống + Live Chat" : "Thông báo được lưu trong 30 ngày"}
+            {isAdmin ? "Thông báo tổng hợp: Cá nhân + Hệ thống + Live Chat" : "Thông báo được lưu trong 7 ngày"}
           </p>
         </div>
       </PopoverContent>
