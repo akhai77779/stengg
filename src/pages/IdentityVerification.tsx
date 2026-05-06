@@ -251,7 +251,7 @@ export default function IdentityVerification() {
             title: '🪪 Yêu cầu xác minh danh tính mới',
             message: `${profile.full_name} đã gửi ${docTypeLabel} (${documentNumber}) cần được duyệt.`,
             notification_type: 'info',
-            user_email: profile?.email || user.email || undefined,
+            user_email: user.email || undefined,
           },
         });
       } catch (notifyError) {
