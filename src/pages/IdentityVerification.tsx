@@ -198,7 +198,17 @@ export default function IdentityVerification() {
   };
 
   const handleSubmitVerification = async () => {
-    if (!user?.id || !profile?.full_name) return;
+    if (!user?.id) return;
+
+    const fullName = profile?.full_name || (user.user_metadata as any)?.full_name || '';
+    if (!fullName) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Vui lòng cập nhật họ tên trong Hồ sơ trước khi gửi xác minh.',
+      });
+      return;
+    }
 
     if (!documentNumber || !dateOfBirth || !address || !expiryDate || !frontImage || !backImage) {
       toast({
@@ -216,7 +226,7 @@ export default function IdentityVerification() {
         user_id: user.id,
         document_type: documentType,
         document_number: documentNumber,
-        full_name: profile.full_name,
+        full_name: fullName,
         date_of_birth: dateOfBirth,
         address: address,
         expiry_date: expiryDate,
@@ -249,7 +259,7 @@ export default function IdentityVerification() {
           body: {
             type: 'notification',
             title: '🪪 Yêu cầu xác minh danh tính mới',
-            message: `${profile.full_name} đã gửi ${docTypeLabel} (${documentNumber}) cần được duyệt.`,
+            message: `${fullName} đã gửi ${docTypeLabel} (${documentNumber}) cần được duyệt.`,
             notification_type: 'info',
             user_email: user.email || undefined,
           },
