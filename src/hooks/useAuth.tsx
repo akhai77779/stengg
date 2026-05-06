@@ -162,10 +162,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string): Promise<{ error: Error | null; frozenReason?: string }> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const isTransientAuthError = (message: string) => {
+      const lowerMessage = message.toLowerCase();
+      return lowerMessage.includes('database error granting user')
+        || lowerMessage.includes('unexpected_failure')
+        || lowerMessage.includes('read-only transaction')
+        || lowerMessage.includes('failed to fetch')
+        || lowerMessage.includes('network');
+    };
+
+    let authResult = await supabase.auth.signInWithPassword({ email, password });
+
+    for (let attempt = 1; authResult.error && attempt <= 2 && isTransientAuthError(authResult.error.message); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 900));
+      authResult = await supabase.auth.signInWithPassword({ email, password });
+    }
+
+    const { data, error } = authResult;
     
     if (error) {
       return { error };
