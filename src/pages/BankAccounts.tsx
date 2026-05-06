@@ -595,8 +595,10 @@ export default function BankAccountsPage() {
                     id="accountNumber"
                     placeholder="Nhập số tài khoản"
                     value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    className="bg-muted/50 border-border text-sm md:text-base"
+                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className="bg-muted/50 border-border text-base h-12"
                   />
                 </div>
 
@@ -609,7 +611,8 @@ export default function BankAccountsPage() {
                     placeholder="VD: NGUYEN VAN A"
                     value={accountHolder}
                     onChange={(e) => setAccountHolder(e.target.value)}
-                    className="bg-muted/50 border-border uppercase text-sm md:text-base"
+                    autoComplete="off"
+                    className="bg-muted/50 border-border uppercase text-base h-12"
                   />
                 </div>
 
@@ -622,7 +625,7 @@ export default function BankAccountsPage() {
                     placeholder="VD: BẮC NINH (không bắt buộc)"
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
-                    className="bg-muted/50 border-border text-sm md:text-base"
+                    className="bg-muted/50 border-border text-base h-12"
                   />
                 </div>
 
