@@ -42,7 +42,7 @@ export function Header() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/login');
   };
 
   const isPhoneUser = (email: string) => email?.endsWith('@phone.local');
