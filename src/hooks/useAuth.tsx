@@ -112,18 +112,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminRole(session.user.id);
-      } else {
-        setIsAdminLoading(false);
-      }
+    // Safety timeout: never let the app spin forever if Supabase is slow/unreachable
+    const loadingTimeout = setTimeout(() => {
+      console.warn('[Auth] getSession timed out after 5s, releasing loading state');
       setIsLoading(false);
-    });
+      setIsAdminLoading(false);
+    }, 5000);
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          checkAdminRole(session.user.id);
+        } else {
+          setIsAdminLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('[Auth] getSession failed:', err);
+        setIsAdminLoading(false);
+      })
+      .finally(() => {
+        clearTimeout(loadingTimeout);
+        setIsLoading(false);
+      });
+
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, [checkAdminRole]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
