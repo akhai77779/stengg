@@ -110,6 +110,7 @@ export function useUserNotifications() {
         .eq("user_id", user.id)
         .neq("type", "option_trade")
         .is("metadata->>trade_id", null)
+        .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order("created_at", { ascending: false })
         .limit(50);
 
