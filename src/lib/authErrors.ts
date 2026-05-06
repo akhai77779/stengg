@@ -55,6 +55,14 @@ const AUTH_ERROR_MAP: ErrorMap = {
     vi: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
     en: 'Session expired. Please log in again.',
   },
+  'Database error granting user': {
+    vi: 'Hệ thống đăng nhập vừa khởi động lại sau khi nâng cấp. Vui lòng bấm đăng nhập lại sau vài giây.',
+    en: 'The login system has just restarted after the upgrade. Please try logging in again in a few seconds.',
+  },
+  'unexpected_failure': {
+    vi: 'Hệ thống đăng nhập đang ổn định lại. Vui lòng thử lại sau vài giây.',
+    en: 'The login system is stabilizing. Please try again in a few seconds.',
+  },
   'For security purposes, you can only request this after': {
     vi: 'Vì lý do bảo mật, bạn chỉ có thể thực hiện sau một khoảng thời gian.',
     en: 'For security purposes, please try again after a moment.',
