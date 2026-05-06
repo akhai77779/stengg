@@ -76,6 +76,7 @@ export default function BankAccountsPage() {
   });
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [branch, setBranch] = useState("");
@@ -219,6 +220,7 @@ export default function BankAccountsPage() {
     // Giữ lại ngân hàng gần đây để lần sau mở form vẫn còn
     const recent = localStorage.getItem(RECENT_BANK_KEY) || "";
     setBankName(recent);
+    setBankSearch("");
     setAccountNumber("");
     setAccountHolder("");
     setBranch("");
