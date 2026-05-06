@@ -242,6 +242,22 @@ export default function IdentityVerification() {
         if (error) throw error;
       }
 
+      // Notify admin via Telegram bot
+      try {
+        const docTypeLabel = documentType === 'cccd' ? 'CCCD' : 'Passport';
+        await supabase.functions.invoke('telegram-notify', {
+          body: {
+            type: 'notification',
+            title: '🪪 Yêu cầu xác minh danh tính mới',
+            message: `${profile.full_name} đã gửi ${docTypeLabel} (${documentNumber}) cần được duyệt.`,
+            notification_type: 'info',
+            user_email: user.email || undefined,
+          },
+        });
+      } catch (notifyError) {
+        console.warn('Telegram notify failed:', notifyError);
+      }
+
       toast({
         title: t('common.success'),
         description: t('identity.submitSuccess'),
