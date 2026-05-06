@@ -1,4 +1,5 @@
 import { Bell, Check, CheckCheck, Volume2, VolumeX, Trash2 } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,6 +33,12 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
     markAllAsRead,
     deleteNotification,
   } = useUserNotifications();
+
+  useEffect(() => {
+    if (open && unreadCount > 0) {
+      markAllAsRead();
+    }
+  }, [open, unreadCount, markAllAsRead]);
 
   const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
     if (!isRead) {
@@ -170,7 +177,7 @@ export function MobileNotificationSheet({ open, onOpenChange }: MobileNotificati
         {notifications.length > 0 && (
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-background border-t text-center">
             <p className="text-xs text-muted-foreground">
-              Thông báo được lưu trong 30 ngày
+              Thông báo được lưu trong 7 ngày
             </p>
           </div>
         )}
