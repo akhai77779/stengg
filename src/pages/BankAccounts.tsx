@@ -69,8 +69,6 @@ export default function BankAccountsPage() {
   });
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const selectedCountry = COUNTRIES_CURRENCIES.find(c => c.countryCode === selectedCountryCode) || COUNTRIES_CURRENCIES[0];
-  const selectedBank = VIETNAM_BANKS.find(b => b.name === bankName);
-  
   // Form states — khôi phục ngân hàng đã chọn lần trước từ localStorage
   const RECENT_BANK_KEY = "recent_bank_name";
   const [bankName, setBankName] = useState<string>(() => {
@@ -78,6 +76,7 @@ export default function BankAccountsPage() {
     return localStorage.getItem(RECENT_BANK_KEY) || "";
   });
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
+  const selectedBank = VIETNAM_BANKS.find(b => b.name === bankName);
   const [countrySearch, setCountrySearch] = useState("");
   const [bankSearch, setBankSearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
