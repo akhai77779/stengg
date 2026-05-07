@@ -8,6 +8,7 @@ export interface CountryCurrency {
 
 // Danh sách quốc gia & loại tiền tệ phổ biến trên thế giới
 export const COUNTRIES_CURRENCIES: CountryCurrency[] = [
+  { countryCode: "SG", countryName: "Singapore", currencyCode: "SGD", currencyName: "Singapore Dollar", flag: "🇸🇬" },
   { countryCode: "VN", countryName: "Việt Nam", currencyCode: "VND", currencyName: "Vietnamese Dong", flag: "🇻🇳" },
   { countryCode: "US", countryName: "United States", currencyCode: "USD", currencyName: "US Dollar", flag: "🇺🇸" },
   { countryCode: "GB", countryName: "United Kingdom", currencyCode: "GBP", currencyName: "British Pound", flag: "🇬🇧" },
@@ -15,7 +16,6 @@ export const COUNTRIES_CURRENCIES: CountryCurrency[] = [
   { countryCode: "JP", countryName: "Japan", currencyCode: "JPY", currencyName: "Japanese Yen", flag: "🇯🇵" },
   { countryCode: "CN", countryName: "China", currencyCode: "CNY", currencyName: "Chinese Yuan", flag: "🇨🇳" },
   { countryCode: "KR", countryName: "South Korea", currencyCode: "KRW", currencyName: "South Korean Won", flag: "🇰🇷" },
-  { countryCode: "SG", countryName: "Singapore", currencyCode: "SGD", currencyName: "Singapore Dollar", flag: "🇸🇬" },
   { countryCode: "TH", countryName: "Thailand", currencyCode: "THB", currencyName: "Thai Baht", flag: "🇹🇭" },
   { countryCode: "MY", countryName: "Malaysia", currencyCode: "MYR", currencyName: "Malaysian Ringgit", flag: "🇲🇾" },
   { countryCode: "ID", countryName: "Indonesia", currencyCode: "IDR", currencyName: "Indonesian Rupiah", flag: "🇮🇩" },
