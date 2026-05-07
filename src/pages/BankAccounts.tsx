@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert, Check, ChevronsUpDown, Wallet } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Loader2, ShieldAlert, Check, ChevronsUpDown, Wallet, Search as SearchIcon } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,7 @@ export default function BankAccountsPage() {
   });
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const selectedCountry = COUNTRIES_CURRENCIES.find(c => c.countryCode === selectedCountryCode) || COUNTRIES_CURRENCIES[0];
+  const selectedBank = VIETNAM_BANKS.find(b => b.name === bankName);
   
   // Form states — khôi phục ngân hàng đã chọn lần trước từ localStorage
   const RECENT_BANK_KEY = "recent_bank_name";
