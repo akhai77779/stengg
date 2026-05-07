@@ -352,39 +352,41 @@ export default function WithdrawPage() {
 
             {/* Country & Currency Select */}
             <Card className="bg-card border-border">
-              <CardContent className="p-3 md:p-4 space-y-4">
-                {/* Country Select */}
-                <div>
-                  <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Quốc gia</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm">
-                      <SelectValue placeholder="Vui lòng chọn một quốc gia" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border rounded-lg">
-                      {COUNTRIES.map((c) => (
-                        <SelectItem key={c.id} value={c.id} className="rounded-md">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <CardContent className="p-3 md:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  {/* Country Select */}
+                  <div className="min-w-0">
+                    <Label className="text-[11px] md:text-sm text-muted-foreground mb-1.5 block">Quốc gia</Label>
+                    <Select value={country} onValueChange={setCountry}>
+                      <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm [&>span]:truncate [&>span]:block [&>span]:text-left min-w-0">
+                        <SelectValue placeholder="Chọn quốc gia" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border rounded-lg max-h-[60vh]">
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="rounded-md">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Currency Select */}
-                <div>
-                  <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Tiền tệ</Label>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm">
-                      <SelectValue placeholder="Vui lòng chọn tiền tệ" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border rounded-lg">
-                      {CURRENCIES.map((c) => (
-                        <SelectItem key={c.id} value={c.id} className="rounded-md">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* Currency Select */}
+                  <div className="min-w-0">
+                    <Label className="text-[11px] md:text-sm text-muted-foreground mb-1.5 block">Tiền tệ</Label>
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm [&>span]:truncate [&>span]:block [&>span]:text-left min-w-0">
+                        <SelectValue placeholder="Chọn tiền tệ" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border rounded-lg max-h-[60vh]">
+                        {CURRENCIES.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="rounded-md">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
