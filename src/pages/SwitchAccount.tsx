@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, Trash2, Plus, Loader2 } from 'lucide-react';
+import { ChevronLeft, Trash2, Plus, Loader2, LogIn } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +29,11 @@ import { z } from 'zod';
 interface SavedAccount {
   email: string;
   lastLogin: string;
+  // Stored Supabase session so we can restore it without re-login.
+  // Optional for backwards-compat with previously saved entries.
+  accessToken?: string;
+  refreshToken?: string;
+  userId?: string;
 }
 
 export default function SwitchAccount() {
@@ -42,6 +47,7 @@ export default function SwitchAccount() {
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [switchingEmail, setSwitchingEmail] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,22 +104,44 @@ export default function SwitchAccount() {
     return email.charAt(0).toUpperCase();
   };
 
-  const saveAccountToStorage = (email: string) => {
-    const now = new Date().toISOString();
-    const newAccount: SavedAccount = { email, lastLogin: now };
-    
-    // Remove if already exists, then add to front
-    const filtered = savedAccounts.filter(acc => acc.email !== email);
-    const updated = [newAccount, ...filtered];
-    
-    setSavedAccounts(updated);
-    localStorage.setItem('savedAccounts', JSON.stringify(updated));
+  const persistAccounts = (list: SavedAccount[]) => {
+    setSavedAccounts(list);
+    localStorage.setItem('savedAccounts', JSON.stringify(list));
+  };
+
+  const readAccounts = (): SavedAccount[] => {
+    try {
+      const raw = localStorage.getItem('savedAccounts');
+      return raw ? (JSON.parse(raw) as SavedAccount[]) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  /**
+   * Snapshot the CURRENT Supabase session and store it under its email so we
+   * can restore it later via setSession() without asking the user to log in again.
+   */
+  const snapshotCurrentSession = async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    if (!session?.user?.email) return;
+
+    const current = readAccounts();
+    const filtered = current.filter(a => a.email !== session.user!.email);
+    const entry: SavedAccount = {
+      email: session.user.email,
+      lastLogin: new Date().toISOString(),
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+      userId: session.user.id,
+    };
+    persistAccounts([entry, ...filtered]);
   };
 
   const removeAccountFromStorage = (email: string) => {
     const filtered = savedAccounts.filter(acc => acc.email !== email);
-    setSavedAccounts(filtered);
-    localStorage.setItem('savedAccounts', JSON.stringify(filtered));
+    persistAccounts(filtered);
     setAccountToDelete(null);
     
     toast({
@@ -122,15 +150,73 @@ export default function SwitchAccount() {
     });
   };
 
-  const handleSwitchToAccount = async (email: string) => {
-    // Save current account before switching
-    if (user?.email) {
-      saveAccountToStorage(user.email);
+  const handleSwitchToAccount = async (account: SavedAccount) => {
+    if (switchingEmail) return;
+    setSwitchingEmail(account.email);
+
+    try {
+      // Always snapshot the current session first so we can switch back later.
+      await snapshotCurrentSession();
+
+      // If we have stored tokens, restore that session directly — no re-login.
+      if (account.refreshToken && account.accessToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: account.accessToken,
+          refresh_token: account.refreshToken,
+        });
+
+        if (error || !data.session) {
+          // Refresh token expired/revoked — fall back to login screen.
+          const remaining = readAccounts().filter(a => a.email !== account.email);
+          persistAccounts([
+            { email: account.email, lastLogin: account.lastLogin },
+            ...remaining,
+          ]);
+          toast({
+            variant: 'destructive',
+            title: t('switchAccount.sessionExpired') || 'Phiên đã hết hạn',
+            description: t('switchAccount.pleaseLoginAgain') || 'Vui lòng đăng nhập lại tài khoản này.',
+          });
+          await signOut();
+          navigate('/login', { state: { prefillEmail: account.email } });
+          return;
+        }
+
+        // Refresh stored tokens (Supabase may rotate the refresh token).
+        const refreshed = data.session;
+        const accounts = readAccounts().filter(a => a.email !== account.email);
+        persistAccounts([
+          {
+            email: account.email,
+            lastLogin: new Date().toISOString(),
+            accessToken: refreshed.access_token,
+            refreshToken: refreshed.refresh_token,
+            userId: refreshed.user.id,
+          },
+          ...accounts,
+        ]);
+
+        toast({
+          title: t('switchAccount.switched') || 'Đã chuyển tài khoản',
+          description: account.email,
+        });
+        navigate('/');
+        return;
+      }
+
+      // Legacy entry without tokens — fall back to login flow.
+      await signOut();
+      navigate('/login', { state: { prefillEmail: account.email } });
+    } catch (e) {
+      console.error('Switch account failed:', e);
+      toast({
+        variant: 'destructive',
+        title: t('common.failed') || 'Thất bại',
+        description: (e as Error).message,
+      });
+    } finally {
+      setSwitchingEmail(null);
     }
-    
-    // Sign out and navigate to login with prefilled email
-    await signOut();
-    navigate('/login', { state: { prefillEmail: email } });
   };
 
   const validateForm = () => {
@@ -162,39 +248,40 @@ export default function SwitchAccount() {
     if (!validateForm()) return;
     
     setIsLoggingIn(true);
-    
-    // Save current account before switching
-    if (user?.email) {
-      saveAccountToStorage(user.email);
-    }
-    
-    // Sign out first
-    await signOut();
-    
-    // Then sign in with new account
-    const { error } = await signIn(loginEmail, loginPassword);
-    
-    setIsLoggingIn(false);
-    
-    if (error) {
+
+    try {
+      // 1) Snapshot the current session BEFORE signing out so we can switch back.
+      await snapshotCurrentSession();
+
+      // 2) Sign out the current user (Supabase only supports one active session).
+      await signOut();
+
+      // 3) Sign in with the new account.
+      const { error } = await signIn(loginEmail, loginPassword);
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: t('auth.login') + ' ' + t('common.failed'),
+          description: error.message,
+        });
+        return;
+      }
+
+      // 4) Snapshot the new account's session too.
+      await snapshotCurrentSession();
+
       toast({
-        variant: 'destructive',
-        title: t('auth.login') + ' ' + t('common.failed'),
-        description: error.message,
+        title: t('auth.login') + ' ' + t('common.success'),
+        description: t('auth.welcomeSubtitle'),
       });
-      return;
+
+      setShowAddSheet(false);
+      setLoginEmail('');
+      setLoginPassword('');
+      navigate('/');
+    } finally {
+      setIsLoggingIn(false);
     }
-    
-    // Save new account
-    saveAccountToStorage(loginEmail);
-    
-    toast({
-      title: t('auth.login') + ' ' + t('common.success'),
-      description: t('auth.welcomeSubtitle'),
-    });
-    
-    setShowAddSheet(false);
-    navigate('/');
   };
 
   // Filter out current user from saved accounts
@@ -281,13 +368,23 @@ export default function SwitchAccount() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={switchingEmail === account.email}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSwitchToAccount(account.email);
+                        handleSwitchToAccount(account);
                       }}
                       className="text-green-400 hover:text-green-300 hover:bg-green-400/10 active:scale-95 transition-all duration-200"
                     >
-                      {t('switchAccount.switch')}
+                      {switchingEmail === account.email ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : account.refreshToken ? (
+                        t('switchAccount.switch')
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <LogIn className="h-3.5 w-3.5" />
+                          {t('switchAccount.switch')}
+                        </span>
+                      )}
                     </Button>
                   )}
                 </div>
