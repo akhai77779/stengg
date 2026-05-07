@@ -87,6 +87,38 @@ export default function SwitchAccount() {
     fetchLastLogin();
   }, [user?.id]);
 
+  // Snapshot the current session into savedAccounts on mount so the active
+  // account always has tokens stored — required to switch back to it later.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session?.user?.email) return;
+      try {
+        const raw = localStorage.getItem('savedAccounts');
+        const list: SavedAccount[] = raw ? JSON.parse(raw) : [];
+        const existing = list.find(a => a.email === session.user!.email);
+        // Only update if tokens are missing or have changed
+        if (existing?.refreshToken === session.refresh_token) return;
+        const filtered = list.filter(a => a.email !== session.user!.email);
+        const updated: SavedAccount[] = [
+          {
+            email: session.user.email,
+            lastLogin: new Date().toISOString(),
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+            userId: session.user.id,
+          },
+          ...filtered,
+        ];
+        localStorage.setItem('savedAccounts', JSON.stringify(updated));
+        setSavedAccounts(updated);
+      } catch (e) {
+        console.error('Failed to snapshot session:', e);
+      }
+    })();
+  }, [user?.id]);
+
   const formatLastLogin = (dateString: string | null) => {
     if (!dateString) return '';
     const date = new Date(dateString);
