@@ -11,8 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Layout } from "@/components/layout/Layout";
-import { VIETNAM_BANKS } from "@/data/vietnamBanks";
 import { COUNTRIES_CURRENCIES } from "@/data/countriesCurrencies";
+import { getBanksByCountry } from "@/data/banksByCountry";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -76,7 +76,8 @@ export default function BankAccountsPage() {
     return localStorage.getItem(RECENT_BANK_KEY) || "";
   });
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
-  const selectedBank = VIETNAM_BANKS.find(b => b.name === bankName);
+  const countryBanks = getBanksByCountry(selectedCountryCode);
+  const selectedBank = countryBanks.find(b => b.name === bankName);
   const [countrySearch, setCountrySearch] = useState("");
   const [bankSearch, setBankSearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -578,7 +579,11 @@ export default function BankAccountsPage() {
                           Không tìm thấy ngân hàng.
                         </CommandEmpty>
                         <CommandGroup className="p-1">
-                          {VIETNAM_BANKS.filter((bank) =>
+                          {countryBanks.length === 0 ? (
+                            <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                              Chưa có danh sách ngân hàng cho quốc gia này. Vui lòng nhập tên ngân hàng thủ công ở bước sau hoặc chọn quốc gia khác.
+                            </div>
+                          ) : countryBanks.filter((bank) =>
                             `${bank.shortName} ${bank.name}`
                               .toLowerCase()
                               .includes(bankSearch.toLowerCase())
