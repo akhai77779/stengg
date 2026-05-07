@@ -393,6 +393,7 @@ export default function BankAccountsPage() {
                                 setBankSearch("");
                                 try {
                                   localStorage.setItem(RECENT_COUNTRY_KEY, c.countryCode);
+                                  localStorage.removeItem(RECENT_BANK_KEY);
                                 } catch {
                                   // ignore
                                 }
