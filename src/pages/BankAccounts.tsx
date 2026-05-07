@@ -388,6 +388,9 @@ export default function BankAccountsPage() {
                               onSelect={() => {
                                 setSelectedCountryCode(c.countryCode);
                                 setCountrySearch("");
+                                // Reset bank when switching country
+                                setBankName("");
+                                setBankSearch("");
                                 try {
                                   localStorage.setItem(RECENT_COUNTRY_KEY, c.countryCode);
                                 } catch {
