@@ -355,17 +355,28 @@ export default function BankAccountsPage() {
                   <Label className="text-xs text-muted-foreground">
                     Quốc gia / Tiền tệ <span className="text-destructive">*</span>
                   </Label>
+                  <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <span className="text-2xl">{selectedCountry.flag}</span>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-semibold text-sm text-foreground truncate">{selectedCountry.countryName}</span>
+                      <span className="text-xs text-muted-foreground truncate">{selectedCountry.currencyCode} — {selectedCountry.currencyName}</span>
+                    </div>
+                    <Check className="h-5 w-5 text-primary shrink-0" />
+                  </div>
                   <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex-1 min-h-0 flex flex-col">
                     <Command>
                       <CommandInput
                         value={countrySearch}
                         onValueChange={(value) => setCountrySearch(value)}
                         placeholder="Tìm quốc gia hoặc tiền tệ..."
-                        className="h-9"
+                        className="h-12 text-base"
                       />
-                      <CommandList className="max-h-[40vh] sm:max-h-80">
+                      <CommandList
+                        className="max-h-[45vh] sm:max-h-80 overscroll-contain scroll-smooth-touch"
+                        style={{ WebkitOverflowScrolling: "touch" }}
+                      >
                         <CommandEmpty>Không tìm thấy.</CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="p-1">
                           {COUNTRIES_CURRENCIES.filter((c) =>
                             `${c.countryName} ${c.currencyCode} ${c.currencyName}`
                               .toLowerCase()
@@ -377,10 +388,18 @@ export default function BankAccountsPage() {
                               onSelect={() => {
                                 setSelectedCountryCode(c.countryCode);
                                 setCountrySearch("");
+                                try {
+                                  localStorage.setItem(RECENT_COUNTRY_KEY, c.countryCode);
+                                } catch {
+                                  // ignore
+                                }
                               }}
-                              className="cursor-pointer py-2"
+                              className={cn(
+                                "cursor-pointer touch-manipulation rounded-md my-0.5 px-3 py-3 min-h-[52px] gap-3 active:scale-[0.99] transition-transform",
+                                selectedCountryCode === c.countryCode && "bg-primary/10"
+                              )}
                             >
-                              <span className="text-base mr-2">{c.flag}</span>
+                              <span className="text-xl">{c.flag}</span>
                               <div className="flex flex-col flex-1 min-w-0">
                                 <span className="font-medium text-sm">{c.countryName}</span>
                                 <span className="text-xs text-muted-foreground truncate">
@@ -389,7 +408,7 @@ export default function BankAccountsPage() {
                               </div>
                               <Check
                                 className={cn(
-                                  "ml-2 h-4 w-4",
+                                  "ml-2 h-5 w-5 text-primary shrink-0",
                                   selectedCountryCode === c.countryCode ? "opacity-100" : "opacity-0"
                                 )}
                               />
@@ -398,12 +417,6 @@ export default function BankAccountsPage() {
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-md bg-muted/20 px-3 py-2 text-xs sm:text-sm">
-                    <span className="text-muted-foreground">Đã chọn:</span>
-                    <span className="text-base">{selectedCountry.flag}</span>
-                    <span className="font-medium truncate">{selectedCountry.countryName}</span>
-                    <span className="text-muted-foreground">— {selectedCountry.currencyCode}</span>
                   </div>
                 </div>
               </div>
