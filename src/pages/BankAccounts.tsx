@@ -523,50 +523,66 @@ export default function BankAccountsPage() {
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
-                  <div className="rounded-md border border-border bg-muted/30 overflow-hidden flex flex-col">
-                    <Command>
+                  <div className="rounded-lg border border-border bg-muted/30 overflow-hidden flex flex-col">
+                    <Command shouldFilter={false}>
                       <CommandInput
                         value={bankSearch}
                         onValueChange={(value) => setBankSearch(value)}
                         placeholder="Tìm ngân hàng..."
-                        className="h-9"
+                        className="h-12 text-base"
                       />
-                      <CommandList className="max-h-[40vh] md:max-h-64 overscroll-contain">
-                        <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
-                        <CommandGroup>
+                      <CommandList
+                        className="max-h-[50vh] md:max-h-72 overscroll-contain scroll-smooth-touch"
+                        style={{ WebkitOverflowScrolling: "touch" }}
+                      >
+                        <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                          Không tìm thấy ngân hàng.
+                        </CommandEmpty>
+                        <CommandGroup className="p-1">
                           {VIETNAM_BANKS.filter((bank) =>
                             `${bank.shortName} ${bank.name}`
                               .toLowerCase()
                               .includes(bankSearch.toLowerCase())
-                          ).map((bank) => (
-                            <CommandItem
-                              key={bank.code}
-                              value={`${bank.shortName} ${bank.name}`}
-                              onSelect={() => {
-                                setBankName(bank.name);
-                                setBankSearch("");
-                                try {
-                                  localStorage.setItem(RECENT_BANK_KEY, bank.name);
-                                } catch {
-                                  // ignore storage errors
-                                }
-                              }}
-                              className="cursor-pointer py-3 touch-manipulation"
-                            >
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className="font-medium text-sm">{bank.shortName}</span>
-                                <span className="text-xs text-muted-foreground truncate">
-                                  {bank.name}
-                                </span>
-                              </div>
-                              <Check
+                          ).map((bank) => {
+                            const selected = bankName === bank.name;
+                            return (
+                              <CommandItem
+                                key={bank.code}
+                                value={`${bank.shortName} ${bank.name}`}
+                                onSelect={() => {
+                                  setBankName(bank.name);
+                                  setBankSearch("");
+                                  try {
+                                    localStorage.setItem(RECENT_BANK_KEY, bank.name);
+                                  } catch {
+                                    // ignore storage errors
+                                  }
+                                }}
                                 className={cn(
-                                  "ml-2 h-4 w-4",
-                                  bankName === bank.name ? "opacity-100" : "opacity-0"
+                                  "cursor-pointer touch-manipulation rounded-md my-0.5 px-3 py-3 min-h-[56px] gap-3 active:scale-[0.99] transition-transform",
+                                  selected && "bg-primary/10"
                                 )}
-                              />
-                            </CommandItem>
-                          ))}
+                              >
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary text-xs font-bold">
+                                  {bank.shortName.slice(0, 3).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium text-sm text-foreground truncate">
+                                    {bank.shortName}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {bank.name}
+                                  </span>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-2 h-5 w-5 text-primary shrink-0",
+                                    selected ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
