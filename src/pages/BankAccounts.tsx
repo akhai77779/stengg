@@ -524,6 +524,33 @@ export default function BankAccountsPage() {
                   <Label htmlFor="bankName" className="text-[10px] md:text-xs text-muted-foreground">
                     Tên ngân hàng <span className="text-destructive">*</span>
                   </Label>
+                  {bankName && selectedBank ? (
+                    <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 animate-in fade-in-50 slide-in-from-top-1">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary text-sm font-bold">
+                        {selectedBank.shortName.slice(0, 3).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-semibold text-sm text-foreground truncate">
+                          {selectedBank.shortName}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {selectedBank.name}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 px-3 text-xs font-medium shrink-0"
+                        onClick={() => {
+                          setBankName("");
+                          setBankSearch("");
+                        }}
+                      >
+                        Đổi
+                      </Button>
+                    </div>
+                  ) : (
                   <div className="rounded-lg border border-border bg-muted/30 overflow-hidden flex flex-col">
                     <Command shouldFilter={false}>
                       <CommandInput
@@ -588,21 +615,6 @@ export default function BankAccountsPage() {
                       </CommandList>
                     </Command>
                   </div>
-                  {bankName && (
-                    <div className="flex items-center justify-between gap-2 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs">
-                      <span className="truncate">
-                        Đã chọn: <span className="text-foreground font-medium">{bankName}</span>
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs shrink-0"
-                        onClick={() => setBankName("")}
-                      >
-                        Xoá
-                      </Button>
-                    </div>
                   )}
                 </div>
 
