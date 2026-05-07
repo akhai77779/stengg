@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -49,6 +50,7 @@ export default function BankAccountsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
   
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -433,33 +435,33 @@ export default function BankAccountsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Add Account — Sheet on mobile, Dialog on desktop */}
-          {/* Mobile: bottom sheet */}
-          <Sheet open={showAddForm} onOpenChange={setShowAddForm}>
-            <SheetContent
-              side="bottom"
-              className="md:hidden h-[90vh] max-h-[90vh] rounded-t-2xl bg-background flex flex-col p-4"
-            >
-              <SheetHeader className="text-center pb-3 shrink-0">
-                <SheetTitle className="text-base font-semibold">Thêm tài khoản ngân hàng</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 pb-6 overflow-y-auto flex-1 -mx-1 px-1">
-                {renderAddForm()}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Desktop: centered dialog */}
-          <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-            <DialogContent className="hidden md:flex max-w-lg max-h-[85vh] flex-col p-6">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-semibold">Thêm tài khoản ngân hàng</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-2 overflow-y-auto flex-1 -mx-1 px-1">
-                {renderAddForm()}
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* Add Account — Sheet on mobile, Dialog on desktop (only one mounted at a time) */}
+          {isMobile ? (
+            <Sheet open={showAddForm} onOpenChange={setShowAddForm}>
+              <SheetContent
+                side="bottom"
+                className="h-[90vh] max-h-[90vh] rounded-t-2xl bg-background flex flex-col p-4"
+              >
+                <SheetHeader className="text-center pb-3 shrink-0">
+                  <SheetTitle className="text-base font-semibold">Thêm tài khoản ngân hàng</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-4 pb-6 overflow-y-auto flex-1 -mx-1 px-1">
+                  {renderAddForm()}
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+              <DialogContent className="flex max-w-lg max-h-[85vh] flex-col p-6">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-semibold">Thêm tài khoản ngân hàng</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2 overflow-y-auto flex-1 -mx-1 px-1">
+                  {renderAddForm()}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
