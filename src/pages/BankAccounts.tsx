@@ -247,18 +247,18 @@ export default function BankAccountsPage() {
   return (
     <Layout hideFooter>
       <div className="min-h-screen pb-20 md:pb-8">
-        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
+        <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-lg">
           {/* Header */}
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
+          <div className="sticky top-0 z-20 -mx-3 md:mx-0 px-3 md:px-0 py-2 md:py-0 mb-3 md:mb-6 bg-background/85 backdrop-blur-md md:bg-transparent md:backdrop-blur-0 flex items-center gap-2 md:gap-3 border-b border-border/40 md:border-0">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate(-1)} 
-              className="text-foreground hover:bg-muted min-h-[44px] min-w-[44px]"
+              className="text-foreground hover:bg-muted h-11 w-11 shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg md:text-xl font-bold text-foreground flex-1 text-center pr-10">
+            <h1 className="text-base md:text-xl font-bold text-foreground flex-1 text-center pr-11 truncate">
               Quản lý tài khoản rút tiền
             </h1>
           </div>
