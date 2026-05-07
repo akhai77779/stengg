@@ -357,12 +357,12 @@ export default function WithdrawPage() {
                 <div>
                   <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Quốc gia</Label>
                   <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary text-sm">
+                    <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm">
                       <SelectValue placeholder="Vui lòng chọn một quốc gia" />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
+                    <SelectContent className="bg-card border-border rounded-lg">
                       {COUNTRIES.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
+                        <SelectItem key={c.id} value={c.id} className="rounded-md">
                           {c.name}
                         </SelectItem>
                       ))}
@@ -374,12 +374,12 @@ export default function WithdrawPage() {
                 <div>
                   <Label className="text-xs md:text-sm text-muted-foreground mb-2 block">Tiền tệ</Label>
                   <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="w-full bg-transparent border-b border-border rounded-none h-10 px-0 focus:ring-0 focus:border-primary text-sm">
+                    <SelectTrigger className="w-full bg-muted/40 border border-border rounded-lg h-11 px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm">
                       <SelectValue placeholder="Vui lòng chọn tiền tệ" />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
+                    <SelectContent className="bg-card border-border rounded-lg">
                       {CURRENCIES.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
+                        <SelectItem key={c.id} value={c.id} className="rounded-md">
                           {c.name}
                         </SelectItem>
                       ))}
