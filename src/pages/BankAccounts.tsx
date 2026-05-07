@@ -392,6 +392,8 @@ export default function BankAccountsPage() {
                                 } catch {
                                   // ignore
                                 }
+                                setShowCountryStep(false);
+                                setShowAddForm(true);
                               }}
                               className={cn(
                                 "cursor-pointer touch-manipulation rounded-md my-0.5 px-3 py-3 min-h-[52px] gap-3 active:scale-[0.99] transition-transform",
@@ -420,11 +422,8 @@ export default function BankAccountsPage() {
                 </div>
               </div>
               <DialogFooter className="flex-row gap-2 sm:gap-2 pt-2">
-                <Button variant="outline" onClick={() => setShowCountryStep(false)} className="flex-1 sm:flex-none">
+                <Button variant="outline" onClick={() => setShowCountryStep(false)} className="flex-1">
                   Huỷ
-                </Button>
-                <Button onClick={handleConfirmCountry} className="flex-1 sm:flex-none">
-                  Tiếp tục
                 </Button>
               </DialogFooter>
             </DialogContent>
