@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Search, Filter, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Search, Filter, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Download, FileText, FileSpreadsheet, Undo2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Json } from '@/integrations/supabase/types';
 import { exportToCSV, exportToPDF } from '@/lib/exportAuditLogs';
@@ -56,6 +57,7 @@ const actionLabels: Record<string, string> = {
   deposit_approved: 'Duyệt nạp tiền',
   deposit_rejected: 'Từ chối nạp tiền',
   rate_limit_exceeded: 'Vượt giới hạn',
+  action_reverted: 'Đã hoàn tác',
 };
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -84,6 +86,42 @@ export function DashboardAuditLogs() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [revertingId, setRevertingId] = useState<string | null>(null);
+
+  const REVERSIBLE = new Set([
+    'deposit_approved',
+    'deposit_rejected',
+    'withdrawal_approved',
+    'withdrawal_rejected',
+  ]);
+
+  const isReverted = (log: AuditLog) =>
+    !!(log.details && typeof log.details === 'object' && !Array.isArray(log.details) &&
+      (log.details as Record<string, unknown>).reverted_at);
+
+  const handleRevert = async (log: AuditLog) => {
+    if (!REVERSIBLE.has(log.action)) {
+      toast.error('Hành động này không thể hoàn lại tự động');
+      return;
+    }
+    setRevertingId(log.id);
+    const { data, error } = await supabase.rpc('admin_revert_action', {
+      _audit_log_id: log.id,
+      _admin_id: (await supabase.auth.getUser()).data.user?.id as string,
+    });
+    setRevertingId(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const result = data as { success: boolean; error?: string };
+    if (!result?.success) {
+      toast.error(result?.error || 'Không thể hoàn lại');
+      return;
+    }
+    toast.success('Đã hoàn lại thao tác');
+    fetchLogs();
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -351,6 +389,25 @@ export function DashboardAuditLogs() {
                           <Eye className="w-4 h-4 mr-1" />
                           Xem
                         </Button>
+                        {REVERSIBLE.has(log.action) && !isReverted(log) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={revertingId === log.id}
+                            onClick={() => handleRevert(log)}
+                            className="text-orange-500 hover:text-orange-600"
+                          >
+                            {revertingId === log.id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Undo2 className="w-4 h-4 mr-1" />
+                            )}
+                            Hoàn lại
+                          </Button>
+                        )}
+                        {isReverted(log) && (
+                          <Badge variant="outline" className="ml-2 text-xs">Đã hoàn</Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
