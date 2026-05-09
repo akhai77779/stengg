@@ -1319,6 +1319,10 @@ export type Database = {
         Args: { _admin_id: string; _notes?: string; _transaction_id: string }
         Returns: Json
       }
+      admin_revert_action: {
+        Args: { _admin_id: string; _audit_log_id: string }
+        Returns: Json
+      }
       admin_subtract_balance: {
         Args: { _admin_id: string; _amount: number; _user_id: string }
         Returns: Json
