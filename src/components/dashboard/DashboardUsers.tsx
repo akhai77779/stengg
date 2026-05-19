@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil } from 'lucide-react';
+import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -108,6 +108,12 @@ export function DashboardUsers() {
   // Bank accounts for selected user
   const [userBankAccounts, setUserBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
+
+  // Edit/delete bank account
+  const [editBankAccount, setEditBankAccount] = useState<BankAccount | null>(null);
+  const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', account_holder: '', branch: '' });
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [deletingBankId, setDeletingBankId] = useState<string | null>(null);
 
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
@@ -216,6 +222,52 @@ export function DashboardUsers() {
       setUserBankAccounts(data || []);
     }
     setIsLoadingBankAccounts(false);
+  };
+
+  const handleSaveBankAccount = async () => {
+    if (!editBankAccount || !selectedUser) return;
+    if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
+      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
+      return;
+    }
+    setIsSavingBank(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase.rpc('admin_update_bank_account', {
+      _admin_id: userData.user?.id as string,
+      _account_id: editBankAccount.id,
+      _bank_name: bankForm.bank_name.trim(),
+      _account_number: bankForm.account_number.trim(),
+      _account_holder: bankForm.account_holder.trim(),
+      _branch: bankForm.branch.trim(),
+    });
+    setIsSavingBank(false);
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật' });
+      return;
+    }
+    toast({ title: 'Đã cập nhật', description: 'Cập nhật tài khoản ngân hàng thành công.' });
+    setEditBankAccount(null);
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
+  const handleDeleteBankAccount = async (account: BankAccount) => {
+    if (!selectedUser) return;
+    if (!window.confirm(`Xóa tài khoản ngân hàng ${account.bank_name} - ${account.account_number}?`)) return;
+    setDeletingBankId(account.id);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase.rpc('admin_delete_bank_account', {
+      _admin_id: userData.user?.id as string,
+      _account_id: account.id,
+    });
+    setDeletingBankId(null);
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
+      return;
+    }
+    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
+    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleShowUserDetail = (profile: Profile) => {
@@ -1049,18 +1101,53 @@ export function DashboardUsers() {
                   <div className="space-y-2">
                     {userBankAccounts.map((account) => (
                       <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm">
-                        <div className="font-medium">{account.bank_name}</div>
-                        <div className="text-muted-foreground">
-                          STK: <span className="font-mono">{account.account_number}</span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          Chủ TK: {account.account_holder}
-                        </div>
-                        {account.branch && (
-                          <div className="text-muted-foreground text-xs">
-                            Chi nhánh: {account.branch}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{account.bank_name}</div>
+                            <div className="text-muted-foreground">
+                              STK: <span className="font-mono">{account.account_number}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Chủ TK: {account.account_holder}
+                            </div>
+                            {account.branch && (
+                              <div className="text-muted-foreground text-xs">
+                                Chi nhánh: {account.branch}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setEditBankAccount(account);
+                                setBankForm({
+                                  bank_name: account.bank_name,
+                                  account_number: account.account_number,
+                                  account_holder: account.account_holder,
+                                  branch: account.branch || '',
+                                });
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              disabled={deletingBankId === account.id}
+                              onClick={() => handleDeleteBankAccount(account)}
+                            >
+                              {deletingBankId === account.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1624,6 +1711,40 @@ export function DashboardUsers() {
             <Button variant="outline" onClick={() => setEditUser(null)}>Hủy</Button>
             <Button onClick={handleEditUser} disabled={isEditingUser}>
               {isEditingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Bank Account Dialog */}
+      <Dialog open={!!editBankAccount} onOpenChange={(open) => !open && setEditBankAccount(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sửa tài khoản ngân hàng</DialogTitle>
+            <DialogDescription>Cập nhật thông tin tài khoản của người dùng</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Tên ngân hàng *</Label>
+              <Input value={bankForm.bank_name} onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Số tài khoản *</Label>
+              <Input value={bankForm.account_number} onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chủ tài khoản *</Label>
+              <Input value={bankForm.account_holder} onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chi nhánh</Label>
+              <Input value={bankForm.branch} onChange={(e) => setBankForm({ ...bankForm, branch: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBankAccount(null)}>Hủy</Button>
+            <Button onClick={handleSaveBankAccount} disabled={isSavingBank}>
+              {isSavingBank ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Lưu
             </Button>
           </DialogFooter>

@@ -1315,6 +1315,10 @@ export type Database = {
         Args: { _admin_id: string; _notes?: string; _transaction_id: string }
         Returns: Json
       }
+      admin_delete_bank_account: {
+        Args: { _account_id: string; _admin_id: string }
+        Returns: Json
+      }
       admin_reject_transaction: {
         Args: { _admin_id: string; _notes?: string; _transaction_id: string }
         Returns: Json
@@ -1325,6 +1329,17 @@ export type Database = {
       }
       admin_subtract_balance: {
         Args: { _admin_id: string; _amount: number; _user_id: string }
+        Returns: Json
+      }
+      admin_update_bank_account: {
+        Args: {
+          _account_holder: string
+          _account_id: string
+          _account_number: string
+          _admin_id: string
+          _bank_name: string
+          _branch: string
+        }
         Returns: Json
       }
       assert_no_option_trade_user_notifications: {
