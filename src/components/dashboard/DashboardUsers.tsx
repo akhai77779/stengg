@@ -1055,18 +1055,53 @@ export function DashboardUsers() {
                   <div className="space-y-2">
                     {userBankAccounts.map((account) => (
                       <div key={account.id} className="bg-muted/50 rounded-lg p-3 text-sm">
-                        <div className="font-medium">{account.bank_name}</div>
-                        <div className="text-muted-foreground">
-                          STK: <span className="font-mono">{account.account_number}</span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          Chủ TK: {account.account_holder}
-                        </div>
-                        {account.branch && (
-                          <div className="text-muted-foreground text-xs">
-                            Chi nhánh: {account.branch}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{account.bank_name}</div>
+                            <div className="text-muted-foreground">
+                              STK: <span className="font-mono">{account.account_number}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Chủ TK: {account.account_holder}
+                            </div>
+                            {account.branch && (
+                              <div className="text-muted-foreground text-xs">
+                                Chi nhánh: {account.branch}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setEditBankAccount(account);
+                                setBankForm({
+                                  bank_name: account.bank_name,
+                                  account_number: account.account_number,
+                                  account_holder: account.account_holder,
+                                  branch: account.branch || '',
+                                });
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              disabled={deletingBankId === account.id}
+                              onClick={() => handleDeleteBankAccount(account)}
+                            >
+                              {deletingBankId === account.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
