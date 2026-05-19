@@ -231,28 +231,21 @@ export function DashboardUsers() {
       return;
     }
     setIsSavingBank(true);
-    const before = { ...editBankAccount };
-    const { error } = await supabase
-      .from('bank_accounts')
-      .update({
-        bank_name: bankForm.bank_name.trim(),
-        account_number: bankForm.account_number.trim(),
-        account_holder: bankForm.account_holder.trim(),
-        branch: bankForm.branch.trim() || null,
-      })
-      .eq('id', editBankAccount.id);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase.rpc('admin_update_bank_account', {
+      _admin_id: userData.user?.id as string,
+      _account_id: editBankAccount.id,
+      _bank_name: bankForm.bank_name.trim(),
+      _account_number: bankForm.account_number.trim(),
+      _account_holder: bankForm.account_holder.trim(),
+      _branch: bankForm.branch.trim(),
+    });
     setIsSavingBank(false);
-    if (error) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error.message });
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật' });
       return;
     }
-    await supabase.from('audit_logs').insert({
-      user_id: (await supabase.auth.getUser()).data.user?.id,
-      action: 'bank_account_updated',
-      entity_type: 'bank_account',
-      entity_id: editBankAccount.id,
-      details: { target_user_id: selectedUser.id, before, after: bankForm },
-    } as any);
     toast({ title: 'Đã cập nhật', description: 'Cập nhật tài khoản ngân hàng thành công.' });
     setEditBankAccount(null);
     fetchUserBankAccounts(selectedUser.id);
@@ -262,19 +255,17 @@ export function DashboardUsers() {
     if (!selectedUser) return;
     if (!window.confirm(`Xóa tài khoản ngân hàng ${account.bank_name} - ${account.account_number}?`)) return;
     setDeletingBankId(account.id);
-    const { error } = await supabase.from('bank_accounts').delete().eq('id', account.id);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase.rpc('admin_delete_bank_account', {
+      _admin_id: userData.user?.id as string,
+      _account_id: account.id,
+    });
     setDeletingBankId(null);
-    if (error) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error.message });
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
       return;
     }
-    await supabase.from('audit_logs').insert({
-      user_id: (await supabase.auth.getUser()).data.user?.id,
-      action: 'bank_account_deleted',
-      entity_type: 'bank_account',
-      entity_id: account.id,
-      details: { target_user_id: selectedUser.id, snapshot: account },
-    } as any);
     toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
     fetchUserBankAccounts(selectedUser.id);
   };
