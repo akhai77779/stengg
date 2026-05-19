@@ -224,6 +224,61 @@ export function DashboardUsers() {
     setIsLoadingBankAccounts(false);
   };
 
+  const handleSaveBankAccount = async () => {
+    if (!editBankAccount || !selectedUser) return;
+    if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
+      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
+      return;
+    }
+    setIsSavingBank(true);
+    const before = { ...editBankAccount };
+    const { error } = await supabase
+      .from('bank_accounts')
+      .update({
+        bank_name: bankForm.bank_name.trim(),
+        account_number: bankForm.account_number.trim(),
+        account_holder: bankForm.account_holder.trim(),
+        branch: bankForm.branch.trim() || null,
+      })
+      .eq('id', editBankAccount.id);
+    setIsSavingBank(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message });
+      return;
+    }
+    await supabase.from('audit_logs').insert({
+      user_id: (await supabase.auth.getUser()).data.user?.id,
+      action: 'bank_account_updated',
+      entity_type: 'bank_account',
+      entity_id: editBankAccount.id,
+      details: { target_user_id: selectedUser.id, before, after: bankForm },
+    } as any);
+    toast({ title: 'Đã cập nhật', description: 'Cập nhật tài khoản ngân hàng thành công.' });
+    setEditBankAccount(null);
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
+  const handleDeleteBankAccount = async (account: BankAccount) => {
+    if (!selectedUser) return;
+    if (!window.confirm(`Xóa tài khoản ngân hàng ${account.bank_name} - ${account.account_number}?`)) return;
+    setDeletingBankId(account.id);
+    const { error } = await supabase.from('bank_accounts').delete().eq('id', account.id);
+    setDeletingBankId(null);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Lỗi', description: error.message });
+      return;
+    }
+    await supabase.from('audit_logs').insert({
+      user_id: (await supabase.auth.getUser()).data.user?.id,
+      action: 'bank_account_deleted',
+      entity_type: 'bank_account',
+      entity_id: account.id,
+      details: { target_user_id: selectedUser.id, snapshot: account },
+    } as any);
+    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
+    fetchUserBankAccounts(selectedUser.id);
+  };
+
   const handleShowUserDetail = (profile: Profile) => {
     setSelectedUser(profile);
     setShowDetailDialog(true);
