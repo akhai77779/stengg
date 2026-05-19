@@ -1716,6 +1716,40 @@ export function DashboardUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Edit Bank Account Dialog */}
+      <Dialog open={!!editBankAccount} onOpenChange={(open) => !open && setEditBankAccount(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sửa tài khoản ngân hàng</DialogTitle>
+            <DialogDescription>Cập nhật thông tin tài khoản của người dùng</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Tên ngân hàng *</Label>
+              <Input value={bankForm.bank_name} onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Số tài khoản *</Label>
+              <Input value={bankForm.account_number} onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chủ tài khoản *</Label>
+              <Input value={bankForm.account_holder} onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chi nhánh</Label>
+              <Input value={bankForm.branch} onChange={(e) => setBankForm({ ...bankForm, branch: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBankAccount(null)}>Hủy</Button>
+            <Button onClick={handleSaveBankAccount} disabled={isSavingBank}>
+              {isSavingBank ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
