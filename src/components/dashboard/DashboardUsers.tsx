@@ -989,6 +989,17 @@ export function DashboardUsers() {
                                   <><Lock className="w-4 h-4 mr-2" />Khóa tài khoản</>
                                 )}
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDeleteUserTarget(profile);
+                                  setDeleteUserConfirm('');
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Xóa tài khoản
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
