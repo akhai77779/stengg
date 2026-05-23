@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil, Trash2 } from 'lucide-react';
+import { Search, Loader2, Shield, Eye, Key, Copy, Check, DollarSign, Mail, Phone, Ban, Lock, Unlock, TrendingUp, CreditCard, KeyRound, UserCheck, Clock, XCircle, CheckCircle, History, UserPlus, MoreHorizontal, StickyNote, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -114,6 +114,7 @@ export function DashboardUsers() {
   const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', account_holder: '', branch: '' });
   const [isSavingBank, setIsSavingBank] = useState(false);
   const [deletingBankId, setDeletingBankId] = useState<string | null>(null);
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<BankAccount | null>(null);
 
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
@@ -251,16 +252,21 @@ export function DashboardUsers() {
     fetchUserBankAccounts(selectedUser.id);
   };
 
-  const handleDeleteBankAccount = async (account: BankAccount) => {
+  const handleDeleteBankAccount = (account: BankAccount) => {
     if (!selectedUser) return;
-    if (!window.confirm(`Xóa tài khoản ngân hàng ${account.bank_name} - ${account.account_number}?`)) return;
-    setDeletingBankId(account.id);
+    setDeleteConfirmAccount(account);
+  };
+
+  const handleConfirmDeleteBankAccount = async () => {
+    if (!selectedUser || !deleteConfirmAccount) return;
+    setDeletingBankId(deleteConfirmAccount.id);
     const { data: userData } = await supabase.auth.getUser();
     const { data, error } = await supabase.rpc('admin_delete_bank_account', {
       _admin_id: userData.user?.id as string,
-      _account_id: account.id,
+      _account_id: deleteConfirmAccount.id,
     });
     setDeletingBankId(null);
+    setDeleteConfirmAccount(null);
     const res = data as { success?: boolean; error?: string } | null;
     if (error || !res?.success) {
       toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
@@ -1746,6 +1752,54 @@ export function DashboardUsers() {
             <Button onClick={handleSaveBankAccount} disabled={isSavingBank}>
               {isSavingBank ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Bank Account Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmAccount} onOpenChange={(open) => !open && setDeleteConfirmAccount(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Xác nhận xóa tài khoản ngân hàng
+            </DialogTitle>
+            <DialogDescription>
+              Thao tác này không thể hoàn tác. Vui lòng kiểm tra kỹ thông tin trước khi xác nhận.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteConfirmAccount && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tên ngân hàng</span>
+                <span className="font-medium">{deleteConfirmAccount.bank_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Số tài khoản</span>
+                <span className="font-mono font-medium">{deleteConfirmAccount.account_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Chủ tài khoản</span>
+                <span className="font-medium">{deleteConfirmAccount.account_holder}</span>
+              </div>
+              {deleteConfirmAccount.branch && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Chi nhánh</span>
+                  <span className="font-medium">{deleteConfirmAccount.branch}</span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmAccount(null)}>Hủy</Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteBankAccount} disabled={deletingBankId === deleteConfirmAccount?.id}>
+              {deletingBankId === deleteConfirmAccount?.id ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Xác nhận xóa
             </Button>
           </DialogFooter>
         </DialogContent>
