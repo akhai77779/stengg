@@ -43,6 +43,8 @@ const actionColors: Record<string, string> = {
   withdrawal_approved: 'bg-green-500/20 text-green-500',
   withdrawal_rejected: 'bg-red-500/20 text-red-500',
   rate_limit_exceeded: 'bg-yellow-500/20 text-yellow-500',
+  bank_account_updated: 'bg-blue-500/20 text-blue-500',
+  bank_account_deleted: 'bg-red-500/20 text-red-500',
 };
 
 const actionLabels: Record<string, string> = {
@@ -58,6 +60,8 @@ const actionLabels: Record<string, string> = {
   deposit_rejected: 'Từ chối nạp tiền',
   rate_limit_exceeded: 'Vượt giới hạn',
   action_reverted: 'Đã hoàn tác',
+  bank_account_updated: 'Sửa tài khoản ngân hàng',
+  bank_account_deleted: 'Xóa tài khoản ngân hàng',
 };
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -72,6 +76,8 @@ const actionIcons: Record<string, React.ReactNode> = {
   deposit_approved: <CheckCircle className="w-4 h-4" />,
   deposit_rejected: <XCircle className="w-4 h-4" />,
   rate_limit_exceeded: <AlertTriangle className="w-4 h-4" />,
+  bank_account_updated: <CheckCircle className="w-4 h-4" />,
+  bank_account_deleted: <XCircle className="w-4 h-4" />,
 };
 
 export function DashboardAuditLogs() {
