@@ -1879,18 +1879,30 @@ export function DashboardUsers() {
                     body: { user_id: deleteUserTarget.id },
                   });
                   const res = data as { success?: boolean; error?: string } | null;
-                  if (error || !res?.success) {
-                    toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa tài khoản' });
-                  } else {
-                    toast({ title: 'Đã xóa', description: 'Tài khoản người dùng đã được xóa.' });
-                    setProfiles((prev) => prev.filter((p) => p.id !== deleteUserTarget.id));
-                    setDeleteUserTarget(null);
-                    setDeleteUserConfirm('');
-                  }
-                } catch (e) {
-                  toast({ variant: 'destructive', title: 'Lỗi', description: e instanceof Error ? e.message : 'Lỗi không xác định' });
-                }
-                setIsDeletingUser(false);
+                 if (error || !res?.success) {
+                   toast({
+                     variant: 'destructive',
+                     title: 'Lỗi',
+                     description: error?.message || res?.error || 'Không thể xóa tài khoản',
+                   });
+                 } else {
+                   toast({
+                     title: 'Thành công',
+                     description: `Đã xóa tài khoản ${deleteUserTarget.full_name || deleteUserTarget.email || deleteUserTarget.phone || ''}`.trim(),
+                   });
+                   setProfiles((prev) => prev.filter((p) => p.id !== deleteUserTarget.id));
+                   setDeleteUserTarget(null);
+                   setDeleteUserConfirm('');
+                 }
+               } catch (e) {
+                 toast({
+                   variant: 'destructive',
+                   title: 'Lỗi',
+                   description: e instanceof Error ? e.message : 'Lỗi không xác định',
+                 });
+               } finally {
+                 setIsDeletingUser(false);
+               }
               }}
             >
               {isDeletingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
