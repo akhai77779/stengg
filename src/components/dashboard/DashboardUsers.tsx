@@ -252,16 +252,21 @@ export function DashboardUsers() {
     fetchUserBankAccounts(selectedUser.id);
   };
 
-  const handleDeleteBankAccount = async (account: BankAccount) => {
+  const handleDeleteBankAccount = (account: BankAccount) => {
     if (!selectedUser) return;
-    if (!window.confirm(`Xóa tài khoản ngân hàng ${account.bank_name} - ${account.account_number}?`)) return;
-    setDeletingBankId(account.id);
+    setDeleteConfirmAccount(account);
+  };
+
+  const handleConfirmDeleteBankAccount = async () => {
+    if (!selectedUser || !deleteConfirmAccount) return;
+    setDeletingBankId(deleteConfirmAccount.id);
     const { data: userData } = await supabase.auth.getUser();
     const { data, error } = await supabase.rpc('admin_delete_bank_account', {
       _admin_id: userData.user?.id as string,
-      _account_id: account.id,
+      _account_id: deleteConfirmAccount.id,
     });
     setDeletingBankId(null);
+    setDeleteConfirmAccount(null);
     const res = data as { success?: boolean; error?: string } | null;
     if (error || !res?.success) {
       toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
