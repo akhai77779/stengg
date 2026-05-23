@@ -99,6 +99,8 @@ export function DashboardAuditLogs() {
     'deposit_rejected',
     'withdrawal_approved',
     'withdrawal_rejected',
+    'bank_account_updated',
+    'bank_account_deleted',
   ]);
 
   const isReverted = (log: AuditLog) =>
