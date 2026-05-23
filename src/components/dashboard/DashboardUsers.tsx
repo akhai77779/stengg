@@ -1820,6 +1820,85 @@ export function DashboardUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={!!deleteUserTarget} onOpenChange={(open) => { if (!open) { setDeleteUserTarget(null); setDeleteUserConfirm(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Xóa tài khoản người dùng
+            </DialogTitle>
+            <DialogDescription>
+              Hành động này không thể hoàn tác. Hồ sơ, vai trò, tài khoản ngân hàng, thông báo và xác minh danh tính sẽ bị xóa.
+              Lịch sử giao dịch và audit logs sẽ được giữ lại để truy vết.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteUserTarget && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tên</span>
+                  <span className="font-medium">{deleteUserTarget.full_name || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mã</span>
+                  <span className="font-mono">{getUserCode(deleteUserTarget)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Liên hệ</span>
+                  <span className="font-medium truncate max-w-[200px]">{deleteUserTarget.email || deleteUserTarget.phone || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Số dư</span>
+                  <span className="font-medium">${(deleteUserTarget.balance || 0).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="delete-confirm">Gõ <span className="font-mono font-bold text-destructive">DELETE</span> để xác nhận</Label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteUserConfirm}
+                  onChange={(e) => setDeleteUserConfirm(e.target.value)}
+                  placeholder="DELETE"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteUserTarget(null); setDeleteUserConfirm(''); }}>Hủy</Button>
+            <Button
+              variant="destructive"
+              disabled={isDeletingUser || deleteUserConfirm !== 'DELETE'}
+              onClick={async () => {
+                if (!deleteUserTarget) return;
+                setIsDeletingUser(true);
+                try {
+                  const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+                    body: { user_id: deleteUserTarget.id },
+                  });
+                  const res = data as { success?: boolean; error?: string } | null;
+                  if (error || !res?.success) {
+                    toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa tài khoản' });
+                  } else {
+                    toast({ title: 'Đã xóa', description: 'Tài khoản người dùng đã được xóa.' });
+                    setProfiles((prev) => prev.filter((p) => p.id !== deleteUserTarget.id));
+                    setDeleteUserTarget(null);
+                    setDeleteUserConfirm('');
+                  }
+                } catch (e) {
+                  toast({ variant: 'destructive', title: 'Lỗi', description: e instanceof Error ? e.message : 'Lỗi không xác định' });
+                }
+                setIsDeletingUser(false);
+              }}
+            >
+              {isDeletingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Xóa vĩnh viễn
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
