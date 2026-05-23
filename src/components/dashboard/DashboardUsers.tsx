@@ -114,6 +114,7 @@ export function DashboardUsers() {
   const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', account_holder: '', branch: '' });
   const [isSavingBank, setIsSavingBank] = useState(false);
   const [deletingBankId, setDeletingBankId] = useState<string | null>(null);
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<BankAccount | null>(null);
 
   // Identity verification states
   const [verifications, setVerifications] = useState<Record<string, IdentityVerification>>({});
