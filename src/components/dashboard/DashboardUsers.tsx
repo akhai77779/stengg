@@ -141,6 +141,11 @@ export function DashboardUsers() {
   const [editUserCode, setEditUserCode] = useState('');
   const [isEditingUser, setIsEditingUser] = useState(false);
 
+  // Delete user dialog
+  const [deleteUserTarget, setDeleteUserTarget] = useState<Profile | null>(null);
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState('');
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
