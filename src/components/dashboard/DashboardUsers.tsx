@@ -1756,6 +1756,54 @@ export function DashboardUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Bank Account Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmAccount} onOpenChange={(open) => !open && setDeleteConfirmAccount(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Xác nhận xóa tài khoản ngân hàng
+            </DialogTitle>
+            <DialogDescription>
+              Thao tác này không thể hoàn tác. Vui lòng kiểm tra kỹ thông tin trước khi xác nhận.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteConfirmAccount && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tên ngân hàng</span>
+                <span className="font-medium">{deleteConfirmAccount.bank_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Số tài khoản</span>
+                <span className="font-mono font-medium">{deleteConfirmAccount.account_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Chủ tài khoản</span>
+                <span className="font-medium">{deleteConfirmAccount.account_holder}</span>
+              </div>
+              {deleteConfirmAccount.branch && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Chi nhánh</span>
+                  <span className="font-medium">{deleteConfirmAccount.branch}</span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmAccount(null)}>Hủy</Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteBankAccount} disabled={deletingBankId === deleteConfirmAccount?.id}>
+              {deletingBankId === deleteConfirmAccount?.id ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Xác nhận xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
