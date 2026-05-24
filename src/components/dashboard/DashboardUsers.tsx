@@ -310,67 +310,49 @@ export function DashboardUsers() {
 
   const handleApproveVerification = async (id: string) => {
     setIsProcessingVerification(true);
-    const { error } = await supabase
-      .from('identity_verifications')
-      .update({ 
-        status: 'approved',
-        rejection_reason: null 
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('identity_verifications')
+        .update({ status: 'approved', rejection_reason: null })
+        .eq('id', id);
 
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể duyệt yêu cầu.',
-      });
-    } else {
-      toast({
-        title: 'Thành công',
-        description: 'Đã duyệt xác minh danh tính.',
-      });
-      // Update local state
+      if (error) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể duyệt yêu cầu xác minh danh tính' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã duyệt xác minh danh tính.' });
       if (verificationUser) {
         const updatedVerification = { ...verifications[verificationUser.id], status: 'approved' as const, rejection_reason: null };
         setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
         setUserVerification(updatedVerification);
       }
       setShowVerificationDialog(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsProcessingVerification(false);
     }
-    setIsProcessingVerification(false);
   };
 
   const handleRejectVerification = async (id: string) => {
     if (!rejectionReason.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Vui lòng nhập lý do từ chối.',
-      });
+      toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng nhập lý do từ chối.' });
       return;
     }
 
     setIsProcessingVerification(true);
-    const { error } = await supabase
-      .from('identity_verifications')
-      .update({ 
-        status: 'rejected',
-        rejection_reason: rejectionReason 
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('identity_verifications')
+        .update({ status: 'rejected', rejection_reason: rejectionReason })
+        .eq('id', id);
 
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể từ chối yêu cầu.',
-      });
-    } else {
-      toast({
-        title: 'Thành công',
-        description: 'Đã từ chối yêu cầu xác minh.',
-      });
-      // Update local state
+      if (error) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể từ chối yêu cầu xác minh danh tính' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã từ chối yêu cầu xác minh danh tính.' });
       if (verificationUser) {
         const updatedVerification = { ...verifications[verificationUser.id], status: 'rejected' as const, rejection_reason: rejectionReason };
         setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
@@ -378,8 +360,12 @@ export function DashboardUsers() {
       }
       setShowVerificationDialog(false);
       setRejectionReason('');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsProcessingVerification(false);
     }
-    setIsProcessingVerification(false);
   };
 
   const getVerificationBadge = (userId: string) => {
