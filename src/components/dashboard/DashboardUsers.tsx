@@ -18,6 +18,7 @@ import { UserTransactionHistory } from './UserTransactionHistory';
  import { useAdminUserNotes } from '@/hooks/useAdminUserNotes';
  import { AdminUserNoteDialog } from '@/components/admin/AdminUserNoteDialog';
 import { AdminCreateUserDialog } from '@/components/admin/AdminCreateUserDialog';
+import { RecentDeletedUsersPanel } from '@/components/admin/RecentDeletedUsersPanel';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -760,6 +761,9 @@ export function DashboardUsers() {
 
   return (
     <>
+      <div className="mb-4">
+        <RecentDeletedUsersPanel />
+      </div>
       <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
