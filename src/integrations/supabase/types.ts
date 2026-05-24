@@ -522,6 +522,7 @@ export type Database = {
           customer_email: string | null
           customer_id: string
           customer_name: string
+          guest_token_hash: string | null
           id: string
           last_message: string | null
           last_updated_at: string | null
@@ -534,6 +535,7 @@ export type Database = {
           customer_email?: string | null
           customer_id: string
           customer_name: string
+          guest_token_hash?: string | null
           id?: string
           last_message?: string | null
           last_updated_at?: string | null
@@ -546,6 +548,7 @@ export type Database = {
           customer_email?: string | null
           customer_id?: string
           customer_name?: string
+          guest_token_hash?: string | null
           id?: string
           last_message?: string | null
           last_updated_at?: string | null
@@ -1372,6 +1375,8 @@ export type Database = {
         }
         Returns: Json
       }
+      current_guest_id: { Args: never; Returns: string }
+      current_guest_token: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1505,6 +1510,7 @@ export type Database = {
         Args: { _exit_price: number; _trade_id: string }
         Returns: Json
       }
+      verify_guest_session: { Args: { _customer_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
