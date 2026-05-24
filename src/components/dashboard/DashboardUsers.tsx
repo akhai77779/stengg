@@ -455,9 +455,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsAddingBalance(false);
     }
-
-    setIsAddingBalance(false);
   };
 
   const handleSubtractBalance = async () => {
@@ -519,9 +519,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsSubtractingBalance(false);
     }
-
-    setIsSubtractingBalance(false);
   };
 
   const handleChangePassword = async () => {
@@ -566,9 +566,9 @@ export function DashboardUsers() {
       setConfirmPassword('');
     } catch (error: any) {
       toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsChangingPassword(false);
     }
-
-    setIsChangingPassword(false);
   };
 
   const handleChangeWithdrawalPassword = async () => {
@@ -614,9 +614,9 @@ export function DashboardUsers() {
       setConfirmWithdrawalPassword('');
     } catch (error: any) {
       toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsChangingWithdrawalPassword(false);
     }
-
-    setIsChangingWithdrawalPassword(false);
   };
 
   const handleToggleAccountFreeze = async (profile: Profile) => {
