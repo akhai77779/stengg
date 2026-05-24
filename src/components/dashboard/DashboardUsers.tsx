@@ -233,28 +233,34 @@ export function DashboardUsers() {
   const handleSaveBankAccount = async () => {
     if (!editBankAccount || !selectedUser) return;
     if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
-      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
+      toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
       return;
     }
     setIsSavingBank(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase.rpc('admin_update_bank_account', {
-      _admin_id: userData.user?.id as string,
-      _account_id: editBankAccount.id,
-      _bank_name: bankForm.bank_name.trim(),
-      _account_number: bankForm.account_number.trim(),
-      _account_holder: bankForm.account_holder.trim(),
-      _branch: bankForm.branch.trim(),
-    });
-    setIsSavingBank(false);
-    const res = data as { success?: boolean; error?: string } | null;
-    if (error || !res?.success) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật' });
-      return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('admin_update_bank_account', {
+        _admin_id: userData.user?.id as string,
+        _account_id: editBankAccount.id,
+        _bank_name: bankForm.bank_name.trim(),
+        _account_number: bankForm.account_number.trim(),
+        _account_holder: bankForm.account_holder.trim(),
+        _branch: bankForm.branch.trim(),
+      });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật tài khoản ngân hàng' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã cập nhật tài khoản ngân hàng.' });
+      setEditBankAccount(null);
+      fetchUserBankAccounts(selectedUser.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsSavingBank(false);
     }
-    toast({ title: 'Đã cập nhật', description: 'Cập nhật tài khoản ngân hàng thành công.' });
-    setEditBankAccount(null);
-    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleDeleteBankAccount = (account: BankAccount) => {
@@ -265,20 +271,26 @@ export function DashboardUsers() {
   const handleConfirmDeleteBankAccount = async () => {
     if (!selectedUser || !deleteConfirmAccount) return;
     setDeletingBankId(deleteConfirmAccount.id);
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase.rpc('admin_delete_bank_account', {
-      _admin_id: userData.user?.id as string,
-      _account_id: deleteConfirmAccount.id,
-    });
-    setDeletingBankId(null);
-    setDeleteConfirmAccount(null);
-    const res = data as { success?: boolean; error?: string } | null;
-    if (error || !res?.success) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
-      return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('admin_delete_bank_account', {
+        _admin_id: userData.user?.id as string,
+        _account_id: deleteConfirmAccount.id,
+      });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa tài khoản ngân hàng' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã xóa tài khoản ngân hàng.' });
+      setDeleteConfirmAccount(null);
+      fetchUserBankAccounts(selectedUser.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setDeletingBankId(null);
     }
-    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
-    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleShowUserDetail = (profile: Profile) => {
