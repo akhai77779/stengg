@@ -670,18 +670,20 @@ export function DashboardUsers() {
 
     setIsUpdatingFreeze(true);
 
-    const updateData = freezeType === 'account' 
-      ? { is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
-      : { is_trade_frozen: true };
+    try {
+      const updateData = freezeType === 'account'
+        ? { is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
+        : { is_trade_frozen: true };
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', freezeUser.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', freezeUser.id);
 
-    if (error) {
-      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
-    } else {
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+        return;
+      }
       const message = freezeType === 'account' ? 'Đã khóa tài khoản' : 'Đã đóng băng giao dịch';
       toast({ title: 'Thành công', description: message });
       setProfiles(profiles.map(p => {
@@ -693,9 +695,12 @@ export function DashboardUsers() {
         return p;
       }));
       setFreezeUser(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: msg, variant: 'destructive' });
+    } finally {
+      setIsUpdatingFreeze(false);
     }
-
-    setIsUpdatingFreeze(false);
   };
 
   const handleOpenEditUser = (profile: Profile) => {
@@ -748,9 +753,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsEditingUser(false);
     }
-
-    setIsEditingUser(false);
   };
 
   return (
