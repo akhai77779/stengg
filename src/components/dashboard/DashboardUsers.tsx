@@ -233,28 +233,34 @@ export function DashboardUsers() {
   const handleSaveBankAccount = async () => {
     if (!editBankAccount || !selectedUser) return;
     if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_holder.trim()) {
-      toast({ variant: 'destructive', title: 'Thiếu thông tin', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
+      toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng điền đầy đủ thông tin bắt buộc.' });
       return;
     }
     setIsSavingBank(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase.rpc('admin_update_bank_account', {
-      _admin_id: userData.user?.id as string,
-      _account_id: editBankAccount.id,
-      _bank_name: bankForm.bank_name.trim(),
-      _account_number: bankForm.account_number.trim(),
-      _account_holder: bankForm.account_holder.trim(),
-      _branch: bankForm.branch.trim(),
-    });
-    setIsSavingBank(false);
-    const res = data as { success?: boolean; error?: string } | null;
-    if (error || !res?.success) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật' });
-      return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('admin_update_bank_account', {
+        _admin_id: userData.user?.id as string,
+        _account_id: editBankAccount.id,
+        _bank_name: bankForm.bank_name.trim(),
+        _account_number: bankForm.account_number.trim(),
+        _account_holder: bankForm.account_holder.trim(),
+        _branch: bankForm.branch.trim(),
+      });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể cập nhật tài khoản ngân hàng' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã cập nhật tài khoản ngân hàng.' });
+      setEditBankAccount(null);
+      fetchUserBankAccounts(selectedUser.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsSavingBank(false);
     }
-    toast({ title: 'Đã cập nhật', description: 'Cập nhật tài khoản ngân hàng thành công.' });
-    setEditBankAccount(null);
-    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleDeleteBankAccount = (account: BankAccount) => {
@@ -265,20 +271,26 @@ export function DashboardUsers() {
   const handleConfirmDeleteBankAccount = async () => {
     if (!selectedUser || !deleteConfirmAccount) return;
     setDeletingBankId(deleteConfirmAccount.id);
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase.rpc('admin_delete_bank_account', {
-      _admin_id: userData.user?.id as string,
-      _account_id: deleteConfirmAccount.id,
-    });
-    setDeletingBankId(null);
-    setDeleteConfirmAccount(null);
-    const res = data as { success?: boolean; error?: string } | null;
-    if (error || !res?.success) {
-      toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa' });
-      return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('admin_delete_bank_account', {
+        _admin_id: userData.user?.id as string,
+        _account_id: deleteConfirmAccount.id,
+      });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error?.message || res?.error || 'Không thể xóa tài khoản ngân hàng' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã xóa tài khoản ngân hàng.' });
+      setDeleteConfirmAccount(null);
+      fetchUserBankAccounts(selectedUser.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setDeletingBankId(null);
     }
-    toast({ title: 'Đã xóa', description: 'Đã xóa tài khoản ngân hàng.' });
-    fetchUserBankAccounts(selectedUser.id);
   };
 
   const handleShowUserDetail = (profile: Profile) => {
@@ -298,67 +310,49 @@ export function DashboardUsers() {
 
   const handleApproveVerification = async (id: string) => {
     setIsProcessingVerification(true);
-    const { error } = await supabase
-      .from('identity_verifications')
-      .update({ 
-        status: 'approved',
-        rejection_reason: null 
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('identity_verifications')
+        .update({ status: 'approved', rejection_reason: null })
+        .eq('id', id);
 
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể duyệt yêu cầu.',
-      });
-    } else {
-      toast({
-        title: 'Thành công',
-        description: 'Đã duyệt xác minh danh tính.',
-      });
-      // Update local state
+      if (error) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể duyệt yêu cầu xác minh danh tính' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã duyệt xác minh danh tính.' });
       if (verificationUser) {
         const updatedVerification = { ...verifications[verificationUser.id], status: 'approved' as const, rejection_reason: null };
         setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
         setUserVerification(updatedVerification);
       }
       setShowVerificationDialog(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsProcessingVerification(false);
     }
-    setIsProcessingVerification(false);
   };
 
   const handleRejectVerification = async (id: string) => {
     if (!rejectionReason.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Vui lòng nhập lý do từ chối.',
-      });
+      toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng nhập lý do từ chối.' });
       return;
     }
 
     setIsProcessingVerification(true);
-    const { error } = await supabase
-      .from('identity_verifications')
-      .update({ 
-        status: 'rejected',
-        rejection_reason: rejectionReason 
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('identity_verifications')
+        .update({ status: 'rejected', rejection_reason: rejectionReason })
+        .eq('id', id);
 
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể từ chối yêu cầu.',
-      });
-    } else {
-      toast({
-        title: 'Thành công',
-        description: 'Đã từ chối yêu cầu xác minh.',
-      });
-      // Update local state
+      if (error) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: error.message || 'Không thể từ chối yêu cầu xác minh danh tính' });
+        return;
+      }
+      toast({ title: 'Thành công', description: 'Đã từ chối yêu cầu xác minh danh tính.' });
       if (verificationUser) {
         const updatedVerification = { ...verifications[verificationUser.id], status: 'rejected' as const, rejection_reason: rejectionReason };
         setVerifications({ ...verifications, [verificationUser.id]: updatedVerification });
@@ -366,8 +360,12 @@ export function DashboardUsers() {
       }
       setShowVerificationDialog(false);
       setRejectionReason('');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ variant: 'destructive', title: 'Lỗi', description: msg });
+    } finally {
+      setIsProcessingVerification(false);
     }
-    setIsProcessingVerification(false);
   };
 
   const getVerificationBadge = (userId: string) => {
@@ -420,7 +418,6 @@ export function DashboardUsers() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
-        setIsAddingBalance(false);
         return;
       }
 
@@ -457,9 +454,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsAddingBalance(false);
     }
-
-    setIsAddingBalance(false);
   };
 
   const handleSubtractBalance = async () => {
@@ -484,7 +481,6 @@ export function DashboardUsers() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
-        setIsSubtractingBalance(false);
         return;
       }
 
@@ -521,9 +517,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsSubtractingBalance(false);
     }
-
-    setIsSubtractingBalance(false);
   };
 
   const handleChangePassword = async () => {
@@ -568,9 +564,9 @@ export function DashboardUsers() {
       setConfirmPassword('');
     } catch (error: any) {
       toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsChangingPassword(false);
     }
-
-    setIsChangingPassword(false);
   };
 
   const handleChangeWithdrawalPassword = async () => {
@@ -616,9 +612,9 @@ export function DashboardUsers() {
       setConfirmWithdrawalPassword('');
     } catch (error: any) {
       toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsChangingWithdrawalPassword(false);
     }
-
-    setIsChangingWithdrawalPassword(false);
   };
 
   const handleToggleAccountFreeze = async (profile: Profile) => {
@@ -674,18 +670,20 @@ export function DashboardUsers() {
 
     setIsUpdatingFreeze(true);
 
-    const updateData = freezeType === 'account' 
-      ? { is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
-      : { is_trade_frozen: true };
+    try {
+      const updateData = freezeType === 'account'
+        ? { is_frozen: true, frozen_reason: freezeReason || 'Tài khoản bị khóa bởi admin' }
+        : { is_trade_frozen: true };
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', freezeUser.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', freezeUser.id);
 
-    if (error) {
-      toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
-    } else {
+      if (error) {
+        toast({ title: 'Lỗi', description: error.message, variant: 'destructive' });
+        return;
+      }
       const message = freezeType === 'account' ? 'Đã khóa tài khoản' : 'Đã đóng băng giao dịch';
       toast({ title: 'Thành công', description: message });
       setProfiles(profiles.map(p => {
@@ -697,9 +695,12 @@ export function DashboardUsers() {
         return p;
       }));
       setFreezeUser(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+      toast({ title: 'Lỗi', description: msg, variant: 'destructive' });
+    } finally {
+      setIsUpdatingFreeze(false);
     }
-
-    setIsUpdatingFreeze(false);
   };
 
   const handleOpenEditUser = (profile: Profile) => {
@@ -752,9 +753,9 @@ export function DashboardUsers() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
       toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' });
+    } finally {
+      setIsEditingUser(false);
     }
-
-    setIsEditingUser(false);
   };
 
   return (
