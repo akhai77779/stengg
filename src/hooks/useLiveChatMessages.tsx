@@ -20,13 +20,16 @@ export interface LiveChatMessage {
 
 interface UseLiveChatMessagesOptions {
   onNewMessage?: (message: LiveChatMessage) => void;
+  /** When > 0, poll the messages query at this interval (ms). Useful for
+   *  anonymous guests where realtime postgres_changes is not available. */
+  pollMs?: number;
 }
 
 export function useLiveChatMessages(
   roomId: string | null,
   options: UseLiveChatMessagesOptions = {}
 ) {
-  const { onNewMessage } = options;
+  const { onNewMessage, pollMs } = options;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const lastMessageIdRef = useRef<string | null>(null);
@@ -52,6 +55,7 @@ export function useLiveChatMessages(
       return data as LiveChatMessage[];
     },
     enabled: !!roomId,
+    refetchInterval: pollMs && pollMs > 0 ? pollMs : false,
   });
 
   // Send message mutation
