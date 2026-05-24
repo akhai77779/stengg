@@ -418,7 +418,6 @@ export function DashboardUsers() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
-        setIsAddingBalance(false);
         return;
       }
 
@@ -482,7 +481,6 @@ export function DashboardUsers() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'Lỗi', description: 'Không tìm thấy phiên đăng nhập', variant: 'destructive' });
-        setIsSubtractingBalance(false);
         return;
       }
 
