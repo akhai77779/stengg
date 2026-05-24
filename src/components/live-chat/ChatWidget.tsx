@@ -11,6 +11,11 @@ import { useLiveChatSession } from "@/hooks/useLiveChatSession";
 import { useLiveChatBot, isWithinWorkingHours, BOT_CONFIG } from "@/hooks/useLiveChatBot";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageList, MessageInput } from "./MessageComponents";
+import {
+  initGuestSession,
+  rehydrateGuestHeaders,
+  loadGuestSession,
+} from "@/lib/guestChatAuth";
 
 interface ChatWidgetProps {
   position?: "bottom-right" | "bottom-left";
@@ -35,6 +40,7 @@ export function ChatWidget({
   const isAuthenticated = !!user;
   const { findOrCreateRoom } = useLiveChatRooms();
   const lastActivityRef = useRef<number>(Date.now());
+  const [guestInitError, setGuestInitError] = useState<string | null>(null);
 
   // Get or create customer info
   const customerId = user?.id || guestInfo?.id || "";
@@ -56,6 +62,7 @@ export function ChatWidget({
       // Record activity on new message
       lastActivityRef.current = Date.now();
     },
+    pollMs: !isAuthenticated ? 2500 : undefined,
   });
 
   // Session management
@@ -96,7 +103,13 @@ export function ChatWidget({
     if (isOpen && !roomId && (isAuthenticated || guestInfo)) {
       initRoom();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, roomId, isAuthenticated, guestInfo]);
+
+  // Re-apply guest headers from localStorage on mount so realtime/queries pass RLS.
+  useEffect(() => {
+    if (!isAuthenticated) rehydrateGuestHeaders();
+  }, [isAuthenticated]);
 
   // Mark messages as read when viewing
   useEffect(() => {
@@ -109,22 +122,43 @@ export function ChatWidget({
     if (!customerId) return;
 
     try {
-      const room = await findOrCreateRoom({
-        id: customerId,
-        name: customerName,
-        email: user?.email || guestInfo?.email,
-      });
-      
-      // Check if this is a new room (no messages yet)
-      setIsNewRoom(room.last_message === null);
-      setRoomId(room.id);
+      if (!isAuthenticated) {
+        // Guests: must issue a fresh signed token via edge function.
+        const session = await initGuestSession({
+          customer_name: customerName,
+          customer_email: guestInfo?.email,
+        });
+        setIsNewRoom(false);
+        setRoomId(session.room_id);
+        // Keep guestInfo.id in sync with server-issued guest_id
+        if (guestInfo && guestInfo.id !== session.guest_id) {
+          setGuestInfo({ ...guestInfo, id: session.guest_id });
+          localStorage.setItem("live_chat_guest_id", session.guest_id);
+        }
+        setGuestInitError(null);
+      } else {
+        const room = await findOrCreateRoom({
+          id: customerId,
+          name: customerName,
+          email: user?.email || guestInfo?.email,
+        });
+        setIsNewRoom(room.last_message === null);
+        setRoomId(room.id);
+      }
     } catch (error) {
       console.error("Error initializing room:", error);
+      setGuestInitError(
+        error instanceof Error ? error.message : "Không thể khởi tạo phiên chat",
+      );
     }
   };
 
   // Generate guest ID
   const generateGuestId = () => {
+    // Prefer a previously stored signed session; otherwise reuse the legacy
+    // guest_id (server will re-issue a fresh token on init regardless).
+    const session = loadGuestSession();
+    if (session?.guest_id) return session.guest_id;
     let guestId = localStorage.getItem("live_chat_guest_id");
     if (!guestId) {
       guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
