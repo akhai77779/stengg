@@ -35,6 +35,10 @@ Deno.serve(async (req) => {
         : "Khách";
     const customer_email: string | null =
       typeof body.customer_email === "string" ? body.customer_email.slice(0, 200) : null;
+    const topic: string | null =
+      typeof body.topic === "string" && body.topic.trim()
+        ? body.topic.trim().slice(0, 60)
+        : null;
     const existing_guest_id: string | undefined =
       typeof body.guest_id === "string" && body.guest_id.startsWith("guest_")
         ? body.guest_id
@@ -67,6 +71,7 @@ Deno.serve(async (req) => {
           guest_token_hash: token_hash,
           customer_name,
           customer_email,
+          topic: topic ?? existingRoom.topic ?? null,
           last_updated_at: new Date().toISOString(),
         })
         .eq("id", existingRoom.id)
@@ -81,6 +86,7 @@ Deno.serve(async (req) => {
           customer_id: guest_id,
           customer_name,
           customer_email,
+          topic,
           status: "waiting",
           guest_token_hash: token_hash,
         })
