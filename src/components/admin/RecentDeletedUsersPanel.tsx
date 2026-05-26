@@ -145,6 +145,10 @@ export function RecentDeletedUsersPanel() {
           <p className="text-center text-muted-foreground py-6 text-sm">
             Chưa có thao tác xóa tài khoản nào được ghi nhận.
           </p>
+        ) : filteredLogs.length === 0 ? (
+          <p className="text-center text-muted-foreground py-6 text-sm">
+            Không tìm thấy kết quả phù hợp.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -158,7 +162,7 @@ export function RecentDeletedUsersPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => {
+                {filteredLogs.map((log) => {
                   const snap = log.details?.snapshot ?? {};
                   const contact = snap.email || snap.phone || "—";
                   return (
