@@ -41,6 +41,27 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_presence: {
+        Row: {
+          last_seen_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
@@ -427,6 +448,7 @@ export type Database = {
           attachment_type: string | null
           attachment_url: string | null
           created_at: string | null
+          delivered_at: string | null
           id: string
           is_read: boolean | null
           message: string
@@ -441,6 +463,7 @@ export type Database = {
           attachment_type?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           is_read?: boolean | null
           message?: string
@@ -455,6 +478,7 @@ export type Database = {
           attachment_type?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           is_read?: boolean | null
           message?: string
@@ -527,6 +551,8 @@ export type Database = {
           last_message: string | null
           last_updated_at: string | null
           status: string
+          tags: string[]
+          topic: string | null
           updated_at: string | null
         }
         Insert: {
@@ -540,6 +566,8 @@ export type Database = {
           last_message?: string | null
           last_updated_at?: string | null
           status?: string
+          tags?: string[]
+          topic?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -553,6 +581,8 @@ export type Database = {
           last_message?: string | null
           last_updated_at?: string | null
           status?: string
+          tags?: string[]
+          topic?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1000,6 +1030,33 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      room_tags: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          id: string
+          room_id: string
+          tag: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          room_id: string
+          tag: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          room_id?: string
+          tag?: string
         }
         Relationships: []
       }
@@ -1473,6 +1530,7 @@ export type Database = {
         }
         Returns: number
       }
+      online_admin_count: { Args: never; Returns: number }
       process_option_trade: {
         Args: {
           _amount: number
