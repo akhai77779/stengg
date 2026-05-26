@@ -44,6 +44,7 @@ interface DeleteLog {
 export function RecentDeletedUsersPanel() {
   const [logs, setLogs] = useState<DeleteLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
