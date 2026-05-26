@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -16,8 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Search } from "lucide-react";
 import { format } from "date-fns";
+
 
 interface DeleteSnapshot {
   full_name?: string | null;
@@ -42,6 +44,7 @@ interface DeleteLog {
 export function RecentDeletedUsersPanel() {
   const [logs, setLogs] = useState<DeleteLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -88,15 +91,26 @@ export function RecentDeletedUsersPanel() {
     fetchLogs();
   }, [fetchLogs]);
 
+  const filteredLogs = logs.filter((log) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const snap = log.details?.snapshot ?? {};
+    return (
+      (snap.email?.toLowerCase() ?? "").includes(q) ||
+      (snap.phone?.toLowerCase() ?? "").includes(q) ||
+      (snap.user_code?.toString() ?? "").includes(q)
+    );
+  });
+
   return (
     <Card className="bg-card border-border">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Trash2 className="w-4 h-4 text-destructive" />
             Xóa tài khoản gần đây
             <Badge variant="secondary" className="ml-1">
-              {logs.length}
+              {searchQuery.trim() ? `${filteredLogs.length} / ${logs.length}` : logs.length}
             </Badge>
           </CardTitle>
           <Button
@@ -112,6 +126,15 @@ export function RecentDeletedUsersPanel() {
             Làm mới
           </Button>
         </div>
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo email, SĐT hoặc mã nhân viên…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -121,6 +144,10 @@ export function RecentDeletedUsersPanel() {
         ) : logs.length === 0 ? (
           <p className="text-center text-muted-foreground py-6 text-sm">
             Chưa có thao tác xóa tài khoản nào được ghi nhận.
+          </p>
+        ) : filteredLogs.length === 0 ? (
+          <p className="text-center text-muted-foreground py-6 text-sm">
+            Không tìm thấy kết quả phù hợp.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -135,7 +162,7 @@ export function RecentDeletedUsersPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => {
+                {filteredLogs.map((log) => {
                   const snap = log.details?.snapshot ?? {};
                   const contact = snap.email || snap.phone || "—";
                   return (
