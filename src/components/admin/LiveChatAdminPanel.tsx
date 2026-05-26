@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminPresence } from "@/hooks/useAgentPresence";
 import { useLiveChatRooms, LiveChatRoom } from "@/hooks/useLiveChatRooms";
 import { useLiveChatMessages, LiveChatMessage } from "@/hooks/useLiveChatMessages";
 import { useLiveChatTyping } from "@/hooks/useLiveChatTyping";
@@ -83,6 +84,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
   const [newMessageRoomId, setNewMessageRoomId] = useState<string | null>(null);
 
   const { user } = useAuth();
+  useAdminPresence(user?.id);
   const { toast } = useToast();
   const { rooms, isLoading: roomsLoading, refetch: refetchRooms, updateRoom, totalUnread } = useLiveChatRooms();
 
@@ -93,6 +95,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     deleteMessage,
     uploadAttachment,
     markAsRead,
+    markDelivered,
     isLoading: messagesLoading,
     isSending,
   } = useLiveChatMessages(selectedRoom?.id || null, {
@@ -103,6 +106,8 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
         // Flash the room in sidebar even if filtered
         setNewMessageRoomId(msg.room_id);
         setTimeout(() => setNewMessageRoomId(null), 3000);
+        // Mark as delivered immediately for the customer's tick indicator
+        markDelivered?.(["customer"]);
       }
     },
   });
