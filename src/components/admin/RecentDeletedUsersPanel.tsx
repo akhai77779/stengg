@@ -91,6 +91,17 @@ export function RecentDeletedUsersPanel() {
     fetchLogs();
   }, [fetchLogs]);
 
+  const filteredLogs = logs.filter((log) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const snap = log.details?.snapshot ?? {};
+    return (
+      (snap.email?.toLowerCase() ?? "").includes(q) ||
+      (snap.phone?.toLowerCase() ?? "").includes(q) ||
+      (snap.user_code?.toString() ?? "").includes(q)
+    );
+  });
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
