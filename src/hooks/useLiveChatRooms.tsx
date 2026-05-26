@@ -169,7 +169,7 @@ export function useLiveChatRooms(options: UseLiveChatRoomsOptions = {}) {
         .neq("status", "closed")
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (existingRoom) {
         return existingRoom as LiveChatRoom;
