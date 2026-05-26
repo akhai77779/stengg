@@ -928,6 +928,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
                   disabled={isSending}
                   placeholder="Nhập tin nhắn..."
                    isAdmin={true}
+                  draftKey={selectedRoom ? `admin-chat-draft:${selectedRoom.id}` : undefined}
                 />
               </div>
             </>
