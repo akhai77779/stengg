@@ -23,8 +23,6 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
         return;
       }
 
-      setServerAllowed(null);
-
       const { data, error } = await supabase.functions.invoke("admin-session-guard", {
         method: "GET",
         headers: {
