@@ -26,6 +26,9 @@ interface ChatInputWithExtrasProps {
   disabled?: boolean;
   placeholder?: string;
    isAdmin?: boolean;
+  /** Optional localStorage key to persist draft message per-conversation.
+   *  When set, draft survives tab switches / page reloads until message is sent. */
+  draftKey?: string;
 }
 
 export function ChatInputWithExtras({
@@ -35,8 +38,16 @@ export function ChatInputWithExtras({
   disabled,
   placeholder = "Nhập tin nhắn...",
    isAdmin = false,
+  draftKey,
 }: ChatInputWithExtrasProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<string>(() => {
+    if (!draftKey || typeof window === "undefined") return "";
+    try {
+      return window.localStorage.getItem(draftKey) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -54,6 +65,34 @@ export function ChatInputWithExtras({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
    const { templates, loading: templatesLoading } = useQuickReplyTemplates();
+
+  // Load draft when switching conversation (draftKey changes)
+  useEffect(() => {
+    if (!draftKey || typeof window === "undefined") {
+      setMessage("");
+      return;
+    }
+    try {
+      setMessage(window.localStorage.getItem(draftKey) ?? "");
+    } catch {
+      setMessage("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Persist draft to localStorage on change
+  useEffect(() => {
+    if (!draftKey || typeof window === "undefined") return;
+    try {
+      if (message) {
+        window.localStorage.setItem(draftKey, message);
+      } else {
+        window.localStorage.removeItem(draftKey);
+      }
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [draftKey, message]);
  
    // Filter only active templates
    const activeTemplates = templates.filter(t => t.is_active);
