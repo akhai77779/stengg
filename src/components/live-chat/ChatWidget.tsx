@@ -10,7 +10,9 @@ import { useLiveChatRooms } from "@/hooks/useLiveChatRooms";
 import { useLiveChatSession } from "@/hooks/useLiveChatSession";
 import { useLiveChatBot, isWithinWorkingHours, BOT_CONFIG } from "@/hooks/useLiveChatBot";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnlineAgentBadge } from "@/hooks/useAgentPresence";
 import { MessageList, MessageInput } from "./MessageComponents";
+import { PreChatForm, type PreChatPayload, TOPIC_LABELS } from "./PreChatForm";
 import {
   initGuestSession,
   rehydrateGuestHeaders,
@@ -34,13 +36,17 @@ export function ChatWidget({
     id: string;
     name: string;
     email?: string;
+    topic?: string;
   } | null>(null);
+  const [showPreChat, setShowPreChat] = useState(false);
+  const [isInitingRoom, setIsInitingRoom] = useState(false);
 
   const { user } = useAuth();
   const isAuthenticated = !!user;
   const { findOrCreateRoom } = useLiveChatRooms();
   const lastActivityRef = useRef<number>(Date.now());
   const [guestInitError, setGuestInitError] = useState<string | null>(null);
+  const { isOnline: hasOnlineAgent } = useOnlineAgentBadge();
 
   // Get or create customer info
   const customerId = user?.id || guestInfo?.id || "";
@@ -51,6 +57,7 @@ export function ChatWidget({
     sendMessage,
     uploadAttachment,
     markAsRead,
+    markDelivered,
     isLoading,
     isSending,
   } = useLiveChatMessages(roomId, {
@@ -58,6 +65,8 @@ export function ChatWidget({
       // Play sound for support messages
       if (msg.sender_type === "support" || msg.sender_type === "bot") {
         playNotificationSound();
+        // Mark as delivered as soon as it arrives client-side
+        markDelivered?.(["support", "bot"]);
       }
       // Record activity on new message
       lastActivityRef.current = Date.now();
@@ -121,12 +130,14 @@ export function ChatWidget({
   const initRoom = async () => {
     if (!customerId) return;
 
+    setIsInitingRoom(true);
     try {
       if (!isAuthenticated) {
         // Guests: must issue a fresh signed token via edge function.
         const session = await initGuestSession({
           customer_name: customerName,
           customer_email: guestInfo?.email,
+          topic: guestInfo?.topic,
         });
         setIsNewRoom(false);
         setRoomId(session.room_id);
@@ -150,6 +161,8 @@ export function ChatWidget({
       setGuestInitError(
         error instanceof Error ? error.message : "Không thể khởi tạo phiên chat",
       );
+    } finally {
+      setIsInitingRoom(false);
     }
   };
 
@@ -170,16 +183,32 @@ export function ChatWidget({
   // Handle widget open
   const handleOpen = () => {
     if (!isAuthenticated && !guestInfo) {
-      // For guests, auto-generate info
-      const guestId = generateGuestId();
-      setGuestInfo({
-        id: guestId,
-        name: `Khách #${guestId.slice(-4)}`,
-      });
+      // For new guests: show pre-chat form first.
+      // For returning guests with existing session, reuse it transparently.
+      const existing = loadGuestSession();
+      if (existing) {
+        setGuestInfo({
+          id: existing.guest_id,
+          name: `Khách #${existing.guest_id.slice(-4)}`,
+        });
+      } else {
+        setShowPreChat(true);
+      }
     }
     setIsOpen(true);
     setIsMinimized(false);
     handleUserActivity();
+  };
+
+  const handlePreChatSubmit = (data: PreChatPayload) => {
+    const guestId = generateGuestId();
+    setGuestInfo({
+      id: guestId,
+      name: data.name,
+      email: data.email,
+      topic: data.topic,
+    });
+    setShowPreChat(false);
   };
 
   // Handle send message
@@ -248,9 +277,16 @@ export function ChatWidget({
     position === "bottom-right" ? "right-4" : "left-4";
 
   // Working hours indicator
-  const workingHoursText = isWorkingHours
-    ? "Đang trực tuyến"
-    : `Ngoài giờ làm việc (${BOT_CONFIG.WORKING_HOURS_START}:00-${BOT_CONFIG.WORKING_HOURS_END}:00)`;
+  const workingHoursText = hasOnlineAgent
+    ? "Hỗ trợ viên đang trực tuyến"
+    : isWorkingHours
+    ? "Sẽ phản hồi sớm"
+    : `Ngoài giờ (${BOT_CONFIG.WORKING_HOURS_START}:00-${BOT_CONFIG.WORKING_HOURS_END}:00)`;
+  const statusDotClass = hasOnlineAgent
+    ? "bg-green-400"
+    : isWorkingHours
+    ? "bg-yellow-400"
+    : "bg-muted-foreground";
 
   return (
     <>
@@ -295,7 +331,7 @@ export function ChatWidget({
                 <span 
                   className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-primary-foreground",
-                    isWorkingHours ? "bg-green-400" : "bg-yellow-400"
+                    statusDotClass
                   )}
                 />
               </div>
@@ -337,22 +373,36 @@ export function ChatWidget({
           {/* Content */}
           {!isMinimized && (
             <>
-              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <MessageList
-                  messages={messages}
-                  currentUserId={customerId}
-                  typingText={typingText}
-                  isLoading={isLoading}
-                />
-              </div>
+              {showPreChat ? (
+                <PreChatForm onStart={handlePreChatSubmit} isLoading={isInitingRoom} />
+              ) : (
+                <>
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    {guestInfo?.topic && messages.length === 0 && (
+                      <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/50 border-b">
+                        Chủ đề:{" "}
+                        <span className="font-medium text-foreground">
+                          {TOPIC_LABELS[guestInfo.topic] ?? guestInfo.topic}
+                        </span>
+                      </div>
+                    )}
+                    <MessageList
+                      messages={messages}
+                      currentUserId={customerId}
+                      typingText={typingText}
+                      isLoading={isLoading || isInitingRoom}
+                    />
+                  </div>
 
-              <MessageInput
-                onSend={handleSend}
-                onTyping={handleTyping}
-                onUpload={uploadAttachment}
-                disabled={isSending || !roomId}
-                placeholder="Nhập tin nhắn..."
-              />
+                  <MessageInput
+                    onSend={handleSend}
+                    onTyping={handleTyping}
+                    onUpload={uploadAttachment}
+                    disabled={isSending || !roomId}
+                    placeholder="Nhập tin nhắn..."
+                  />
+                </>
+              )}
             </>
           )}
         </Card>
