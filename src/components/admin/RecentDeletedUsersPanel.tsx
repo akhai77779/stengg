@@ -104,13 +104,13 @@ export function RecentDeletedUsersPanel() {
 
   return (
     <Card className="bg-card border-border">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Trash2 className="w-4 h-4 text-destructive" />
             Xóa tài khoản gần đây
             <Badge variant="secondary" className="ml-1">
-              {logs.length}
+              {searchQuery.trim() ? `${filteredLogs.length} / ${logs.length}` : logs.length}
             </Badge>
           </CardTitle>
           <Button
@@ -125,6 +125,15 @@ export function RecentDeletedUsersPanel() {
             />
             Làm mới
           </Button>
+        </div>
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo email, SĐT hoặc mã nhân viên…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
         </div>
       </CardHeader>
       <CardContent>
