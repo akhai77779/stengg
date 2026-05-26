@@ -49,7 +49,15 @@ import AdminLiveChat from "./pages/admin/AdminLiveChat";
 import AdminProductsMonitor from "./pages/admin/AdminProductsMonitor";
 import AdminDataHealth from "./pages/admin/AdminDataHealth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Tránh refetch lại mọi query khi admin chuyển tab và quay lại
+      // -> không làm reload UI / mất state cục bộ (draft tin nhắn, v.v.)
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // App component with proper provider hierarchy
 const App = () => (
