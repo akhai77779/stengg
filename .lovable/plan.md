@@ -1,65 +1,73 @@
-## Vấn đề tìm thấy
+# Plan: Live chat kiểu LiveChat.com
 
-Đúng, **đang có 2 nguồn dữ liệu nến chạy chồng nhau** ở 2 trang khác nhau:
+Nâng cấp hệ thống live chat hiện tại để có trải nghiệm gần với LiveChat.com — giữ nguyên hạ tầng (Lovable Cloud, RLS, guest token, realtime/polling) và bổ sung 5 nhóm tính năng theo thứ tự ưu tiên.
 
-### 1. Trang `/products` — Hiện tượng "nhảy biểu đồ khi F5"
+## 1. Pre-chat form (khách mới)
+- Khi guest mở widget lần đầu, hiển thị form: **Tên**, **Email** (tuỳ chọn), **Chủ đề** (dropdown: Nạp/Rút, Tài khoản, Giao dịch, Khác).
+- Bấm "Bắt đầu chat" → gọi `guest-chat-init` (đã có) kèm các field này → lưu vào `live_chat_rooms.customer_name`, `customer_email`, và `topic` (cột mới).
+- User đã đăng nhập: bỏ qua form, vẫn cho chọn chủ đề ở tin nhắn đầu.
+- Tin nhắn welcome của bot tự cá nhân hoá theo `topic`.
 
-Mỗi card sản phẩm đang đọc nến từ **2 chỗ**:
+## 2. Trạng thái agent + routing
+- Bảng mới `agent_presence` (user_id, status: online/away/offline, last_seen_at).
+- Admin panel: dropdown đổi trạng thái + auto chuyển `away` sau 5 phút không hoạt động, `offline` khi đóng tab (visibilitychange).
+- Widget khách hiển thị badge "Đang online" (xanh) / "Sẽ phản hồi sớm" (vàng) / "Hiện đang ngoài giờ" (xám) dựa trên có ít nhất 1 admin online + giờ làm việc.
+- Khi gửi tin đầu tiên, room tự gán `assigned_to` = admin online ít room nhất.
 
-- **Nguồn A** (`useProductsData` ở `Products.tsx`): fetch **30 nến thô gần nhất** (1 phút mỗi nến) từ `price_history` → render ngay khi F5.
-- **Nguồn B** (`useSharedProductRealtime` với `timeframe: '30m'` ở `LiveProductCard`): query lại `price_history`, **gộp thành nến 30 phút**, rồi thay thế Nguồn A khi load xong (`liveCandles.length >= 2`).
+## 3. Message status (sent / delivered / seen) + typing nâng cao
+- Thêm cột `delivered_at` vào `live_chat_messages` (ngoài `read_at` đã có).
+- Khi tin nhắn xuất hiện ở phía nhận (realtime/polling), client tự update `delivered_at`.
+- Khi cửa sổ chat đang mở + nhìn thấy tin → update `read_at` (đã có sẵn `markAsRead`, mở rộng để hoạt động cả 2 chiều).
+- Hiển thị tick dưới bubble: ✓ sent, ✓✓ delivered (xám), ✓✓ seen (xanh) — kiểu Messenger.
+- Typing indicator hiện preview text (đã có) nhưng thêm tên agent + avatar nhỏ giống LiveChat.
 
-→ Vì 2 nguồn dùng **khung thời gian khác nhau** (1m vs 30m), khi F5 user thấy chart 1m trước, ~1 giây sau bị thay bằng chart 30m → cảm giác "nhảy biểu đồ", giá H/L/% cũng đổi.
+## 4. Canned responses + tags
+- Tận dụng `quick_reply_templates` đã có → bổ sung UI dropdown "/" trong khung soạn admin: gõ `/` mở list, mũi tên chọn, Enter chèn.
+- Bảng mới `room_tags` (room_id, tag, color) — admin gán tag (VIP, Khiếu nại, Đã giải quyết…) — hiện chip màu trên danh sách room + filter theo tag.
 
-### 2. Trang `/admin/products-monitor` — Shock Event không hoạt động trực quan
+## 5. Offline → ticket qua email
+- Khi không có admin online + khách gửi tin: bot trả lời "Hiện ngoài giờ, chúng tôi sẽ phản hồi qua email".
+- Nếu khách (guest) đã điền email ở pre-chat: gọi edge function `notify-offline-ticket` đẩy nội dung sang admin (Telegram + lưu vào room với badge "ticket").
+- Khi admin reply, gửi email `support-reply` cho khách (dùng hạ tầng email đã có).
 
-`AdminProductsMonitor.tsx` cũng có **2 nguồn**:
+---
 
-- **Nguồn A** (Market Engine local, `useMarketEngine`): nơi Shock Event được apply ngay lập tức.
-- **Nguồn B** (`useSharedProductRealtime` đọc từ DB `price_history`): data đã được DB Sync ghi xuống.
+## Technical details
 
-Code ưu tiên Nguồn B:
-```ts
-const displayCandles = sharedRealtime.engineCandles.length > 0
-  ? sharedRealtime.engineCandles    // ← DB (delay 3s + chỉ ghi khi sync ON)
-  : aggregateCandles(getCandles(...)); // ← engine local (chỉ làm fallback)
-```
+**Database migrations**
+- `live_chat_rooms`: thêm `topic text`, `tags text[]` default `{}`.
+- `live_chat_messages`: thêm `delivered_at timestamptz`.
+- New table `agent_presence` (user_id PK, status, last_seen_at, updated_at) + RLS: admin full, user xem own.
+- New table `room_tags` (id, room_id, tag, color, created_by, created_at) + RLS admin-only.
+- Trigger: khi insert message từ customer → nếu `room.assigned_to is null` chạy function `auto_assign_room()` chọn admin online ít room nhất.
 
-→ Khi bấm Shock Event:
-- Engine local đổi giá ngay lập tức.
-- Nhưng chart đang vẽ Nguồn B (DB), nên bạn không thấy gì cho đến khi DB Sync ghi xuống (mỗi 3s) và Realtime push lại.
-- Nếu DB Sync OFF, Shock Event không bao giờ xuất hiện trên chart ở trang admin.
-- `currentPrice` cũng ưu tiên DB → giá hiển thị/target lệch so với engine thật.
+**RLS adjustments**
+- Cho phép `anon` update `delivered_at` trong room của mình (mở rộng policy đã có "Guest marks support messages as read").
+- Cho phép `authenticated` update `delivered_at` cho tin nhắn trong room của mình.
 
-## Cách sửa
+**Frontend**
+- `src/components/live-chat/PreChatForm.tsx` (mới) — render trước khi `ChatWidget` gọi `guest-chat-init`.
+- `src/components/live-chat/MessageStatus.tsx` (mới) — render tick theo state.
+- `src/hooks/useAgentPresence.tsx` (mới) — admin: heartbeat 30s + đổi status; khách: subscribe realtime để biết online.
+- `src/components/admin/LiveChatAdminPanel.tsx` — thêm dropdown trạng thái, slash-command quick replies, room tag chips, filter theo tag.
+- `src/hooks/useLiveChatMessages.tsx` — bổ sung `markDelivered()` chạy khi nhận tin mới.
 
-### A. Trang `/products` — gộp về 1 nguồn
+**Edge functions**
+- `guest-chat-init` (cập nhật): nhận thêm `topic`, `email`, lưu vào room.
+- `notify-offline-ticket` (mới): nhận room_id, message → gửi Telegram + email cho admin.
+- `support-reply-email` (mới hoặc tích hợp vào template hiện có): gửi reply cho khách offline.
 
-**File:** `src/hooks/useProductsData.tsx`
-- Bỏ phần fetch 30 nến thô (đoạn `candlePromises` + `setProducts(... candles: candleMap[p.id])`). Khởi tạo `candles: []` và để `useSharedProductRealtime` lo toàn bộ.
+**i18n**
+- Tất cả label mới đi qua `useLanguage` (theo Core memory).
 
-**File:** `src/components/product/ProductList.tsx` (`LiveProductCard`)
-- Khi `realtime.isLoading === true` hoặc `realtime.candles.length < 2`: hiển thị skeleton/`—` thay vì rơi về `product.candles` cũ. Chỉ render nến khi data 30m thực sự sẵn sàng.
-- Bỏ điều kiện fallback `liveCandles.length >= 2 ? liveCandles : product.candles` (vì product.candles giờ luôn rỗng).
+---
 
-Kết quả: F5 → loading skeleton ngắn → render 1 lần duy nhất bằng nến 30m. Không nhảy.
+## Thứ tự triển khai (build mode)
+1. Migration DB + RLS.
+2. Pre-chat form + lưu topic/email.
+3. Agent presence + badge online ở widget.
+4. Message status tick + delivered logic.
+5. Slash quick replies + tags.
+6. Offline ticket flow (edge + email).
 
-### B. Trang `/admin/products-monitor` — đảo thứ tự ưu tiên về Engine local
-
-**File:** `src/pages/admin/AdminProductsMonitor.tsx`
-- Đổi `displayCandles` để ưu tiên **engine local** (vì admin là người điều khiển engine):
-  ```ts
-  const baseCandles = effectiveProductId ? getCandles(effectiveProductId) : [];
-  const localCandles = timeInterval === '1M' ? baseCandles : aggregateCandles(baseCandles, timeInterval);
-  const displayCandles = localCandles.length > 0 ? localCandles : sharedRealtime.engineCandles;
-  ```
-- Đổi `currentPrice` ưu tiên engine local: `getCurrentPrice(effectiveProductId) ?? sharedRealtime.latestPrice`.
-- Giữ `useSharedProductRealtime` chỉ làm fallback khi engine chưa ready.
-
-Kết quả: bấm Shock Event → giá engine đổi ngay → chart admin đổi ngay (không đợi DB Sync). User-side `/products` vẫn nhận được data qua DB Sync như cũ.
-
-## Tác động
-
-- `/products`: chỉ load nhanh hơn 1 chút (bỏ được N query parallel), không còn flash chart 1m → 30m.
-- `/admin/products-monitor`: Shock Event hoạt động trực quan ngay lập tức, scenario sliders cũng phản ánh tức thì.
-- Không đụng tới DB schema, edge functions, hay luồng DB Sync. Chỉ sửa logic ưu tiên ở client.
+Phạm vi giới hạn ở live chat — không đụng giao diện khác. Sau khi bạn duyệt plan, mình sẽ chuyển sang build và làm tuần tự theo thứ tự trên (có thể tách thành nhiều lượt nếu bạn muốn review từng bước).

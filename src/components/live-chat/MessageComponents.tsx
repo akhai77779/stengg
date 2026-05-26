@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, forwardRef, useCallback } from "react";
-import { Send, Paperclip, X, FileText, Download, MoreVertical, Pencil, Trash2, Check, ArrowDown } from "lucide-react";
+import { Send, Paperclip, X, FileText, Download, MoreVertical, Pencil, Trash2, Check, CheckCheck, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -352,8 +352,18 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
 
                     <p className="text-[10px] opacity-50 mt-1 text-right">
                       {format(new Date(message.created_at), "HH:mm", { locale: vi })}
-                      {message.is_read && isOwn && " ✓✓"}
                     </p>
+                    {isOwn && message.sender_type === "customer" && (
+                      <div className="flex justify-end -mt-1">
+                        {message.is_read ? (
+                          <CheckCheck className="h-3 w-3 text-blue-300" aria-label="Đã xem" />
+                        ) : message.delivered_at ? (
+                          <CheckCheck className="h-3 w-3 opacity-60" aria-label="Đã nhận" />
+                        ) : (
+                          <Check className="h-3 w-3 opacity-60" aria-label="Đã gửi" />
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action menu - show on right for other's messages (admin view) */}

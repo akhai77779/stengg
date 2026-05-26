@@ -72,12 +72,14 @@ export function saveGuestSession(session: GuestChatSession) {
 export async function initGuestSession(opts: {
   customer_name: string;
   customer_email?: string;
+  topic?: string;
 }): Promise<GuestChatSession> {
   const existing = loadGuestSession();
   const { data, error } = await supabase.functions.invoke("guest-chat-init", {
     body: {
       customer_name: opts.customer_name,
       customer_email: opts.customer_email,
+      topic: opts.topic,
       guest_id: existing?.guest_id,
     },
   });

@@ -15,6 +15,7 @@ export interface LiveChatMessage {
   attachment_name: string | null;
   is_read: boolean;
   read_at: string | null;
+  delivered_at: string | null;
   created_at: string;
 }
 
@@ -197,6 +198,7 @@ export function useLiveChatMessages(
         .update({
           is_read: true,
           read_at: new Date().toISOString(),
+          delivered_at: new Date().toISOString(),
         })
         .eq("room_id", roomId)
         .eq("sender_type", senderType)
@@ -208,6 +210,23 @@ export function useLiveChatMessages(
       queryClient.invalidateQueries({
         queryKey: ["live-chat-messages", roomId],
       });
+    },
+  });
+
+  // Mark incoming messages as delivered (ticked but not necessarily read).
+  // Pass the senderType of incoming messages (e.g., 'support' for customer view).
+  const markDelivered = useMutation({
+    mutationFn: async (senderTypes: Array<"customer" | "support" | "bot">) => {
+      if (!roomId || senderTypes.length === 0) return;
+      const { error } = await supabase
+        .from("live_chat_messages")
+        .update({ delivered_at: new Date().toISOString() })
+        .eq("room_id", roomId)
+        .in("sender_type", senderTypes)
+        .is("delivered_at", null);
+      if (error) {
+        console.warn("[markDelivered]", error);
+      }
     },
   });
 
@@ -330,6 +349,7 @@ export function useLiveChatMessages(
     deleteMessage: deleteMessage.mutate,
     deleteMessageAsync: deleteMessage.mutateAsync,
     markAsRead: markAsRead.mutate,
+    markDelivered: markDelivered.mutate,
     uploadAttachment,
     isSending: sendMessage.isPending,
     isEditing: editMessage.isPending,
