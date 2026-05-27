@@ -414,7 +414,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   ? "bg-green-600 hover:bg-green-700 active:bg-green-800"
                   : "bg-red-600 hover:bg-red-700 active:bg-red-800"
               )}
-              disabled={isLoading || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
+             disabled={isLoading || isFrozen || checkingActiveTrade || hasActiveTrade || amountNum < currentMinAmount || (effectiveBalance !== null && amountNum > effectiveBalance)}
               onClick={handleTrade}
             >
               {isLoading ? (
