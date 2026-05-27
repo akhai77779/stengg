@@ -23,6 +23,8 @@ interface TradeDialogProps {
 export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: TradeDialogProps) {
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState(0);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [frozenReason, setFrozenReason] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingBalance, setIsFetchingBalance] = useState(true);
   const { user } = useAuth();
@@ -48,12 +50,15 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
     // Use profiles_safe view to exclude sensitive fields
     const { data, error } = await supabase
       .from('profiles_safe')
-      .select('balance')
+      .select('balance, is_frozen, is_trade_frozen, frozen_reason')
       .eq('id', user!.id)
       .single();
 
     if (!error && data) {
       setBalance(data.balance || 0);
+      const frozen = Boolean(data.is_frozen) || Boolean(data.is_trade_frozen);
+      setIsFrozen(frozen);
+      setFrozenReason(data.frozen_reason ?? null);
     }
     setIsFetchingBalance(false);
   };
@@ -63,6 +68,15 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
       toast({
         title: 'Lỗi',
         description: 'Vui lòng nhập số lượng hợp lệ',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isFrozen) {
+      toast({
+        title: 'Tài khoản bị đóng băng',
+        description: frozenReason || 'Tài khoản của bạn đang bị đóng băng giao dịch',
         variant: 'destructive',
       });
       return;
@@ -220,7 +234,7 @@ export function TradeDialog({ isOpen, onClose, tradeType, product, onSuccess }: 
           </Button>
           <Button
             onClick={handleTrade}
-            disabled={isLoading || !amount || parseFloat(amount) <= 0 || (isBuy && total > balance)}
+            disabled={isLoading || isFrozen || !amount || parseFloat(amount) <= 0 || (isBuy && total > balance)}
             className={isBuy ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
           >
             {isLoading ? (
