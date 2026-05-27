@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useExternalBalance } from '@/hooks/useExternalBalance';
+import { useProfile } from '@/hooks/useProfile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,9 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
   const { toast } = useToast();
   const { t } = useLanguage();
   const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useExternalBalance(user?.id);
+  const { profile } = useProfile(user?.id);
+  const isFrozen = Boolean(profile?.is_frozen) || Boolean(profile?.is_trade_frozen);
+  const frozenReason = profile?.frozen_reason ?? null;
 
   const price = product.price || 0;
   const amountNum = parseFloat(amount) || 0;
@@ -152,6 +156,15 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
         variant: 'destructive',
       });
       void checkActiveTrade();
+      return;
+    }
+
+    if (isFrozen) {
+      toast({
+        title: 'Tài khoản bị đóng băng',
+        description: frozenReason || 'Tài khoản của bạn đang bị đóng băng giao dịch',
+        variant: 'destructive',
+      });
       return;
     }
 
