@@ -87,10 +87,23 @@ export function useLiveChatMessages(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[live-chat] INSERT message failed", {
+          message: error.message,
+          code: (error as { code?: string }).code,
+          details: (error as { details?: string }).details,
+          hint: (error as { hint?: string }).hint,
+          payload: {
+            room_id: data.room_id,
+            sender_type: data.sender_type,
+            sender_id: data.sender_id,
+          },
+        });
+        throw error;
+      }
 
       // Update room's last message
-      await supabase
+      const { error: roomErr } = await supabase
         .from("live_chat_rooms")
         .update({
           last_message: data.message || data.attachment_name || "Tệp đính kèm",
@@ -98,6 +111,15 @@ export function useLiveChatMessages(
           status: "active",
         })
         .eq("id", data.room_id);
+      if (roomErr) {
+        console.warn("[live-chat] UPDATE room.last_message failed", {
+          message: roomErr.message,
+          code: (roomErr as { code?: string }).code,
+          details: (roomErr as { details?: string }).details,
+          hint: (roomErr as { hint?: string }).hint,
+        });
+        // Do not throw — the message itself was inserted successfully.
+      }
 
       return message as LiveChatMessage;
     },
@@ -107,13 +129,21 @@ export function useLiveChatMessages(
       });
       queryClient.invalidateQueries({ queryKey: ["live-chat-rooms"] });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
+      const e = error as { message?: string; code?: string; details?: string; hint?: string };
+      const reason = e?.message || "Lỗi không xác định";
       toast({
-        title: "Lỗi",
-        description: "Không thể gửi tin nhắn",
+        title: "Không thể gửi tin nhắn",
+        description: reason,
         variant: "destructive",
       });
-      console.error("Send message error:", error);
+      console.error("[live-chat] Send message error:", {
+        message: e?.message,
+        code: e?.code,
+        details: e?.details,
+        hint: e?.hint,
+        raw: error,
+      });
     },
   });
 
