@@ -458,6 +458,19 @@ export function useSharedProductRealtime({
     return () => clearInterval(interval);
   }, [isActive, mergeRow, productId]);
 
+  // Persist rows/product into module-level cache so chart hydrates instantly on remount
+  useEffect(() => {
+    if (!isActive) return;
+    if (rows.length === 0 && !product) return;
+    writeCache(cacheKey(productId, timeframe), {
+      rows,
+      product,
+      anchorPrice: anchorPriceRef.current,
+      latestRealRowAt: latestRealRowAtRef.current,
+      updatedAt: Date.now(),
+    });
+  }, [isActive, productId, timeframe, rows, product]);
+
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
   const lineData = useMemo(() => ohlcToLineData(candles, timeframe), [candles, timeframe]);
