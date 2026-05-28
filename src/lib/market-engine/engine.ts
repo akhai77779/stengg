@@ -61,6 +61,19 @@ export function generateNextTick(
     close = lastCandle.close + change;
   }
 
+  // Clamp close within a safe band around basePrice to prevent drift to 0
+  // or unrealistic explosions. Allowed band: [basePrice * 0.7, basePrice * 1.3].
+  const base = scenario.basePrice || lastCandle.close || 1;
+  const minPrice = base * 0.7;
+  const maxPrice = base * 1.3;
+  if (!Number.isFinite(close) || close <= 0) close = base;
+  if (close < minPrice) {
+    // Soft bounce back toward base
+    close = minPrice + (base - minPrice) * 0.1 * Math.random();
+  } else if (close > maxPrice) {
+    close = maxPrice - (maxPrice - base) * 0.1 * Math.random();
+  }
+
   const open = lastCandle.close;
   const high = Math.max(open, close) * (1 + Math.random() * scenario.volatility * 0.5);
   const low = Math.min(open, close) * (1 - Math.random() * scenario.volatility * 0.5);
