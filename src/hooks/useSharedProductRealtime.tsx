@@ -78,6 +78,10 @@ const FALLBACK_ROW_LIMIT: Record<SharedTimeframe, number> = {
 
 export const SHARED_PRODUCT_CHANNEL_PREFIX = 'shared-product-price';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isValidProductId = (id: string | undefined | null): boolean =>
+  !!id && UUID_REGEX.test(id);
+
 function hashProductSeed(productId: string) {
   return productId.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
 }
@@ -180,6 +184,8 @@ export function useSharedProductRealtime({
   enabled?: boolean;
   throttleMs?: number;
 }) {
+  // Internal guard: invalid/empty productId must never open a subscription
+  const isActive = enabled && isValidProductId(productId);
   const [rows, setRows] = useState<PriceHistoryRow[]>([]);
   const [product, setProduct] = useState<ProductPayload | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
@@ -191,8 +197,15 @@ export function useSharedProductRealtime({
   const lastUpdateRef = useRef(0);
   const anchorPriceRef = useRef<number | null>(null);
   const latestRealRowAtRef = useRef<string | null>(null);
+  // Tracks which productId the current refs/state belong to.
+  // Used to drop late async results from a previous product.
+  const activeProductIdRef = useRef<string | null>(null);
 
   const mergeRow = useCallback((row: PriceHistoryRow) => {
+    // Drop cross-product leakage: ignore rows whose product_id doesn't match.
+    if (row.product_id && activeProductIdRef.current && row.product_id !== activeProductIdRef.current) {
+      return;
+    }
     if (!row.synthetic) {
       anchorPriceRef.current = Number(row.close_price);
       latestRealRowAtRef.current = row.recorded_at;
@@ -208,6 +221,9 @@ export function useSharedProductRealtime({
   }, []);
 
   const queueRow = useCallback((row: PriceHistoryRow) => {
+    if (row.product_id && activeProductIdRef.current && row.product_id !== activeProductIdRef.current) {
+      return;
+    }
     const now = Date.now();
     const elapsed = now - lastUpdateRef.current;
 
@@ -231,12 +247,35 @@ export function useSharedProductRealtime({
   }, [mergeRow, throttleMs]);
 
   useEffect(() => {
-    if (!enabled || !productId) {
+    if (!isActive) {
       setIsLoading(false);
+      // Reset state so a previous product's data doesn't linger
+      setRows([]);
+      setProduct(null);
+      setStatus('disconnected');
+      activeProductIdRef.current = null;
+      anchorPriceRef.current = null;
+      latestRealRowAtRef.current = null;
+      pendingRowRef.current = null;
+      lastUpdateRef.current = 0;
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+        throttleRef.current = null;
+      }
       return;
     }
 
     let mounted = true;
+    // Reset all per-product state/refs on switch to prevent cross-product contamination
+    activeProductIdRef.current = productId;
+    anchorPriceRef.current = null;
+    latestRealRowAtRef.current = null;
+    pendingRowRef.current = null;
+    lastUpdateRef.current = 0;
+    if (throttleRef.current) {
+      clearTimeout(throttleRef.current);
+      throttleRef.current = null;
+    }
     setStatus('connecting');
     setIsLoading(true);
     setRows([]);
@@ -307,21 +346,34 @@ export function useSharedProductRealtime({
     };
 
     fetchInitial();
-    return () => { mounted = false; };
-  }, [enabled, productId, timeframe]);
+    return () => {
+      mounted = false;
+      // Drop any pending throttled row from this product before unmounting/switching
+      pendingRowRef.current = null;
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+        throttleRef.current = null;
+      }
+    };
+  }, [isActive, productId, timeframe]);
 
   useEffect(() => {
-    if (!enabled || !productId) return;
+    if (!isActive) return;
 
     const channelName = `${SHARED_PRODUCT_CHANNEL_PREFIX}-${productId}`;
     let channel: RealtimeChannel | null = supabase
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'price_history', filter: `product_id=eq.${productId}` }, payload => {
         if (!payload.new) return;
-        queueRow(payload.new as PriceHistoryRow);
+        const row = payload.new as PriceHistoryRow;
+        // Defensive: only accept rows for the active product
+        if (row.product_id && row.product_id !== productId) return;
+        queueRow(row);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `id=eq.${productId}` }, payload => {
-        setProduct(payload.new as ProductPayload);
+        const next = payload.new as ProductPayload;
+        if (next?.id && next.id !== productId) return;
+        setProduct(next);
       })
       .subscribe(subscriptionStatus => {
         if (subscriptionStatus === 'SUBSCRIBED') setStatus('connected');
@@ -330,13 +382,14 @@ export function useSharedProductRealtime({
 
     return () => {
       if (throttleRef.current) clearTimeout(throttleRef.current);
+      pendingRowRef.current = null;
       if (channel) supabase.removeChannel(channel);
       channel = null;
     };
-  }, [enabled, productId, queueRow, subscriptionKey]);
+  }, [isActive, productId, queueRow, subscriptionKey]);
 
   useEffect(() => {
-    if (!enabled || !productId) return;
+    if (!isActive) return;
 
     const interval = setInterval(() => {
       const anchorPrice = anchorPriceRef.current ?? product?.price ?? null;
@@ -351,7 +404,7 @@ export function useSharedProductRealtime({
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [enabled, mergeRow, product?.price, productId]);
+  }, [isActive, mergeRow, product?.price, productId]);
 
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
