@@ -24,6 +24,19 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
     isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
   );
 
+  // Helpers to determine if data is meaningful
+  const isValidPrice = (v: number | null | undefined): boolean =>
+    v !== null && v !== undefined && v > 0 && Number.isFinite(v);
+
+  const isValidVolume = (v: string | null | undefined): boolean => {
+    if (!v || v === '0' || v === 'null') return false;
+    const num = parseFloat(v.replace(/[^0-9.]/g, ''));
+    return !isNaN(num) && num > 0;
+  };
+
+  const hasHighLow = isValidPrice(product.high_24h) && isValidPrice(product.low_24h);
+  const hasVolume = isValidVolume(product.volume) || isValidVolume(product.turnover);
+
   return (
     <Card
       className="group relative bg-card/80 backdrop-blur-md border-border/50 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
@@ -56,20 +69,32 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
           <p className="text-[11px] text-muted-foreground line-clamp-1">{product.description}</p>
         )}
 
-        <div className="mt-auto pt-1 flex items-end justify-between">
-          <div>
+        <div className="mt-auto pt-1 flex items-end justify-between min-h-[2.5rem]">
+          <div className="flex flex-col gap-0.5">
             <AnimatedPrice
               value={product.price}
               formatter={formatPrice}
               className="text-sm md:text-base font-bold tabular-nums"
             />
             <div className="text-[10px] text-muted-foreground">
-              VOL <span className="text-foreground/70">{formatVolume(product.volume, product.turnover)}</span>
+              {hasVolume ? (
+                <>
+                  VOL <span className="text-foreground/70">{formatVolume(product.volume, product.turnover)}</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground/60">—</span>
+              )}
             </div>
           </div>
           <div className="text-right text-[10px] text-muted-foreground leading-tight">
-            <div>H <span className="text-green-400 font-mono">{formatPrice(product.high_24h ?? null)}</span></div>
-            <div>L <span className="text-red-400 font-mono">{formatPrice(product.low_24h ?? null)}</span></div>
+            {hasHighLow ? (
+              <>
+                <div>H <span className="text-green-400 font-mono">{formatPrice(product.high_24h)}</span></div>
+                <div>L <span className="text-red-400 font-mono">{formatPrice(product.low_24h)}</span></div>
+              </>
+            ) : (
+              <span className="text-muted-foreground/60">—</span>
+            )}
           </div>
         </div>
       </div>
