@@ -100,7 +100,7 @@ export function ProductList({ products, isLoading }: ProductListProps) {
   }
 
   return (
-    <div className="grid gap-3 md:gap-5 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-2 md:gap-3">
       {products.map(product => (
         <LiveProductCard
           key={product.id}
