@@ -82,6 +82,27 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export const isValidProductId = (id: string | undefined | null): boolean =>
   !!id && UUID_REGEX.test(id);
 
+// Module-level cache so chart data survives unmount/remount when navigating
+// away and back to the same product. Keyed by `${productId}::${timeframe}`.
+interface SharedProductCacheEntry {
+  rows: PriceHistoryRow[];
+  product: ProductPayload | null;
+  anchorPrice: number | null;
+  latestRealRowAt: string | null;
+  updatedAt: number;
+}
+const sharedProductCache = new Map<string, SharedProductCacheEntry>();
+const CACHE_MAX_ENTRIES = 24;
+const cacheKey = (productId: string, timeframe: SharedTimeframe) => `${productId}::${timeframe}`;
+function writeCache(key: string, entry: SharedProductCacheEntry) {
+  sharedProductCache.set(key, entry);
+  if (sharedProductCache.size > CACHE_MAX_ENTRIES) {
+    // Evict the oldest entry (insertion order)
+    const firstKey = sharedProductCache.keys().next().value;
+    if (firstKey && firstKey !== key) sharedProductCache.delete(firstKey);
+  }
+}
+
 /** Treat null/undefined/0/NaN/Infinity as invalid so we don't surface $0.00 to the UI. */
 function pickValid(value: number | null | undefined, fallback: number | null): number | null {
   if (value === null || value === undefined) return fallback;
