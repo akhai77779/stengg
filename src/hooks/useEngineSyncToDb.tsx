@@ -136,9 +136,11 @@ export function useEngineSyncToDb(
         const high24h = Math.max(...recentCandles.map(c => c.high));
         const low24h = Math.min(...recentCandles.map(c => c.low));
         const firstPrice = recentCandles[0]?.open || lastCandle.close;
-        const priceChange = firstPrice > 0
+        const rawChange = firstPrice > 0
           ? ((lastCandle.close - firstPrice) / firstPrice) * 100
           : 0;
+        // Clamp to a realistic daily change band to avoid extreme % display.
+        const priceChange = Math.max(-30, Math.min(30, rawChange));
 
         productUpdates.push({
           id: mapping.dbId,
