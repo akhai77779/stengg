@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,22 +12,15 @@ import {
   Eye,
   Maximize2,
   Zap,
-  RotateCcw,
-  CloudUpload,
 } from 'lucide-react';
 
-import { CandlestickChart, OHLCData } from '@/components/charts/CandlestickChart';
+import { CandlestickChart } from '@/components/charts/CandlestickChart';
 import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicatorsPanel';
 import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
-import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
-import { ShockEventPanel } from '@/components/admin/ShockEventPanel';
-import { SnapshotManager } from '@/components/admin/SnapshotManager';
 
-import { aggregateCandles, calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
+import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
-import { useMarketEngine } from '@/hooks/useMarketEngine';
-import { useEngineSyncToDb } from '@/hooks/useEngineSyncToDb';
 import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -39,69 +33,84 @@ const ADMIN_TIMEFRAME_MAP: Record<TimeInterval, SharedTimeframe> = {
   '1D': '1d',
 };
 
+interface DbProduct {
+  id: string;
+  name: string;
+  symbol: string | null;
+  price: number | null;
+  price_change: number | null;
+  high_24h: number | null;
+  low_24h: number | null;
+}
+
 export default function AdminProductsMonitor() {
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
-    return localStorage.getItem('admin_monitor_product') || null;
-  });
-  const [timeInterval, setTimeInterval] = useState<TimeInterval>(() => {
-    return (localStorage.getItem('admin_monitor_timeframe') as TimeInterval) || '1M';
-  });
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [dbSyncEnabled, setDbSyncEnabled] = useState<boolean>(() => {
-    const stored = localStorage.getItem('admin_db_sync_enabled');
-    // Default to true if never explicitly set
-    return stored === null ? true : stored === 'true';
-  });
-  const [dbProductIdsBySymbol, setDbProductIdsBySymbol] = useState<Record<string, string>>({});
-
-  const {
-    products,
-    engines,
-    isReady,
-    getCandles,
-    getCurrentPrice,
-    getActiveShock,
-    scenarios,
-    addShockEvent,
-    cancelShockEvent,
-    updateScenario,
-    shockEvents,
-    resetEngine,
-    namedSnapshots,
-    saveNewSnapshot,
-    restoreSnapshot,
-    removeSnapshot,
-    renameSnapshot,
-  } = useMarketEngine();
-
-  // Sync engine data to DB for user-facing charts
-  const { mappings: syncMappings, isSyncing, stats: syncStats } = useEngineSyncToDb(
-    engines,
-    dbSyncEnabled,
-    3000
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    () => localStorage.getItem('admin_monitor_product') || null
   );
+  const [timeInterval, setTimeInterval] = useState<TimeInterval>(
+    () => (localStorage.getItem('admin_monitor_timeframe') as TimeInterval) || '1M'
+  );
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [products, setProducts] = useState<DbProduct[]>([]);
+  const [isReady, setIsReady] = useState(false);
+  const [pendingShockCount, setPendingShockCount] = useState(0);
 
+  // Fetch DB products + subscribe to realtime updates
   useEffect(() => {
-    const fetchDbProducts = async () => {
+    let mounted = true;
+    const fetchProducts = async () => {
       const { data } = await supabase
         .from('products')
-        .select('id, symbol')
-        .eq('status', 'available');
-      if (!data) return;
-      setDbProductIdsBySymbol(Object.fromEntries(data.map(p => [p.symbol?.toUpperCase() || '', p.id])));
+        .select('id, name, symbol, price, price_change, high_24h, low_24h')
+        .eq('status', 'available')
+        .order('name', { ascending: true });
+      if (!mounted) return;
+      setProducts(data || []);
+      setIsReady(true);
     };
-    fetchDbProducts();
+    fetchProducts();
+
+    const channel = supabase
+      .channel('admin-monitor-products')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'products' },
+        (payload) => {
+          const updated = payload.new as DbProduct;
+          setProducts(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const toggleDbSync = useCallback(() => {
-    setDbSyncEnabled(prev => {
-      const next = !prev;
-      localStorage.setItem('admin_db_sync_enabled', String(next));
-      return next;
-    });
+  // Pending shock_events count (server-side engine)
+  useEffect(() => {
+    const fetchPending = async () => {
+      const { count } = await supabase
+        .from('shock_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('applied', false);
+      setPendingShockCount(count || 0);
+    };
+    fetchPending();
+    const channel = supabase
+      .channel('admin-monitor-shocks')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shock_events' },
+        fetchPending
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Auto-select first product
   const effectiveProductId = useMemo(() => {
     if (selectedProductId && products.find(p => p.id === selectedProductId)) {
       return selectedProductId;
@@ -109,59 +118,33 @@ export default function AdminProductsMonitor() {
     return products.length > 0 ? products[0].id : null;
   }, [selectedProductId, products]);
 
-  const selectedProduct = useMemo(() => {
-    return products.find(p => p.id === effectiveProductId) || null;
-  }, [products, effectiveProductId]);
-
-  const selectedDbProductId = useMemo(() => {
-    if (!effectiveProductId) return '';
-    const mappedId = syncMappings.find(mapping => mapping.localId === effectiveProductId)?.dbId;
-    if (mappedId) return mappedId;
-    const symbol = products.find(p => p.id === effectiveProductId)?.symbol?.toUpperCase() || '';
-    return dbProductIdsBySymbol[symbol] || '';
-  }, [dbProductIdsBySymbol, effectiveProductId, products, syncMappings]);
+  const selectedProduct = useMemo(
+    () => products.find(p => p.id === effectiveProductId) || null,
+    [products, effectiveProductId]
+  );
 
   const sharedRealtime = useSharedProductRealtime({
-    productId: selectedDbProductId,
+    productId: effectiveProductId || '',
     timeframe: ADMIN_TIMEFRAME_MAP[timeInterval],
-    enabled: !!selectedDbProductId,
+    enabled: !!effectiveProductId,
     throttleMs: 150,
   });
 
-  const displayCandles = useMemo(() => {
-    if (effectiveProductId) {
-      const baseCandles = getCandles(effectiveProductId);
-      const localCandles = timeInterval === '1M' ? baseCandles : aggregateCandles(baseCandles, timeInterval);
-      if (localCandles.length > 0) return localCandles;
-    }
-    return sharedRealtime.engineCandles;
-  }, [effectiveProductId, getCandles, sharedRealtime.engineCandles, timeInterval]);
-
-  const chartOHLCData: OHLCData[] = useMemo(() => {
-    return displayCandles.map(c => ({
-      time: new Date(c.time * 1000).toISOString(),
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-  }, [displayCandles]);
+  const chartOHLCData = sharedRealtime.candles;
 
   const technicalIndicators = useMemo((): TechnicalIndicators | null => {
-    if (displayCandles.length < 50) return null;
-    const closes = displayCandles.map(c => c.close);
+    if (chartOHLCData.length < 50) return null;
+    const closes = chartOHLCData.map(c => Number(c.close));
     return {
       ma20: calculateSMA(closes, 20),
       ma50: calculateSMA(closes, 50),
       rsi: calculateRSI(closes, 14),
       macd: calculateMACD(closes),
     };
-  }, [displayCandles]);
+  }, [chartOHLCData]);
 
-  const localPrice = effectiveProductId ? getCurrentPrice(effectiveProductId) : 0;
-  const currentPrice = localPrice || sharedRealtime.latestPrice || 0;
-  const activeShock = effectiveProductId ? getActiveShock(effectiveProductId) : null;
-  const activeShockCount = shockEvents.filter(e => !e.isComplete).length;
+  const currentPrice =
+    sharedRealtime.latestPrice ?? selectedProduct?.price ?? 0;
 
   const handleProductSelect = useCallback((productId: string) => {
     setSelectedProductId(productId);
@@ -177,7 +160,7 @@ export default function AdminProductsMonitor() {
     <div className="flex items-center justify-center h-[60vh]">
       <div className="flex flex-col items-center gap-3">
         <Activity className="w-8 h-8 animate-pulse text-primary" />
-        <p className="text-muted-foreground">Loading market engine...</p>
+        <p className="text-muted-foreground">Loading products...</p>
       </div>
     </div>
   );
@@ -192,48 +175,20 @@ export default function AdminProductsMonitor() {
             <h1 className="text-xl font-bold text-foreground">Product Chart Monitor</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            4-layer engine: Scenario → Engine → Persistence → Shock Events
+            Server-side market engine · price_history is the single source of truth
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* DB Sync Toggle */}
-          <Button
-            size="sm"
-            variant={dbSyncEnabled ? "default" : "outline"}
-            className={`h-8 gap-1.5 ${dbSyncEnabled ? '' : 'text-muted-foreground'}`}
-            onClick={toggleDbSync}
-          >
-            <CloudUpload className={`h-3.5 w-3.5 ${isSyncing ? 'animate-pulse' : ''}`} />
-            {dbSyncEnabled ? `Sync ON (${syncMappings.length})` : 'DB Sync'}
+          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+            <Link to="/admin/shock-events">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              Shock Events{pendingShockCount > 0 ? ` (${pendingShockCount})` : ''}
+            </Link>
           </Button>
-          {dbSyncEnabled && syncStats.lastSyncAt && (
-            <Badge variant="outline" className="gap-1 text-xs">
-              {syncStats.candlesSynced} candles · {syncStats.pricesUpdated} prices
-            </Badge>
-          )}
-          {activeShockCount > 0 && (
-            <Badge variant="outline" className="gap-1.5 text-amber-500 border-amber-500/40">
-              <Zap className="w-3 h-3" />
-              {activeShockCount} shock{activeShockCount > 1 ? 's' : ''}
-            </Badge>
-          )}
           <Badge variant="outline" className="gap-1.5 text-green-500 border-green-500/40">
             <Activity className="w-3 h-3" />
             Live
           </Badge>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
-            onClick={() => {
-              if (confirm('Reset toàn bộ market engine? Dữ liệu chart sẽ được tạo mới.')) {
-                resetEngine();
-              }
-            }}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset
-          </Button>
           <Button
             size="icon"
             variant="outline"
@@ -257,14 +212,9 @@ export default function AdminProductsMonitor() {
           <ScrollArea className="h-[calc(100%-48px)]">
             <div className="p-2 space-y-1">
               {products.map((product) => {
-                const price = getCurrentPrice(product.id) || product.basePrice;
-                const candles = getCandles(product.id);
-                const lastCandle = candles[candles.length - 1];
-                const change = lastCandle
-                  ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100
-                  : 0;
+                const price = Number(product.price) || 0;
+                const change = Number(product.price_change) || 0;
                 const isSelected = effectiveProductId === product.id;
-                const hasShock = !!getActiveShock(product.id);
 
                 return (
                   <button
@@ -279,11 +229,10 @@ export default function AdminProductsMonitor() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Activity className="w-4 h-4 text-primary" />
-                        {hasShock && <Zap className="w-3 h-3 text-amber-500 animate-pulse" />}
                       </div>
                       <div className="flex-1 ml-2 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{product.symbol}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{product.symbol || '—'}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-sm font-bold text-foreground font-mono">
@@ -315,7 +264,7 @@ export default function AdminProductsMonitor() {
                     <Activity className="w-5 h-5 text-primary" />
                     <div>
                       <h2 className="text-base font-bold text-foreground">{selectedProduct.name}</h2>
-                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{selectedProduct.symbol || '—'}</p>
                     </div>
                     <div className="ml-4">
                       <p className="text-lg font-bold text-foreground font-mono tabular-nums">
@@ -330,9 +279,8 @@ export default function AdminProductsMonitor() {
                   </div>
                   <div className="flex items-center gap-2">
                     <TimeIntervalSelector value={timeInterval} onChange={handleTimeframeChange} />
-                    {displayCandles.length > 0 && (
+                    {chartOHLCData.length > 0 && (
                       <>
-                        <ExportButton candles={displayCandles} productName={selectedProduct.name} />
                         <ShareButton productId={selectedProduct.id} productName={selectedProduct.name} />
                       </>
                     )}
@@ -352,25 +300,15 @@ export default function AdminProductsMonitor() {
                 />
               </div>
 
-              {/* Shock Event + Indicators */}
+              {/* Indicators */}
               <div className="px-3 pb-3 space-y-3">
-                <ShockEventPanel
-                  productId={effectiveProductId}
-                  productName={selectedProduct.name}
-                  currentPrice={currentPrice}
-                  activeShock={activeShock}
-                  scenario={scenarios[effectiveProductId] || null}
-                  onAddShock={addShockEvent}
-                  onCancelShock={cancelShockEvent}
-                  onUpdateScenario={updateScenario}
-                />
-                <SnapshotManager
-                  namedSnapshots={namedSnapshots}
-                  onSave={saveNewSnapshot}
-                  onRestore={restoreSnapshot}
-                  onDelete={removeSnapshot}
-                  onRename={renameSnapshot}
-                />
+                <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  Manage price shocks in the{' '}
+                  <Link to="/admin/shock-events" className="text-primary underline underline-offset-2">
+                    Shock Events
+                  </Link>{' '}
+                  panel. The server-side engine applies them on the next tick.
+                </div>
                 {technicalIndicators && (
                   <TechnicalIndicatorsPanel indicators={technicalIndicators} />
                 )}
