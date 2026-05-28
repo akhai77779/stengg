@@ -82,6 +82,14 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export const isValidProductId = (id: string | undefined | null): boolean =>
   !!id && UUID_REGEX.test(id);
 
+/** Treat null/undefined/0/NaN/Infinity as invalid so we don't surface $0.00 to the UI. */
+function pickValid(value: number | null | undefined, fallback: number | null): number | null {
+  if (value === null || value === undefined) return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return n;
+}
+
 function hashProductSeed(productId: string) {
   return productId.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
 }
@@ -200,6 +208,8 @@ export function useSharedProductRealtime({
   // Tracks which productId the current refs/state belong to.
   // Used to drop late async results from a previous product.
   const activeProductIdRef = useRef<string | null>(null);
+  // Stable ref for product price so the synthetic loop doesn't need to re-subscribe on every tick
+  const productPriceRef = useRef<number | null>(null);
 
   const mergeRow = useCallback((row: PriceHistoryRow) => {
     // Drop cross-product leakage: ignore rows whose product_id doesn't match.
@@ -212,6 +222,11 @@ export function useSharedProductRealtime({
     }
     setRows(prev => {
       const map = new Map(prev.map(item => [item.recorded_at, item]));
+      // Never let a synthetic row overwrite a real row at the same timestamp.
+      const existing = map.get(row.recorded_at);
+      if (row.synthetic && existing && !existing.synthetic) {
+        return prev;
+      }
       map.set(row.recorded_at, row);
       return Array.from(map.values())
         .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
@@ -340,6 +355,7 @@ export function useSharedProductRealtime({
         .maybeSingle();
       if (mounted && productRow) {
         setProduct(productRow as ProductPayload);
+        productPriceRef.current = pickValid(productRow.price as number | null, productPriceRef.current);
         if (!anchorPriceRef.current && productRow.price) anchorPriceRef.current = Number(productRow.price);
       }
       if (mounted) setIsLoading(false);
@@ -374,6 +390,7 @@ export function useSharedProductRealtime({
         const next = payload.new as ProductPayload;
         if (next?.id && next.id !== productId) return;
         setProduct(next);
+        productPriceRef.current = pickValid(next?.price as number | null, productPriceRef.current);
       })
       .subscribe(subscriptionStatus => {
         if (subscriptionStatus === 'SUBSCRIBED') setStatus('connected');
@@ -392,7 +409,7 @@ export function useSharedProductRealtime({
     if (!isActive) return;
 
     const interval = setInterval(() => {
-      const anchorPrice = anchorPriceRef.current ?? product?.price ?? null;
+      const anchorPrice = anchorPriceRef.current ?? productPriceRef.current ?? null;
       if (!anchorPrice || anchorPrice <= 0) return;
 
       const latestRealAt = latestRealRowAtRef.current ? new Date(latestRealRowAtRef.current).getTime() : 0;
@@ -404,14 +421,17 @@ export function useSharedProductRealtime({
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isActive, mergeRow, product?.price, productId]);
+  }, [isActive, mergeRow, productId]);
 
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
   const lineData = useMemo(() => ohlcToLineData(candles, timeframe), [candles, timeframe]);
-  const latestPrice = candles[candles.length - 1]?.close ?? product?.price ?? null;
-  const highPrice = product?.high_24h ?? (candles.length ? Math.max(...candles.map(c => c.high)) : null);
-  const lowPrice = product?.low_24h ?? (candles.length ? Math.min(...candles.map(c => c.low)) : null);
+  const candleHigh = candles.length ? Math.max(...candles.map(c => c.high)) : null;
+  const candleLow = candles.length ? Math.min(...candles.map(c => c.low)) : null;
+  const candleLast = candles.length ? candles[candles.length - 1].close : null;
+  const latestPrice = pickValid(candleLast, pickValid(product?.price ?? null, null));
+  const highPrice = pickValid(product?.high_24h ?? null, pickValid(candleHigh, null));
+  const lowPrice = pickValid(product?.low_24h ?? null, pickValid(candleLow, null));
 
   return {
     candles,

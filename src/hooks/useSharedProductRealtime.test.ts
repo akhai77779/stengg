@@ -54,3 +54,21 @@ describe('aggregateOHLCData', () => {
     expect(result[0].close).toBe(5);
   });
 });
+
+describe('aggregateOHLCData edge values', () => {
+  it('keeps real bucket values even if a later row has lower high', () => {
+    const base = '2024-01-01T00:00:10Z';
+    const later = '2024-01-01T00:00:50Z';
+    const result = aggregateOHLCData(
+      [
+        { recorded_at: base, open_price: 10, high_price: 20, low_price: 5, close_price: 12 },
+        { recorded_at: later, open_price: 12, high_price: 15, low_price: 8, close_price: 13 },
+      ],
+      '1m'
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].high).toBe(20);
+    expect(result[0].low).toBe(5);
+    expect(result[0].close).toBe(13);
+  });
+});
