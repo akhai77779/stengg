@@ -17,7 +17,6 @@ import {
 import { CandlestickChart } from '@/components/charts/CandlestickChart';
 import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicatorsPanel';
 import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
-import { ExportButton } from '@/components/charts/ExportButton';
 import { ShareButton } from '@/components/charts/ShareButton';
 
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
