@@ -82,6 +82,27 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export const isValidProductId = (id: string | undefined | null): boolean =>
   !!id && UUID_REGEX.test(id);
 
+// Module-level cache so chart data survives unmount/remount when navigating
+// away and back to the same product. Keyed by `${productId}::${timeframe}`.
+interface SharedProductCacheEntry {
+  rows: PriceHistoryRow[];
+  product: ProductPayload | null;
+  anchorPrice: number | null;
+  latestRealRowAt: string | null;
+  updatedAt: number;
+}
+const sharedProductCache = new Map<string, SharedProductCacheEntry>();
+const CACHE_MAX_ENTRIES = 24;
+const cacheKey = (productId: string, timeframe: SharedTimeframe) => `${productId}::${timeframe}`;
+function writeCache(key: string, entry: SharedProductCacheEntry) {
+  sharedProductCache.set(key, entry);
+  if (sharedProductCache.size > CACHE_MAX_ENTRIES) {
+    // Evict the oldest entry (insertion order)
+    const firstKey = sharedProductCache.keys().next().value;
+    if (firstKey && firstKey !== key) sharedProductCache.delete(firstKey);
+  }
+}
+
 /** Treat null/undefined/0/NaN/Infinity as invalid so we don't surface $0.00 to the UI. */
 function pickValid(value: number | null | undefined, fallback: number | null): number | null {
   if (value === null || value === undefined) return fallback;
@@ -194,10 +215,13 @@ export function useSharedProductRealtime({
 }) {
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
-  const [rows, setRows] = useState<PriceHistoryRow[]>([]);
-  const [product, setProduct] = useState<ProductPayload | null>(null);
+  const initialKey = isActive ? cacheKey(productId, timeframe) : null;
+  const initialCache = initialKey ? sharedProductCache.get(initialKey) : undefined;
+  const [rows, setRows] = useState<PriceHistoryRow[]>(() => initialCache?.rows ?? []);
+  const [product, setProduct] = useState<ProductPayload | null>(() => initialCache?.product ?? null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
-  const [isLoading, setIsLoading] = useState(true);
+  // If we already have cached rows, treat as not loading so the chart hydrates instantly
+  const [isLoading, setIsLoading] = useState(() => !(initialCache && initialCache.rows.length > 0));
   const [updateCount, setUpdateCount] = useState(0);
   const [subscriptionKey, setSubscriptionKey] = useState(0);
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -264,9 +288,6 @@ export function useSharedProductRealtime({
   useEffect(() => {
     if (!isActive) {
       setIsLoading(false);
-      // Reset state so a previous product's data doesn't linger
-      setRows([]);
-      setProduct(null);
       setStatus('disconnected');
       activeProductIdRef.current = null;
       anchorPriceRef.current = null;
@@ -281,10 +302,8 @@ export function useSharedProductRealtime({
     }
 
     let mounted = true;
-    // Reset all per-product state/refs on switch to prevent cross-product contamination
+    // Reset per-product refs on switch (state is hydrated from cache, see below)
     activeProductIdRef.current = productId;
-    anchorPriceRef.current = null;
-    latestRealRowAtRef.current = null;
     pendingRowRef.current = null;
     lastUpdateRef.current = 0;
     if (throttleRef.current) {
@@ -292,9 +311,25 @@ export function useSharedProductRealtime({
       throttleRef.current = null;
     }
     setStatus('connecting');
-    setIsLoading(true);
-    setRows([]);
-    setProduct(null);
+
+    const key = cacheKey(productId, timeframe);
+    const cached = sharedProductCache.get(key);
+    if (cached && cached.rows.length > 0) {
+      // Hydrate instantly from cache; refresh in background without clearing the chart
+      setRows(cached.rows);
+      if (cached.product) setProduct(cached.product);
+      anchorPriceRef.current = cached.anchorPrice;
+      latestRealRowAtRef.current = cached.latestRealRowAt;
+      if (cached.product?.price) productPriceRef.current = Number(cached.product.price);
+      setIsLoading(false);
+    } else {
+      // No cache: clear stale data from previous product before fetching
+      setRows([]);
+      setProduct(null);
+      anchorPriceRef.current = null;
+      latestRealRowAtRef.current = null;
+      setIsLoading(true);
+    }
 
     const fetchInitial = async () => {
       const since = new Date(Date.now() - LOOKBACK_MS[timeframe]).toISOString();
@@ -339,7 +374,7 @@ export function useSharedProductRealtime({
           .limit(FALLBACK_ROW_LIMIT[timeframe]);
         if (mounted) {
           const fallbackRows = ((fallback || []) as PriceHistoryRow[]).reverse();
-          setRows(fallbackRows);
+          if (fallbackRows.length > 0) setRows(fallbackRows);
           const last = fallbackRows[fallbackRows.length - 1];
           if (last) {
             anchorPriceRef.current = Number(last.close_price);
@@ -422,6 +457,19 @@ export function useSharedProductRealtime({
 
     return () => clearInterval(interval);
   }, [isActive, mergeRow, productId]);
+
+  // Persist rows/product into module-level cache so chart hydrates instantly on remount
+  useEffect(() => {
+    if (!isActive) return;
+    if (rows.length === 0 && !product) return;
+    writeCache(cacheKey(productId, timeframe), {
+      rows,
+      product,
+      anchorPrice: anchorPriceRef.current,
+      latestRealRowAt: latestRealRowAtRef.current,
+      updatedAt: Date.now(),
+    });
+  }, [isActive, productId, timeframe, rows, product]);
 
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
