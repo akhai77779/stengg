@@ -358,6 +358,30 @@ export type Database = {
         }
         Relationships: []
       }
+      engine_state: {
+        Row: {
+          extra: Json
+          last_price: number
+          last_recorded_at: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          extra?: Json
+          last_price: number
+          last_recorded_at?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          extra?: Json
+          last_price?: number
+          last_recorded_at?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hero_banners: {
         Row: {
           created_at: string
@@ -1114,6 +1138,42 @@ export type Database = {
           min_deposit_amount?: number
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      shock_events: {
+        Row: {
+          applied: boolean
+          applied_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          magnitude: number
+          product_id: string
+          scheduled_at: string
+          shock_type: string
+        }
+        Insert: {
+          applied?: boolean
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          magnitude: number
+          product_id: string
+          scheduled_at?: string
+          shock_type: string
+        }
+        Update: {
+          applied?: boolean
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          magnitude?: number
+          product_id?: string
+          scheduled_at?: string
+          shock_type?: string
         }
         Relationships: []
       }

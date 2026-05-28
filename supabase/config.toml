@@ -17,3 +17,6 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.handle-email-suppression]
     verify_jwt = false
+
+  [functions.market-engine-tick]
+    verify_jwt = false
