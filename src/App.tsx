@@ -48,6 +48,7 @@ import AdminIdentityVerifications from "./pages/admin/AdminIdentityVerifications
 import AdminLiveChat from "./pages/admin/AdminLiveChat";
 import AdminProductsMonitor from "./pages/admin/AdminProductsMonitor";
 import AdminDataHealth from "./pages/admin/AdminDataHealth";
+import AdminShockEvents from "./pages/admin/AdminShockEvents";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +95,7 @@ const App = () => (
                     <Route path="news" element={<AdminNews />} />
                     <Route path="products" element={<AdminProducts />} />
                     <Route path="products-monitor" element={<AdminProductsMonitor />} />
+                    <Route path="shock-events" element={<AdminShockEvents />} />
                     <Route path="data-health" element={<AdminDataHealth />} />
                     <Route path="option-trades" element={<AdminOptionTrades />} />
                     <Route path="charity" element={<AdminCharity />} />
