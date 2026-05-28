@@ -215,10 +215,13 @@ export function useSharedProductRealtime({
 }) {
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
-  const [rows, setRows] = useState<PriceHistoryRow[]>([]);
-  const [product, setProduct] = useState<ProductPayload | null>(null);
+  const initialKey = isActive ? cacheKey(productId, timeframe) : null;
+  const initialCache = initialKey ? sharedProductCache.get(initialKey) : undefined;
+  const [rows, setRows] = useState<PriceHistoryRow[]>(() => initialCache?.rows ?? []);
+  const [product, setProduct] = useState<ProductPayload | null>(() => initialCache?.product ?? null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
-  const [isLoading, setIsLoading] = useState(true);
+  // If we already have cached rows, treat as not loading so the chart hydrates instantly
+  const [isLoading, setIsLoading] = useState(() => !(initialCache && initialCache.rows.length > 0));
   const [updateCount, setUpdateCount] = useState(0);
   const [subscriptionKey, setSubscriptionKey] = useState(0);
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -285,9 +288,6 @@ export function useSharedProductRealtime({
   useEffect(() => {
     if (!isActive) {
       setIsLoading(false);
-      // Reset state so a previous product's data doesn't linger
-      setRows([]);
-      setProduct(null);
       setStatus('disconnected');
       activeProductIdRef.current = null;
       anchorPriceRef.current = null;
@@ -302,10 +302,8 @@ export function useSharedProductRealtime({
     }
 
     let mounted = true;
-    // Reset all per-product state/refs on switch to prevent cross-product contamination
+    // Reset per-product refs on switch (state is hydrated from cache, see below)
     activeProductIdRef.current = productId;
-    anchorPriceRef.current = null;
-    latestRealRowAtRef.current = null;
     pendingRowRef.current = null;
     lastUpdateRef.current = 0;
     if (throttleRef.current) {
@@ -313,9 +311,25 @@ export function useSharedProductRealtime({
       throttleRef.current = null;
     }
     setStatus('connecting');
-    setIsLoading(true);
-    setRows([]);
-    setProduct(null);
+
+    const key = cacheKey(productId, timeframe);
+    const cached = sharedProductCache.get(key);
+    if (cached && cached.rows.length > 0) {
+      // Hydrate instantly from cache; refresh in background without clearing the chart
+      setRows(cached.rows);
+      if (cached.product) setProduct(cached.product);
+      anchorPriceRef.current = cached.anchorPrice;
+      latestRealRowAtRef.current = cached.latestRealRowAt;
+      if (cached.product?.price) productPriceRef.current = Number(cached.product.price);
+      setIsLoading(false);
+    } else {
+      // No cache: clear stale data from previous product before fetching
+      setRows([]);
+      setProduct(null);
+      anchorPriceRef.current = null;
+      latestRealRowAtRef.current = null;
+      setIsLoading(true);
+    }
 
     const fetchInitial = async () => {
       const since = new Date(Date.now() - LOOKBACK_MS[timeframe]).toISOString();
@@ -360,7 +374,7 @@ export function useSharedProductRealtime({
           .limit(FALLBACK_ROW_LIMIT[timeframe]);
         if (mounted) {
           const fallbackRows = ((fallback || []) as PriceHistoryRow[]).reverse();
-          setRows(fallbackRows);
+          if (fallbackRows.length > 0) setRows(fallbackRows);
           const last = fallbackRows[fallbackRows.length - 1];
           if (last) {
             anchorPriceRef.current = Number(last.close_price);
