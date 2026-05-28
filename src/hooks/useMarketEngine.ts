@@ -41,8 +41,12 @@ export function useMarketEngine() {
       const defaultScenarios = createScenariosFromProducts(products);
 
       products.forEach(p => {
-        if (snapshot.engines[p.id] && snapshot.engines[p.id].candles.length > 0) {
-          restoredEngines[p.id] = snapshot.engines[p.id];
+        const saved = snapshot.engines[p.id];
+        const lastClose = saved?.candles?.[saved.candles.length - 1]?.close ?? 0;
+        const base = p.basePrice || 1;
+        const drifted = lastClose <= base * 0.3 || lastClose >= base * 3;
+        if (saved && saved.candles.length > 0 && !drifted) {
+          restoredEngines[p.id] = saved;
         } else {
           restoredEngines[p.id] = createEngineState(defaultScenarios[p.id]);
         }
