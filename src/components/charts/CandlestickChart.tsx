@@ -16,6 +16,11 @@ interface CandlestickChartProps {
   height?: number;
   indicatorConfig?: IndicatorConfig;
   onCandleUpdate?: (candle: OHLCData) => void;
+  /**
+   * When this string changes, the chart resets zoom (fitContent). Otherwise the user's
+   * current pan/zoom is preserved across data updates.
+   */
+  resetZoomKey?: string;
 }
 
 export interface CandlestickChartRef {
@@ -61,13 +66,15 @@ const dedupeAndSortIndicator = (indicatorData: { time: string; value: number }[]
 };
 
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
-  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate }, ref) => {
+  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate, resetZoomKey }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const maSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const lastDataRef = useRef<string>('');
+    const lastResetKeyRef = useRef<string | undefined>(undefined);
+    const hasInitialDataRef = useRef<boolean>(false);
     
     // Calculate indicators
     const maData = useMemo(() => {
@@ -233,10 +240,27 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       if (dataHash === lastDataRef.current) {
         return; // No actual changes
       }
+      const prevHash = lastDataRef.current;
       lastDataRef.current = dataHash;
 
       const formattedData = dedupeAndSortOHLC(data);
-      candleSeriesRef.current.setData(formattedData);
+      const resetChanged = resetZoomKey !== lastResetKeyRef.current;
+      const isFirstLoad = !hasInitialDataRef.current;
+      const sameLength = prevHash && Number(prevHash.split('_')[0]) === data.length;
+
+      if (isFirstLoad || resetChanged || !sameLength) {
+        // Full reset path: first load, product/timeframe switch, or candle count changed.
+        candleSeriesRef.current.setData(formattedData);
+        hasInitialDataRef.current = true;
+        lastResetKeyRef.current = resetZoomKey;
+        if (isFirstLoad || resetChanged) {
+          chartRef.current.timeScale().fitContent();
+        }
+      } else {
+        // Incremental: only the last candle changed (same length, different hash).
+        const last = formattedData[formattedData.length - 1];
+        if (last) candleSeriesRef.current.update(last);
+      }
 
       // Update MA series
       if (indicatorConfig.ma.enabled && maData.length > 0) {
@@ -269,9 +293,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         chartRef.current.removeSeries(emaSeriesRef.current);
         emaSeriesRef.current = null;
       }
-
-      chartRef.current.timeScale().fitContent();
-    }, [data, indicatorConfig, maData, emaData]);
+    }, [data, indicatorConfig, maData, emaData, resetZoomKey]);
 
     if (data.length === 0) {
       return (
