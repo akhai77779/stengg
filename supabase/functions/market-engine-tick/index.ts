@@ -23,16 +23,76 @@ interface ShockEventRow {
   applied: boolean;
 }
 
-const VOLATILITY = 0.004; // 0.4% per tick baseline
+const BASE_VOLATILITY = 0.004; // 0.4% per tick baseline
+const MOMENTUM_DECAY = 0.7;
+const MOMENTUM_PUSH = 0.0015; // random push std per tick
+const VOL_DECAY = 0.85; // vol mean-reverts toward baseline
 
-function generateNextPrice(prev: number): { open: number; high: number; low: number; close: number; volume: number } {
+// Box-Muller approx for ~normal random
+function gauss(): number {
+  const u = Math.max(1e-9, Math.random());
+  const v = Math.max(1e-9, Math.random());
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+interface NextPriceResult {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  nextMomentum: number;
+  nextVol: number;
+}
+
+function generateNextPrice(
+  prev: number,
+  momentum = 0,
+  vol = BASE_VOLATILITY,
+): NextPriceResult {
   const open = prev;
-  const drift = (Math.random() - 0.5) * VOLATILITY * 2;
+
+  // 1. Momentum: decay + small random push
+  const push = gauss() * MOMENTUM_PUSH;
+  let nextMomentum = momentum * MOMENTUM_DECAY + push;
+  // Clamp momentum so it doesn't run away
+  const momCap = BASE_VOLATILITY * 3;
+  if (nextMomentum > momCap) nextMomentum = momCap;
+  if (nextMomentum < -momCap) nextMomentum = -momCap;
+
+  // 2. Volatility clustering: random shock scaled by current vol
+  const shock = gauss() * vol;
+  const drift = nextMomentum + shock;
   const close = Math.max(0.0001, open * (1 + drift));
-  const hi = Math.max(open, close) * (1 + Math.random() * VOLATILITY);
-  const lo = Math.min(open, close) * (1 - Math.random() * VOLATILITY);
-  const volume = Math.round(1000 + Math.random() * 9000);
-  return { open, high: hi, low: lo, close, volume };
+
+  // Body size relative to price
+  const bodyPct = Math.abs(close - open) / Math.max(open, 1e-9);
+
+  // Update vol: react to realized move, decay toward baseline
+  const realized = Math.abs(drift);
+  let nextVol = vol * VOL_DECAY + realized * (1 - VOL_DECAY) + BASE_VOLATILITY * 0.15;
+  // Mean-revert toward baseline a bit more strongly when far above
+  nextVol = nextVol * 0.9 + BASE_VOLATILITY * 0.1;
+  // Floor & ceiling
+  if (nextVol < BASE_VOLATILITY * 0.5) nextVol = BASE_VOLATILITY * 0.5;
+  if (nextVol > BASE_VOLATILITY * 5) nextVol = BASE_VOLATILITY * 5;
+
+  // 3. Natural wicks: multiplier 0.3x - 3x of body, with occasional long wicks
+  const wickHighMult = 0.3 + Math.random() * 2.7;
+  const wickLowMult = 0.3 + Math.random() * 2.7;
+  // Minimum wick relative to price so flat candles still show wicks
+  const minWick = Math.max(bodyPct, vol * 0.3);
+  const hi = Math.max(open, close) * (1 + minWick * wickHighMult * 0.5);
+  const lo = Math.min(open, close) * (1 - minWick * wickLowMult * 0.5);
+
+  // 4. Volume correlated with magnitude of move
+  const moveRatio = bodyPct / BASE_VOLATILITY; // ~1 for normal move
+  const baseVol = 2000;
+  const volSpike = baseVol * moveRatio * (0.5 + Math.random() * 1.5);
+  const noise = Math.random() * 1500;
+  const volume = Math.round(baseVol + volSpike + noise);
+
+  return { open, high: hi, low: lo, close, volume, nextMomentum, nextVol };
 }
 
 function applyShock(price: number, ev: ShockEventRow): number {
@@ -108,7 +168,9 @@ Deno.serve(async (req) => {
         appliedShockIds.push(sh.id);
       }
 
-      const candle = generateNextPrice(basePrice);
+      const prevMomentum = Number((state?.extra as any)?.momentum ?? 0);
+      const prevVol = Number((state?.extra as any)?.vol ?? BASE_VOLATILITY);
+      const candle = generateNextPrice(basePrice, prevMomentum, prevVol);
 
       historyRows.push({
         product_id: p.id,
@@ -124,7 +186,11 @@ Deno.serve(async (req) => {
         product_id: p.id,
         last_price: candle.close,
         last_recorded_at: tickTime.toISOString(),
-        extra: state?.extra ?? {},
+        extra: {
+          ...(state?.extra ?? {}),
+          momentum: candle.nextMomentum,
+          vol: candle.nextVol,
+        },
         updated_at: tickTime.toISOString(),
       });
 
