@@ -197,10 +197,15 @@ Deno.serve(async (req) => {
       productUpdates.push({ id: p.id, price: candle.close });
     }
 
-    // 4. Write price_history (insert; let cron de-dup via app-level)
+    // 4. Write price_history using the actual schema and minute-level unique key
     if (historyRows.length > 0) {
-      const { error } = await supabase.from('price_history').insert(historyRows);
-      if (error) console.warn('price_history insert:', error.message);
+      const { error } = await supabase
+        .from('price_history')
+        .upsert(historyRows, {
+          onConflict: 'product_id,recorded_at',
+          ignoreDuplicates: false,
+        });
+      if (error) console.warn('price_history upsert:', error.message);
     }
 
     // 5. Upsert engine_state
