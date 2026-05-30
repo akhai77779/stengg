@@ -23,7 +23,7 @@ import { ShareButton } from '@/components/charts/ShareButton';
 
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
-import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
+import { SharedTimeframe, useSharedProductRealtime, clearSharedProductCache } from '@/hooks/useSharedProductRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -58,6 +58,7 @@ export default function AdminProductsMonitor() {
   const [isReady, setIsReady] = useState(false);
   const [pendingShockCount, setPendingShockCount] = useState(0);
   const [isBackfilling, setIsBackfilling] = useState(false);
+  const [chartReloadToken, setChartReloadToken] = useState(0);
 
   const handleBackfill = useCallback(async () => {
     if (isBackfilling) return;
@@ -69,6 +70,9 @@ export default function AdminProductsMonitor() {
       });
       if (error) throw error;
       if (data?.ok === false) throw new Error(data.error || 'Backfill failed');
+      // Invalidate cached rows and force the hook to refetch from DB
+      clearSharedProductCache();
+      setChartReloadToken(t => t + 1);
       toast({
         title: 'Backfill hoàn tất',
         description: `Đã seed ${data?.products ?? 0} sản phẩm với 30 ngày dữ liệu nến.`,
@@ -157,6 +161,7 @@ export default function AdminProductsMonitor() {
     timeframe: ADMIN_TIMEFRAME_MAP[timeInterval],
     enabled: !!effectiveProductId,
     throttleMs: 150,
+    reloadToken: chartReloadToken,
   });
 
   const chartOHLCData = sharedRealtime.candles;
