@@ -65,17 +65,26 @@ export default function AdminProductsMonitor() {
     if (!confirm('Backfill 30 ngày dữ liệu nến cho TẤT CẢ sản phẩm? Quá trình có thể mất 1-3 phút.')) return;
     setIsBackfilling(true);
     try {
-      const { data, error } = await supabase.functions.invoke('backfill-price-history', {
-        body: { days: 30 },
-      });
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || 'Backfill failed');
+      // Process one product per invocation to avoid the 150s edge function timeout.
+      const { data: prodRows, error: prodErr } = await supabase
+        .from('products').select('id, name').eq('status', 'available');
+      if (prodErr) throw prodErr;
+      const list = prodRows || [];
+      let done = 0;
+      for (const p of list) {
+        const { data, error } = await supabase.functions.invoke('backfill-price-history', {
+          body: { days: 30, productIds: [p.id] },
+        });
+        if (error) throw new Error(`${p.name}: ${error.message}`);
+        if (data?.ok === false) throw new Error(`${p.name}: ${data.error || 'Backfill failed'}`);
+        done += 1;
+      }
       // Invalidate cached rows and force the hook to refetch from DB
       clearSharedProductCache();
       setChartReloadToken(t => t + 1);
       toast({
         title: 'Backfill hoàn tất',
-        description: `Đã seed ${data?.products ?? 0} sản phẩm với 30 ngày dữ liệu nến.`,
+        description: `Đã seed ${done}/${list.length} sản phẩm với 30 ngày dữ liệu nến.`,
       });
     } catch (e: any) {
       toast({
