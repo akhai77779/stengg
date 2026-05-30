@@ -1,5 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi, LogicalRange } from 'lightweight-charts';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
 import { calculateMA, calculateEMA } from '@/lib/indicators';
 
@@ -21,6 +21,8 @@ interface CandlestickChartProps {
    * current pan/zoom is preserved across data updates.
    */
   resetZoomKey?: string;
+  /** Persist the user's visible range across route changes and page reloads. */
+  visibleRangeKey?: string;
 }
 
 export interface CandlestickChartRef {
@@ -52,6 +54,49 @@ export function computeNextVisibleRange(
   const to = Math.min(prevRange.to, newTotal + 2);
   const from = Math.max(0, to - width);
   return { from, to };
+}
+
+const VISIBLE_RANGE_STORAGE_PREFIX = 'stengg:chart-visible-range:v1:';
+
+function getSessionStorage(): Storage | null {
+  try {
+    return typeof globalThis !== 'undefined' && globalThis.sessionStorage ? globalThis.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+export function chartVisibleRangeStorageKey(key: string) {
+  return `${VISIBLE_RANGE_STORAGE_PREFIX}${key}`;
+}
+
+function isValidVisibleRange(range: unknown): range is LogicalRange {
+  if (!range || typeof range !== 'object') return false;
+  const value = range as { from?: unknown; to?: unknown };
+  return typeof value.from === 'number' && typeof value.to === 'number' && Number.isFinite(value.from) && Number.isFinite(value.to) && value.to > value.from;
+}
+
+export function readStoredVisibleRange(key: string | undefined, newTotal: number): LogicalRange | null {
+  const storage = getSessionStorage();
+  if (!key || !storage) return null;
+  try {
+    const parsed = JSON.parse(storage.getItem(chartVisibleRangeStorageKey(key)) || 'null');
+    if (!isValidVisibleRange(parsed)) return null;
+    return computeNextVisibleRange(parsed, newTotal, 'preserve') as LogicalRange | null;
+  } catch {
+    storage.removeItem(chartVisibleRangeStorageKey(key));
+    return null;
+  }
+}
+
+export function writeStoredVisibleRange(key: string | undefined, range: LogicalRange | null) {
+  const storage = getSessionStorage();
+  if (!key || !storage || !isValidVisibleRange(range)) return;
+  try {
+    storage.setItem(chartVisibleRangeStorageKey(key), JSON.stringify({ from: range.from, to: range.to }));
+  } catch {
+    storage.removeItem(chartVisibleRangeStorageKey(key));
+  }
 }
 
 // Convert ISO time to UTC timestamp
