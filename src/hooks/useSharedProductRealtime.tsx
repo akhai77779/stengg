@@ -163,6 +163,17 @@ export function __resetSharedProductCache() {
     if (key?.startsWith(CACHE_STORAGE_PREFIX)) storage.removeItem(key);
   }
 }
+
+/** Clear cached rows for a single product (or all) so the next render refetches from DB. */
+export function clearSharedProductCache(productId?: string) {
+  if (productId) {
+    sharedProductCache.delete(productId);
+    const storage = getSessionStorage();
+    if (storage) storage.removeItem(`${CACHE_STORAGE_PREFIX}${productId}`);
+    return;
+  }
+  __resetSharedProductCache();
+}
 export function __readSharedProductCacheEntry(key: string) {
   return readCache(key);
 }
@@ -313,11 +324,13 @@ export function useSharedProductRealtime({
   timeframe,
   enabled = true,
   throttleMs = 150,
+  reloadToken = 0,
 }: {
   productId: string;
   timeframe: SharedTimeframe;
   enabled?: boolean;
   throttleMs?: number;
+  reloadToken?: number;
 }) {
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
@@ -541,7 +554,7 @@ export function useSharedProductRealtime({
         throttleRef.current = null;
       }
     };
-  }, [isActive, productId]);
+  }, [isActive, productId, reloadToken]);
 
   useEffect(() => {
     if (!isActive) return;

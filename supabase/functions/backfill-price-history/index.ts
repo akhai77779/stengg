@@ -126,11 +126,12 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-    let body: { productIds?: string[]; days?: number } = {};
+    let body: { productIds?: string[]; days?: number; replace?: boolean } = {};
     try { body = await req.json(); } catch { /* allow empty body = all products */ }
 
     const days = Math.max(1, Math.min(Number(body.days ?? DAYS), 90));
     const totalCandles = days * MINUTES_PER_DAY;
+    const replace = body.replace !== false; // default: replace existing window
 
     // Resolve product list
     let prodQuery = supabase.from('products').select('id, price').eq('status', 'available');
@@ -144,8 +145,10 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Anchor the LAST candle exactly at the current minute, then walk backwards.
     const nowMs = Date.now();
-    const startMinute = Math.floor((nowMs - days * 86400_000) / 60000) * 60000;
+    const endMinute = Math.floor(nowMs / 60000) * 60000;
+    const startMinute = endMinute - (totalCandles - 1) * 60000;
 
     const summary: Array<{ product_id: string; rows: number; finalPrice: number }> = [];
 
@@ -189,6 +192,19 @@ Deno.serve(async (req) => {
         r.close_price *= scale;
       }
 
+      // Optionally wipe the existing window so the new series fully replaces stale data
+      if (replace) {
+        const startIso = new Date(startMinute).toISOString();
+        const endIso = new Date(endMinute + 60000).toISOString();
+        const { error: delErr } = await supabase
+          .from('price_history')
+          .delete()
+          .eq('product_id', p.id)
+          .gte('recorded_at', startIso)
+          .lt('recorded_at', endIso);
+        if (delErr) console.warn(`backfill delete for ${p.id}:`, delErr.message);
+      }
+
       // Upsert in chunks
       let written = 0;
       for (let i = 0; i < rows.length; i += CHUNK) {
@@ -203,13 +219,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Seed engine_state so live ticks continue with a fresh regime + correct price
-      const finalPrice = rows[rows.length - 1].close_price;
+      // Seed engine_state so live ticks continue from the LAST backfilled candle.
+      const lastRow = rows[rows.length - 1];
+      const finalPrice = lastRow.close_price;
       const seedRegime = initState(finalPrice);
       await supabase.from('engine_state').upsert({
         product_id: p.id,
         last_price: finalPrice,
-        last_recorded_at: new Date().toISOString(),
+        last_recorded_at: lastRow.recorded_at,
         extra: {
           regime: seedRegime.regime,
           ticksInRegime: 0,
@@ -220,10 +237,15 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'product_id' });
 
+      // Also push the final price onto products.price so all read paths see fresh data
+      await supabase.from('products')
+        .update({ price: finalPrice, updated_at: new Date().toISOString() })
+        .eq('id', p.id);
+
       summary.push({ product_id: p.id, rows: written, finalPrice });
     }
 
-    return new Response(JSON.stringify({ ok: true, days, products: summary.length, summary }),
+    return new Response(JSON.stringify({ ok: true, days, replaced: replace, products: summary.length, summary }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('backfill-price-history error', e);
