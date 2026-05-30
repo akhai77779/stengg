@@ -299,7 +299,7 @@ export function useSharedProductRealtime({
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
   const initialKey = isActive ? cacheKey(productId) : null;
-  const initialCache = initialKey ? sharedProductCache.get(initialKey) : undefined;
+  const initialCache = initialKey ? readCache(initialKey) : undefined;
   const [rows, setRows] = useState<PriceHistoryRow[]>(() => initialCache?.rows ?? []);
   const [product, setProduct] = useState<ProductPayload | null>(() => initialCache?.product ?? null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
@@ -396,7 +396,7 @@ export function useSharedProductRealtime({
     setStatus('connecting');
 
     const key = cacheKey(productId);
-    const cached = sharedProductCache.get(key);
+    const cached = readCache(key);
     if (cached && cached.rows.length > 0) {
       // Hydrate instantly from cache; refresh in background without clearing the chart
       setRows(cached.rows);
