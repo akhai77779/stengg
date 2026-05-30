@@ -297,7 +297,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       
       window.addEventListener('resize', handleResize);
 
-      const handleVisibleRangeChange = (range: LogicalRange | null) => {
+      const handleVisibleRangeChange = (range: VisibleLogicalRange | null) => {
         writeStoredVisibleRange(visibleRangeKeyRef.current, range);
       };
       chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
