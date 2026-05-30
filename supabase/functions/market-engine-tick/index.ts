@@ -23,77 +23,178 @@ interface ShockEventRow {
   applied: boolean;
 }
 
-const BASE_VOLATILITY = 0.004; // 0.4% per tick baseline
-const MOMENTUM_DECAY = 0.7;
-const MOMENTUM_PUSH = 0.0015; // random push std per tick
-const VOL_DECAY = 0.85; // vol mean-reverts toward baseline
+// ─────────────────────────────────────────────────────────────────────
+// Realistic market-regime candle generation.
+// Exported (via re-import in backfill) so both live ticks and backfill
+// share the EXACT SAME logic.
+// ─────────────────────────────────────────────────────────────────────
 
-// Box-Muller approx for ~normal random
+export type Regime = 'sideways' | 'trending_up' | 'trending_down' | 'volatile';
+
+export interface RegimeState {
+  regime: Regime;
+  ticksInRegime: number;
+  momentum: number;
+  vol: number;
+  anchor?: number; // mean for sideways
+}
+
+const REGIME_PARAMS: Record<Regime, {
+  volMin: number; volMax: number;
+  driftMin: number; driftMax: number;
+  wickMultMin: number; wickMultMax: number;
+  volumeMult: number;
+}> = {
+  sideways:      { volMin: 0.001, volMax: 0.003, driftMin: -0.0002, driftMax: 0.0002, wickMultMin: 0.3, wickMultMax: 1.2, volumeMult: 0.5 },
+  trending_up:   { volMin: 0.003, volMax: 0.006, driftMin: 0.0010,  driftMax: 0.0020, wickMultMin: 0.4, wickMultMax: 2.0, volumeMult: 1.2 },
+  trending_down: { volMin: 0.003, volMax: 0.006, driftMin: -0.0020, driftMax: -0.0010, wickMultMin: 0.4, wickMultMax: 2.0, volumeMult: 1.2 },
+  volatile:      { volMin: 0.010, volMax: 0.020, driftMin: -0.0010, driftMax: 0.0010, wickMultMin: 1.0, wickMultMax: 4.0, volumeMult: 2.5 },
+};
+
+function rand(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+// Box-Muller standard normal
 function gauss(): number {
   const u = Math.max(1e-9, Math.random());
   const v = Math.max(1e-9, Math.random());
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-interface NextPriceResult {
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  nextMomentum: number;
-  nextVol: number;
+function pickRegime(prev?: Regime): Regime {
+  // Weighted distribution: most time spent in sideways/trending, rarely volatile.
+  const weights: Record<Regime, number> = {
+    sideways: 0.40,
+    trending_up: 0.25,
+    trending_down: 0.25,
+    volatile: 0.10,
+  };
+  // Avoid immediately re-picking the same regime
+  if (prev) weights[prev] *= 0.3;
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [k, w] of Object.entries(weights)) {
+    r -= w;
+    if (r <= 0) return k as Regime;
+  }
+  return 'sideways';
 }
 
-function generateNextPrice(
-  prev: number,
-  momentum = 0,
-  vol = BASE_VOLATILITY,
-): NextPriceResult {
-  const open = prev;
+/**
+ * Transition probability grows with ticksInRegime.
+ * Base ~2%, +0.1% per tick, capped at ~15%.
+ */
+function maybeTransition(state: RegimeState, anchorPrice: number): RegimeState {
+  const base = 0.02;
+  const growth = Math.min(state.ticksInRegime * 0.001, 0.13);
+  const p = base + growth;
+  if (Math.random() < p) {
+    const next = pickRegime(state.regime);
+    return {
+      regime: next,
+      ticksInRegime: 0,
+      momentum: 0,
+      vol: rand(REGIME_PARAMS[next].volMin, REGIME_PARAMS[next].volMax),
+      anchor: next === 'sideways' ? anchorPrice : undefined,
+    };
+  }
+  return state;
+}
 
-  // 1. Momentum: decay + small random push
-  const push = gauss() * MOMENTUM_PUSH;
-  let nextMomentum = momentum * MOMENTUM_DECAY + push;
-  // Clamp momentum so it doesn't run away
-  const momCap = BASE_VOLATILITY * 3;
-  if (nextMomentum > momCap) nextMomentum = momCap;
-  if (nextMomentum < -momCap) nextMomentum = -momCap;
+export interface GeneratedCandle {
+  open: number; high: number; low: number; close: number; volume: number;
+}
 
-  // 2. Volatility clustering: random shock scaled by current vol
-  const shock = gauss() * vol;
-  const drift = nextMomentum + shock;
-  const close = Math.max(0.0001, open * (1 + drift));
+export function generateRegimeCandle(
+  prevClose: number,
+  state: RegimeState,
+): { candle: GeneratedCandle; nextState: RegimeState } {
+  const params = REGIME_PARAMS[state.regime];
 
-  // Body size relative to price
+  // Drift in the regime's direction (per-tick), with mean-reversion for sideways
+  let drift = rand(params.driftMin, params.driftMax);
+  if (state.regime === 'sideways' && state.anchor) {
+    const dev = (prevClose - state.anchor) / state.anchor;
+    drift -= dev * 0.3; // pull back to anchor
+  }
+
+  // Momentum accumulates for trends, decays fast for sideways/volatile
+  const momentumDecay = state.regime === 'sideways' ? 0.4
+                      : state.regime === 'volatile' ? 0.5
+                      : 0.85;
+  const newMomentum = state.momentum * momentumDecay + drift * 0.5;
+
+  // Shock from current vol
+  const shock = gauss() * state.vol;
+  const totalReturn = newMomentum + shock;
+
+  const open = prevClose;
+  let close = Math.max(0.0001, open * (1 + totalReturn));
+
+  // Sideways clamp ±0.5% from anchor
+  if (state.regime === 'sideways' && state.anchor) {
+    const upper = state.anchor * 1.005;
+    const lower = state.anchor * 0.995;
+    if (close > upper) close = upper - Math.random() * (upper - state.anchor) * 0.3;
+    if (close < lower) close = lower + Math.random() * (state.anchor - lower) * 0.3;
+  }
+
+  // Wick: based on regime, with intrabar pressure (gauss-driven)
   const bodyPct = Math.abs(close - open) / Math.max(open, 1e-9);
+  const baseWick = Math.max(bodyPct, state.vol * 0.5);
+  const wickHi = baseWick * rand(params.wickMultMin, params.wickMultMax) * 0.5;
+  const wickLo = baseWick * rand(params.wickMultMin, params.wickMultMax) * 0.5;
+  const high = Math.max(open, close) * (1 + wickHi);
+  const low  = Math.min(open, close) * (1 - wickLo);
 
-  // Update vol: react to realized move, decay toward baseline
-  const realized = Math.abs(drift);
-  let nextVol = vol * VOL_DECAY + realized * (1 - VOL_DECAY) + BASE_VOLATILITY * 0.15;
-  // Mean-revert toward baseline a bit more strongly when far above
-  nextVol = nextVol * 0.9 + BASE_VOLATILITY * 0.1;
-  // Floor & ceiling
-  if (nextVol < BASE_VOLATILITY * 0.5) nextVol = BASE_VOLATILITY * 0.5;
-  if (nextVol > BASE_VOLATILITY * 5) nextVol = BASE_VOLATILITY * 5;
+  // Volume: scaled by regime and body magnitude
+  const moveRatio = bodyPct / 0.004;
+  const baseVol = 2000 * params.volumeMult;
+  const spike = baseVol * Math.max(moveRatio, 0.3) * (0.5 + Math.random() * 1.5);
+  const volume = Math.round(baseVol * 0.4 + spike + Math.random() * 800);
 
-  // 3. Natural wicks: multiplier 0.3x - 3x of body, with occasional long wicks
-  const wickHighMult = 0.3 + Math.random() * 2.7;
-  const wickLowMult = 0.3 + Math.random() * 2.7;
-  // Minimum wick relative to price so flat candles still show wicks
-  const minWick = Math.max(bodyPct, vol * 0.3);
-  const hi = Math.max(open, close) * (1 + minWick * wickHighMult * 0.5);
-  const lo = Math.min(open, close) * (1 - minWick * wickLowMult * 0.5);
+  // Volatility evolves: mean-revert toward regime band
+  const targetVol = rand(params.volMin, params.volMax);
+  const nextVol = state.vol * 0.9 + targetVol * 0.1;
 
-  // 4. Volume correlated with magnitude of move
-  const moveRatio = bodyPct / BASE_VOLATILITY; // ~1 for normal move
-  const baseVol = 2000;
-  const volSpike = baseVol * moveRatio * (0.5 + Math.random() * 1.5);
-  const noise = Math.random() * 1500;
-  const volume = Math.round(baseVol + volSpike + noise);
-
-  return { open, high: hi, low: lo, close, volume, nextMomentum, nextVol };
+  return {
+    candle: { open, high, low, close, volume },
+    nextState: {
+      regime: state.regime,
+      ticksInRegime: state.ticksInRegime + 1,
+      momentum: Math.max(-0.05, Math.min(0.05, newMomentum)),
+      vol: nextVol,
+      anchor: state.anchor,
+    },
+  };
 }
+
+export function initialRegimeState(anchorPrice: number, regime?: Regime): RegimeState {
+  const r = regime ?? pickRegime();
+  return {
+    regime: r,
+    ticksInRegime: 0,
+    momentum: 0,
+    vol: rand(REGIME_PARAMS[r].volMin, REGIME_PARAMS[r].volMax),
+    anchor: r === 'sideways' ? anchorPrice : undefined,
+  };
+}
+
+export function loadRegimeState(extra: Record<string, unknown> | undefined, anchor: number): RegimeState {
+  const e = (extra ?? {}) as any;
+  const validRegimes: Regime[] = ['sideways', 'trending_up', 'trending_down', 'volatile'];
+  if (!validRegimes.includes(e.regime)) return initialRegimeState(anchor);
+  return {
+    regime: e.regime,
+    ticksInRegime: Number(e.ticksInRegime ?? 0),
+    momentum: Number(e.momentum ?? 0),
+    vol: Number(e.vol ?? REGIME_PARAMS[e.regime as Regime].volMin),
+    anchor: typeof e.anchor === 'number' ? e.anchor : (e.regime === 'sideways' ? anchor : undefined),
+  };
+}
+
+export { maybeTransition };
 
 function applyShock(price: number, ev: ShockEventRow): number {
   const pct = Math.abs(ev.magnitude) / 100;
@@ -168,9 +269,10 @@ Deno.serve(async (req) => {
         appliedShockIds.push(sh.id);
       }
 
-      const prevMomentum = Number((state?.extra as any)?.momentum ?? 0);
-      const prevVol = Number((state?.extra as any)?.vol ?? BASE_VOLATILITY);
-      const candle = generateNextPrice(basePrice, prevMomentum, prevVol);
+      // Load regime state, possibly transition, then generate a candle
+      let regimeState = loadRegimeState(state?.extra, basePrice);
+      regimeState = maybeTransition(regimeState, basePrice);
+      const { candle, nextState } = generateRegimeCandle(basePrice, regimeState);
 
       historyRows.push({
         product_id: p.id,
@@ -188,8 +290,11 @@ Deno.serve(async (req) => {
         last_recorded_at: tickTime.toISOString(),
         extra: {
           ...(state?.extra ?? {}),
-          momentum: candle.nextMomentum,
-          vol: candle.nextVol,
+          regime: nextState.regime,
+          ticksInRegime: nextState.ticksInRegime,
+          momentum: nextState.momentum,
+          vol: nextState.vol,
+          anchor: nextState.anchor ?? null,
         },
         updated_at: tickTime.toISOString(),
       });

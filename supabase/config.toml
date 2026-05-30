@@ -20,3 +20,6 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.market-engine-tick]
     verify_jwt = false
+
+  [functions.backfill-price-history]
+    verify_jwt = true
