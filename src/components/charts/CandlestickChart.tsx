@@ -1,5 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi, LogicalRange } from 'lightweight-charts';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
 import { calculateMA, calculateEMA } from '@/lib/indicators';
 
@@ -57,6 +57,7 @@ export function computeNextVisibleRange(
 }
 
 const VISIBLE_RANGE_STORAGE_PREFIX = 'stengg:chart-visible-range:v1:';
+type VisibleLogicalRange = { from: number; to: number };
 
 function getSessionStorage(): Storage | null {
   try {
@@ -70,26 +71,26 @@ export function chartVisibleRangeStorageKey(key: string) {
   return `${VISIBLE_RANGE_STORAGE_PREFIX}${key}`;
 }
 
-function isValidVisibleRange(range: unknown): range is LogicalRange {
+function isValidVisibleRange(range: unknown): range is VisibleLogicalRange {
   if (!range || typeof range !== 'object') return false;
   const value = range as { from?: unknown; to?: unknown };
   return typeof value.from === 'number' && typeof value.to === 'number' && Number.isFinite(value.from) && Number.isFinite(value.to) && value.to > value.from;
 }
 
-export function readStoredVisibleRange(key: string | undefined, newTotal: number): LogicalRange | null {
+export function readStoredVisibleRange(key: string | undefined, newTotal: number): VisibleLogicalRange | null {
   const storage = getSessionStorage();
   if (!key || !storage) return null;
   try {
     const parsed = JSON.parse(storage.getItem(chartVisibleRangeStorageKey(key)) || 'null');
     if (!isValidVisibleRange(parsed)) return null;
-    return computeNextVisibleRange(parsed, newTotal, 'preserve') as LogicalRange | null;
+    return computeNextVisibleRange(parsed, newTotal, 'preserve');
   } catch {
     storage.removeItem(chartVisibleRangeStorageKey(key));
     return null;
   }
 }
 
-export function writeStoredVisibleRange(key: string | undefined, range: LogicalRange | null) {
+export function writeStoredVisibleRange(key: string | undefined, range: VisibleLogicalRange | null) {
   const storage = getSessionStorage();
   if (!key || !storage || !isValidVisibleRange(range)) return;
   try {
