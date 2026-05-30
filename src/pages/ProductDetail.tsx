@@ -98,8 +98,9 @@ const ProductDetail = () => {
     debounceMs: 300,
   });
 
-  // Reset zoom only when product or timeframe changes (not on every tick).
-  const resetZoomKey = useMemo(() => `${id || 'none'}-${timeframe}`, [id, timeframe]);
+  // Reset zoom only when the product changes — switching timeframe just re-aggregates
+  // the same raw rows client-side and should preserve the user's pan/zoom feeling.
+  const resetZoomKey = useMemo(() => `${id || 'none'}`, [id]);
 
   const priceChange = product?.price_change ?? 0;
   const isPositive = priceChange >= 0;
