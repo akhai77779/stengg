@@ -135,7 +135,7 @@ const dedupeAndSortIndicator = (indicatorData: { time: string; value: number }[]
 };
 
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
-  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate, resetZoomKey }, ref) => {
+  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate, resetZoomKey, visibleRangeKey }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -144,6 +144,11 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const lastDataRef = useRef<string>('');
     const lastResetKeyRef = useRef<string | undefined>(undefined);
     const hasInitialDataRef = useRef<boolean>(false);
+    const visibleRangeKeyRef = useRef<string | undefined>(visibleRangeKey);
+
+    useEffect(() => {
+      visibleRangeKeyRef.current = visibleRangeKey;
+    }, [visibleRangeKey]);
     
     // Calculate indicators
     const maData = useMemo(() => {
@@ -289,8 +294,14 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       
       window.addEventListener('resize', handleResize);
 
+      const handleVisibleRangeChange = (range: LogicalRange | null) => {
+        writeStoredVisibleRange(visibleRangeKeyRef.current, range);
+      };
+      chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+
       return () => {
         window.removeEventListener('resize', handleResize);
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
         chart.remove();
         chartRef.current = null;
         candleSeriesRef.current = null;
@@ -321,9 +332,11 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       const shouldResetView = isFirstLoad || resetChanged;
 
       if (shouldResetView) {
-        // First mount or product switch: snap to last ~60 candles.
+        // First mount or product switch: restore the saved view if available,
+        // otherwise snap to the last ~60 candles.
         candleSeriesRef.current.setData(formattedData);
-        const next = computeNextVisibleRange(null, formattedData.length, 'reset');
+        const next = readStoredVisibleRange(visibleRangeKey, formattedData.length)
+          ?? computeNextVisibleRange(null, formattedData.length, 'reset');
         if (next) ts.setVisibleLogicalRange(next);
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
