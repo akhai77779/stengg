@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeNextVisibleRange } from './CandlestickChart';
+import {
+  chartVisibleRangeStorageKey,
+  computeNextVisibleRange,
+  readStoredVisibleRange,
+  writeStoredVisibleRange,
+} from './CandlestickChart';
 
 describe('computeNextVisibleRange — reset mode', () => {
   it('snaps to the last 60 candles when plenty of data', () => {
@@ -40,5 +45,31 @@ describe('computeNextVisibleRange — preserve mode', () => {
 
   it('returns null when no previous range exists', () => {
     expect(computeNextVisibleRange(null, 100, 'preserve')).toBeNull();
+  });
+});
+
+describe('visible range session persistence', () => {
+  const key = 'product-a::30m';
+
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  it('stores and restores a visible range by key', () => {
+    writeStoredVisibleRange(key, { from: 20, to: 80 });
+    expect(sessionStorage.getItem(chartVisibleRangeStorageKey(key))).toBe(JSON.stringify({ from: 20, to: 80 }));
+    expect(readStoredVisibleRange(key, 100)).toEqual({ from: 20, to: 80 });
+  });
+
+  it('clamps restored range into the new dataset size', () => {
+    writeStoredVisibleRange(key, { from: 100, to: 160 });
+    expect(readStoredVisibleRange(key, 120)).toEqual({ from: 62, to: 122 });
+  });
+
+  it('keeps timeframe ranges isolated', () => {
+    writeStoredVisibleRange('product-a::1m', { from: 1, to: 20 });
+    writeStoredVisibleRange('product-a::1h', { from: 40, to: 90 });
+    expect(readStoredVisibleRange('product-a::1m', 100)).toEqual({ from: 1, to: 20 });
+    expect(readStoredVisibleRange('product-a::1h', 100)).toEqual({ from: 40, to: 90 });
   });
 });
