@@ -101,6 +101,7 @@ const ProductDetail = () => {
   // Reset zoom only when the product changes — switching timeframe just re-aggregates
   // the same raw rows client-side and should preserve the user's pan/zoom feeling.
   const resetZoomKey = useMemo(() => `${id || 'none'}`, [id]);
+  const visibleRangeKey = useMemo(() => `${id || 'none'}::${timeframe}`, [id, timeframe]);
 
   const priceChange = product?.price_change ?? 0;
   const isPositive = priceChange >= 0;
@@ -249,6 +250,7 @@ const ProductDetail = () => {
                   data={effectiveCandleData}
                   height={320}
                   resetZoomKey={resetZoomKey}
+                  visibleRangeKey={visibleRangeKey}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
