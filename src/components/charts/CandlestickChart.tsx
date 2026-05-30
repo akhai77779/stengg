@@ -148,6 +148,33 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const hasInitialDataRef = useRef<boolean>(false);
     const visibleRangeKeyRef = useRef<string | undefined>(visibleRangeKey);
     const visibleRangeAppliedKeyRef = useRef<string | undefined>(undefined);
+    const suppressVisibleRangeWriteRef = useRef(false);
+    const releaseRangeWriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const releaseRangeWriteFrameRef = useRef<number | null>(null);
+
+    const suppressVisibleRangeWrites = useCallback(() => {
+      suppressVisibleRangeWriteRef.current = true;
+      if (releaseRangeWriteTimerRef.current) clearTimeout(releaseRangeWriteTimerRef.current);
+      if (releaseRangeWriteFrameRef.current && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(releaseRangeWriteFrameRef.current);
+      }
+
+      const release = () => {
+        releaseRangeWriteTimerRef.current = setTimeout(() => {
+          suppressVisibleRangeWriteRef.current = false;
+          releaseRangeWriteTimerRef.current = null;
+          releaseRangeWriteFrameRef.current = null;
+        }, 75);
+      };
+
+      if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+        releaseRangeWriteFrameRef.current = window.requestAnimationFrame(() => {
+          releaseRangeWriteFrameRef.current = window.requestAnimationFrame(release);
+        });
+      } else {
+        release();
+      }
+    }, []);
 
     useEffect(() => {
       visibleRangeKeyRef.current = visibleRangeKey;
@@ -298,12 +325,15 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       window.addEventListener('resize', handleResize);
 
       const handleVisibleRangeChange = (range: VisibleLogicalRange | null) => {
+        if (suppressVisibleRangeWriteRef.current) return;
         writeStoredVisibleRange(visibleRangeKeyRef.current, range);
       };
       chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        if (releaseRangeWriteTimerRef.current) clearTimeout(releaseRangeWriteTimerRef.current);
+        if (releaseRangeWriteFrameRef.current) window.cancelAnimationFrame(releaseRangeWriteFrameRef.current);
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
         chart.remove();
         chartRef.current = null;
@@ -346,10 +376,15 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       if (shouldResetView) {
         // First mount or product switch: restore the saved view if available,
         // otherwise snap to the last ~60 candles.
+        suppressVisibleRangeWrites();
         candleSeriesRef.current.setData(formattedData);
         const next = readStoredVisibleRange(visibleRangeKey, formattedData.length)
           ?? computeNextVisibleRange(null, formattedData.length, 'reset');
-        if (next) ts.setVisibleLogicalRange(next);
+        if (next) {
+          suppressVisibleRangeWrites();
+          ts.setVisibleLogicalRange(next);
+          writeStoredVisibleRange(visibleRangeKey, next);
+        }
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
         visibleRangeAppliedKeyRef.current = visibleRangeKey;
@@ -360,24 +395,38 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
           try {
             candleSeriesRef.current.update(last);
             const restoredRange = visibleRangeChanged ? readStoredVisibleRange(visibleRangeKey, formattedData.length) : null;
-            if (restoredRange) ts.setVisibleLogicalRange(restoredRange);
+            if (restoredRange) {
+              suppressVisibleRangeWrites();
+              ts.setVisibleLogicalRange(restoredRange);
+              writeStoredVisibleRange(visibleRangeKey, restoredRange);
+            }
             visibleRangeAppliedKeyRef.current = visibleRangeKey;
           } catch {
             const prevRange = ts.getVisibleLogicalRange();
+            suppressVisibleRangeWrites();
             candleSeriesRef.current.setData(formattedData);
-            if (prevRange) ts.setVisibleLogicalRange(prevRange);
+            if (prevRange) {
+              suppressVisibleRangeWrites();
+              ts.setVisibleLogicalRange(prevRange);
+              writeStoredVisibleRange(visibleRangeKey, prevRange);
+            }
           }
         }
       } else {
         // Length changed (timeframe switch re-aggregated, or new candle appended).
         // Preserve the user's current visible range across setData to avoid jumps.
         const prevRange = ts.getVisibleLogicalRange();
+        suppressVisibleRangeWrites();
         candleSeriesRef.current.setData(formattedData);
         const restoredRange = visibleRangeKey !== visibleRangeAppliedKeyRef.current
           ? readStoredVisibleRange(visibleRangeKey, formattedData.length)
           : null;
         const next = restoredRange ?? computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
-        if (next) ts.setVisibleLogicalRange(next);
+        if (next) {
+          suppressVisibleRangeWrites();
+          ts.setVisibleLogicalRange(next);
+          writeStoredVisibleRange(visibleRangeKey, next);
+        }
         visibleRangeAppliedKeyRef.current = visibleRangeKey;
       }
 
@@ -412,7 +461,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         chartRef.current.removeSeries(emaSeriesRef.current);
         emaSeriesRef.current = null;
       }
-    }, [data, indicatorConfig, maData, emaData, resetZoomKey, visibleRangeKey]);
+    }, [data, indicatorConfig, maData, emaData, resetZoomKey, visibleRangeKey, suppressVisibleRangeWrites]);
 
     if (data.length === 0) {
       return (
