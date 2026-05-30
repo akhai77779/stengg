@@ -559,8 +559,16 @@ export function useSharedProductRealtime({
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `id=eq.${productId}` }, payload => {
         const next = payload.new as ProductPayload;
         if (next?.id && next.id !== productId) return;
+        const nextPrice = next?.price as number | null;
+        const reference = productPriceRef.current ?? anchorPriceRef.current ?? null;
+        // Reject corrupted product.price updates that deviate >50% from the last known good price.
+        if (isFinitePositive(nextPrice) && !isPriceSane(Number(nextPrice), reference)) {
+          // Keep prior product fields visible but ignore the bad price field.
+          setProduct(prev => ({ ...(prev || {}), ...next, price: prev?.price ?? null }));
+          return;
+        }
         setProduct(next);
-        productPriceRef.current = pickValid(next?.price as number | null, productPriceRef.current);
+        productPriceRef.current = pickValid(nextPrice, productPriceRef.current);
       })
       .subscribe(subscriptionStatus => {
         if (subscriptionStatus === 'SUBSCRIBED') setStatus('connected');
@@ -580,7 +588,7 @@ export function useSharedProductRealtime({
 
     const interval = setInterval(() => {
       const anchorPrice = anchorPriceRef.current ?? productPriceRef.current ?? null;
-      if (!anchorPrice || anchorPrice <= 0) return;
+      if (!isFinitePositive(anchorPrice)) return;
 
       const latestRealAt = latestRealRowAtRef.current ? new Date(latestRealRowAtRef.current).getTime() : 0;
       const isRealtimeStale = !latestRealAt || Date.now() - latestRealAt > 10000;
