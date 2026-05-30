@@ -30,6 +30,30 @@ export interface CandlestickChartRef {
   updateCandle: (candle: OHLCData) => void;
 }
 
+/**
+ * Pure helper computing the next visible logical range for the time scale.
+ * - `reset` mode snaps to the last `resetWindow` candles (used on first mount / product switch).
+ * - `preserve` mode clamps the user's previous range into the new dataset bounds,
+ *   keeping the original width so timeframe switches / new candles don't jump.
+ */
+export function computeNextVisibleRange(
+  prevRange: { from: number; to: number } | null,
+  newTotal: number,
+  mode: 'reset' | 'preserve',
+  resetWindow = 60,
+): { from: number; to: number } | null {
+  if (mode === 'reset') {
+    if (newTotal <= 0) return null;
+    const visible = Math.min(resetWindow, newTotal);
+    return { from: Math.max(0, newTotal - visible), to: newTotal + 2 };
+  }
+  if (!prevRange) return null;
+  const width = prevRange.to - prevRange.from;
+  const to = Math.min(prevRange.to, newTotal + 2);
+  const from = Math.max(0, to - width);
+  return { from, to };
+}
+
 // Convert ISO time to UTC timestamp
 const toTimestamp = (isoTime: string): UTCTimestamp => {
   return Math.floor(new Date(isoTime).getTime() / 1000) as UTCTimestamp;
@@ -254,14 +278,8 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       if (shouldResetView) {
         // First mount or product switch: snap to last ~60 candles.
         candleSeriesRef.current.setData(formattedData);
-        const total = formattedData.length;
-        if (total > 0) {
-          const visible = Math.min(60, total);
-          ts.setVisibleLogicalRange({
-            from: Math.max(0, total - visible),
-            to: total + 2,
-          });
-        }
+        const next = computeNextVisibleRange(null, formattedData.length, 'reset');
+        if (next) ts.setVisibleLogicalRange(next);
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
       } else if (sameLength) {
@@ -281,13 +299,8 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         // Preserve the user's current visible range across setData to avoid jumps.
         const prevRange = ts.getVisibleLogicalRange();
         candleSeriesRef.current.setData(formattedData);
-        if (prevRange) {
-          // Clamp `to` to new data end so we don't show empty space when length shrank.
-          const total = formattedData.length;
-          const to = Math.min(prevRange.to, total + 2);
-          const from = Math.max(0, to - (prevRange.to - prevRange.from));
-          ts.setVisibleLogicalRange({ from, to });
-        }
+        const next = computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
+        if (next) ts.setVisibleLogicalRange(next);
       }
 
       // Update MA series

@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { isValidProductId, aggregateOHLCData } from './useSharedProductRealtime';
+import { vi, beforeEach } from 'vitest';
+import {
+  isValidProductId,
+  aggregateOHLCData,
+  cacheKey,
+  __getSharedProductCache,
+  __resetSharedProductCache,
+} from './useSharedProductRealtime';
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: { from: () => ({}), channel: () => ({}), removeChannel: () => {} },
+}));
 
 describe('isValidProductId', () => {
   it('accepts valid UUIDs', () => {
@@ -70,5 +81,59 @@ describe('aggregateOHLCData edge values', () => {
     expect(result[0].high).toBe(20);
     expect(result[0].low).toBe(5);
     expect(result[0].close).toBe(13);
+  });
+});
+
+describe('shared product cacheKey', () => {
+  const id = '11111111-1111-1111-1111-111111111111';
+  const idB = '22222222-2222-2222-2222-222222222222';
+
+  it('is independent of timeframe', () => {
+    expect(cacheKey(id, '1m')).toBe(cacheKey(id, '5m'));
+    expect(cacheKey(id, '5m')).toBe(cacheKey(id, '1h'));
+    expect(cacheKey(id, '1d')).toBe(cacheKey(id));
+  });
+
+  it('differs across products', () => {
+    expect(cacheKey(id)).not.toBe(cacheKey(idB));
+  });
+});
+
+describe('shared product cache storage', () => {
+  const id = '33333333-3333-3333-3333-333333333333';
+  const idB = '44444444-4444-4444-4444-444444444444';
+  const sampleEntry = {
+    rows: [{ recorded_at: '2024-01-01T00:00:00Z', open_price: 1, high_price: 2, low_price: 0.5, close_price: 1.5 }],
+    product: null,
+    anchorPrice: 1.5,
+    latestRealRowAt: '2024-01-01T00:00:00Z',
+    updatedAt: Date.now(),
+  };
+
+  beforeEach(() => {
+    __resetSharedProductCache();
+  });
+
+  it('writes via 1m key and reads via 5m key (same product)', () => {
+    const cache = __getSharedProductCache();
+    cache.set(cacheKey(id, '1m'), sampleEntry);
+    const read = cache.get(cacheKey(id, '5m'));
+    expect(read).toBeDefined();
+    expect(read?.anchorPrice).toBe(1.5);
+  });
+
+  it('does not duplicate entries when timeframe changes', () => {
+    const cache = __getSharedProductCache();
+    cache.set(cacheKey(id, '1m'), sampleEntry);
+    cache.set(cacheKey(id, '5m'), sampleEntry);
+    cache.set(cacheKey(id, '1h'), sampleEntry);
+    expect(cache.size).toBe(1);
+  });
+
+  it('keeps separate entries per product', () => {
+    const cache = __getSharedProductCache();
+    cache.set(cacheKey(id), sampleEntry);
+    cache.set(cacheKey(idB), sampleEntry);
+    expect(cache.size).toBe(2);
   });
 });

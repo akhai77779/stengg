@@ -94,7 +94,15 @@ interface SharedProductCacheEntry {
 const sharedProductCache = new Map<string, SharedProductCacheEntry>();
 const CACHE_MAX_ENTRIES = 24;
 // Cache by productId only — raw rows are timeframe-agnostic, aggregation is client-side.
-const cacheKey = (productId: string, _timeframe?: SharedTimeframe) => productId;
+export const cacheKey = (productId: string, _timeframe?: SharedTimeframe) => productId;
+
+// Test-only helpers. Do NOT use from runtime code.
+export function __getSharedProductCache() {
+  return sharedProductCache;
+}
+export function __resetSharedProductCache() {
+  sharedProductCache.clear();
+}
 function writeCache(key: string, entry: SharedProductCacheEntry) {
   sharedProductCache.set(key, entry);
   if (sharedProductCache.size > CACHE_MAX_ENTRIES) {
