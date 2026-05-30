@@ -12,6 +12,8 @@ import {
   Eye,
   Maximize2,
   Zap,
+  History,
+  Loader2,
 } from 'lucide-react';
 
 import { CandlestickChart } from '@/components/charts/CandlestickChart';
@@ -23,6 +25,7 @@ import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
 import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const ADMIN_TIMEFRAME_MAP: Record<TimeInterval, SharedTimeframe> = {
   '1M': '1m',
@@ -54,6 +57,32 @@ export default function AdminProductsMonitor() {
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [pendingShockCount, setPendingShockCount] = useState(0);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+
+  const handleBackfill = useCallback(async () => {
+    if (isBackfilling) return;
+    if (!confirm('Backfill 30 ngày dữ liệu nến cho TẤT CẢ sản phẩm? Quá trình có thể mất 1-3 phút.')) return;
+    setIsBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-price-history', {
+        body: { days: 30 },
+      });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || 'Backfill failed');
+      toast({
+        title: 'Backfill hoàn tất',
+        description: `Đã seed ${data?.products ?? 0} sản phẩm với 30 ngày dữ liệu nến.`,
+      });
+    } catch (e: any) {
+      toast({
+        title: 'Backfill thất bại',
+        description: e?.message || String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBackfilling(false);
+    }
+  }, [isBackfilling]);
 
   // Fetch DB products + subscribe to realtime updates
   useEffect(() => {
@@ -179,6 +208,18 @@ export default function AdminProductsMonitor() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5"
+            onClick={handleBackfill}
+            disabled={isBackfilling}
+          >
+            {isBackfilling
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <History className="h-3.5 w-3.5 text-blue-500" />}
+            Backfill 30 ngày
+          </Button>
           <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
             <Link to="/admin/shock-events">
               <Zap className="h-3.5 w-3.5 text-amber-500" />
