@@ -194,11 +194,34 @@ function pickValid(value: number | null | undefined, fallback: number | null): n
   return n;
 }
 
+/** True if `price` is a finite, positive number. */
+function isFinitePositive(price: unknown): price is number {
+  const n = Number(price);
+  return Number.isFinite(n) && n > 0;
+}
+
+/**
+ * Guard against corrupted realtime/synthetic prices that deviate wildly from
+ * the last known-good anchor. We allow up to 50% deviation; anything beyond
+ * that is treated as bad data and rejected by the caller.
+ */
+const MAX_PRICE_DEVIATION = 0.5;
+function isPriceSane(next: number, reference: number | null | undefined): boolean {
+  if (!isFinitePositive(next)) return false;
+  if (!isFinitePositive(reference)) return true; // no baseline yet
+  const ratio = Math.abs(next - reference) / reference;
+  return ratio <= MAX_PRICE_DEVIATION;
+}
+
 function hashProductSeed(productId: string) {
   return productId.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
 }
 
 function buildSyntheticLiveRow(productId: string, anchorPrice: number): PriceHistoryRow {
+  // Caller MUST validate anchorPrice; double-guard here to avoid emitting NaN candles.
+  if (!isFinitePositive(anchorPrice)) {
+    throw new Error('buildSyntheticLiveRow requires a finite positive anchorPrice');
+  }
   const seed = Math.abs(hashProductSeed(productId)) || 1;
   const tick = Math.floor(Date.now() / 3000);
   const minute = new Date();
