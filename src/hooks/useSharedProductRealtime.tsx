@@ -163,6 +163,17 @@ export function __resetSharedProductCache() {
     if (key?.startsWith(CACHE_STORAGE_PREFIX)) storage.removeItem(key);
   }
 }
+
+/** Clear cached rows for a single product (or all) so the next render refetches from DB. */
+export function clearSharedProductCache(productId?: string) {
+  if (productId) {
+    sharedProductCache.delete(productId);
+    const storage = getSessionStorage();
+    if (storage) storage.removeItem(`${CACHE_STORAGE_PREFIX}${productId}`);
+    return;
+  }
+  __resetSharedProductCache();
+}
 export function __readSharedProductCacheEntry(key: string) {
   return readCache(key);
 }
