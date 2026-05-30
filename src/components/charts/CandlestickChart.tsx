@@ -142,6 +142,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const maSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const lastDataRef = useRef<string>('');
+    const lastShapeRef = useRef<string>('');
     const lastResetKeyRef = useRef<string | undefined>(undefined);
     const hasInitialDataRef = useRef<boolean>(false);
     const visibleRangeKeyRef = useRef<string | undefined>(visibleRangeKey);
@@ -317,17 +318,26 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
       // Create a simple hash to detect actual data changes
       const dataHash = data.length + '_' + (data[data.length - 1]?.time || '') + '_' + (data[data.length - 1]?.close || '');
+      const dataShape = [
+        data.length,
+        data[0]?.time || '',
+        data[data.length - 2]?.time || '',
+        data[data.length - 1]?.time || '',
+      ].join('_');
+      const visibleRangeChanged = visibleRangeKey !== visibleRangeAppliedKeyRef.current;
       
-      if (dataHash === lastDataRef.current) {
+      if (dataHash === lastDataRef.current && !visibleRangeChanged) {
         return; // No actual changes
       }
       const prevHash = lastDataRef.current;
+      const prevShape = lastShapeRef.current;
       lastDataRef.current = dataHash;
+      lastShapeRef.current = dataShape;
 
       const formattedData = dedupeAndSortOHLC(data);
       const resetChanged = resetZoomKey !== lastResetKeyRef.current;
       const isFirstLoad = !hasInitialDataRef.current;
-      const sameLength = prevHash && Number(prevHash.split('_')[0]) === data.length;
+      const sameShape = !!prevHash && prevShape === dataShape;
 
       const ts = chartRef.current.timeScale();
       const shouldResetView = isFirstLoad || resetChanged;
@@ -342,12 +352,15 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
         visibleRangeAppliedKeyRef.current = visibleRangeKey;
-      } else if (sameLength) {
+      } else if (sameShape) {
         // Same dataset shape, last candle likely changed — incremental update.
         const last = formattedData[formattedData.length - 1];
         if (last) {
           try {
             candleSeriesRef.current.update(last);
+            const restoredRange = visibleRangeChanged ? readStoredVisibleRange(visibleRangeKey, formattedData.length) : null;
+            if (restoredRange) ts.setVisibleLogicalRange(restoredRange);
+            visibleRangeAppliedKeyRef.current = visibleRangeKey;
           } catch {
             const prevRange = ts.getVisibleLogicalRange();
             candleSeriesRef.current.setData(formattedData);
