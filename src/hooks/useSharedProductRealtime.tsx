@@ -435,9 +435,17 @@ export function useSharedProductRealtime({
       // Hydrate instantly from cache; refresh in background without clearing the chart
       setRows(cached.rows);
       if (cached.product) setProduct(cached.product);
-      anchorPriceRef.current = cached.anchorPrice;
+      // Prefer a sane product.price over a possibly-corrupted cached anchor / last row.
+      const cachedProductPrice = cached.product?.price;
+      if (isFinitePositive(cachedProductPrice)) {
+        anchorPriceRef.current = Number(cachedProductPrice);
+      } else if (isFinitePositive(cached.anchorPrice)) {
+        anchorPriceRef.current = Number(cached.anchorPrice);
+      } else {
+        anchorPriceRef.current = null;
+      }
       latestRealRowAtRef.current = cached.latestRealRowAt;
-      if (cached.product?.price) productPriceRef.current = Number(cached.product.price);
+      if (isFinitePositive(cachedProductPrice)) productPriceRef.current = Number(cachedProductPrice);
       setIsLoading(false);
     } else {
       // No cache: clear stale data from previous product before fetching
@@ -481,7 +489,8 @@ export function useSharedProductRealtime({
       if (initialRows.length > 0) {
         setRows(initialRows);
         const last = initialRows[initialRows.length - 1];
-        anchorPriceRef.current = Number(last.close_price);
+        const lastClose = Number(last.close_price);
+        anchorPriceRef.current = isFinitePositive(lastClose) ? lastClose : null;
         latestRealRowAtRef.current = last.recorded_at;
       } else {
         const { data: fallback } = await supabase
@@ -495,7 +504,8 @@ export function useSharedProductRealtime({
           if (fallbackRows.length > 0) setRows(fallbackRows);
           const last = fallbackRows[fallbackRows.length - 1];
           if (last) {
-            anchorPriceRef.current = Number(last.close_price);
+            const lastClose = Number(last.close_price);
+            anchorPriceRef.current = isFinitePositive(lastClose) ? lastClose : null;
             latestRealRowAtRef.current = last.recorded_at;
           }
         }
@@ -508,8 +518,15 @@ export function useSharedProductRealtime({
         .maybeSingle();
       if (mounted && productRow) {
         setProduct(productRow as ProductPayload);
-        productPriceRef.current = pickValid(productRow.price as number | null, productPriceRef.current);
-        if (!anchorPriceRef.current && productRow.price) anchorPriceRef.current = Number(productRow.price);
+        const dbPrice = productRow.price as number | null;
+        productPriceRef.current = pickValid(dbPrice, productPriceRef.current);
+        // Prefer DB product.price as the anchor (more trusted than possibly-corrupted last row),
+        // but only if it's sane vs. the current anchor.
+        if (isFinitePositive(dbPrice) && isPriceSane(Number(dbPrice), anchorPriceRef.current)) {
+          anchorPriceRef.current = Number(dbPrice);
+        } else if (!anchorPriceRef.current && isFinitePositive(dbPrice)) {
+          anchorPriceRef.current = Number(dbPrice);
+        }
       }
       if (mounted) setIsLoading(false);
     };
