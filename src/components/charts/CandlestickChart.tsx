@@ -145,6 +145,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const lastResetKeyRef = useRef<string | undefined>(undefined);
     const hasInitialDataRef = useRef<boolean>(false);
     const visibleRangeKeyRef = useRef<string | undefined>(visibleRangeKey);
+    const visibleRangeAppliedKeyRef = useRef<string | undefined>(undefined);
 
     useEffect(() => {
       visibleRangeKeyRef.current = visibleRangeKey;
@@ -340,6 +341,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         if (next) ts.setVisibleLogicalRange(next);
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
+        visibleRangeAppliedKeyRef.current = visibleRangeKey;
       } else if (sameLength) {
         // Same dataset shape, last candle likely changed — incremental update.
         const last = formattedData[formattedData.length - 1];
@@ -357,8 +359,12 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         // Preserve the user's current visible range across setData to avoid jumps.
         const prevRange = ts.getVisibleLogicalRange();
         candleSeriesRef.current.setData(formattedData);
-        const next = computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
+        const restoredRange = visibleRangeKey !== visibleRangeAppliedKeyRef.current
+          ? readStoredVisibleRange(visibleRangeKey, formattedData.length)
+          : null;
+        const next = restoredRange ?? computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
         if (next) ts.setVisibleLogicalRange(next);
+        visibleRangeAppliedKeyRef.current = visibleRangeKey;
       }
 
       // Update MA series
