@@ -259,7 +259,14 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       } else {
         // Incremental: only the last candle changed (same length, different hash).
         const last = formattedData[formattedData.length - 1];
-        if (last) candleSeriesRef.current.update(last);
+        if (last) {
+          try {
+            candleSeriesRef.current.update(last);
+          } catch {
+            // Out-of-order or stale update — fall back to full setData
+            candleSeriesRef.current.setData(formattedData);
+          }
+        }
       }
 
       // Update MA series
