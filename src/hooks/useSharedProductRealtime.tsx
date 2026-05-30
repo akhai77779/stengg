@@ -347,8 +347,19 @@ export function useSharedProductRealtime({
       return;
     }
     if (!row.synthetic) {
-      anchorPriceRef.current = Number(row.close_price);
+      const close = Number(row.close_price);
+      // Reject corrupted real rows: must be positive/finite and within ±50% of anchor.
+      const reference = anchorPriceRef.current ?? productPriceRef.current ?? null;
+      if (!isPriceSane(close, reference)) {
+        return;
+      }
+      anchorPriceRef.current = close;
       latestRealRowAtRef.current = row.recorded_at;
+    } else {
+      // Synthetic rows should never push the anchor beyond sane bounds either.
+      if (!isPriceSane(Number(row.close_price), anchorPriceRef.current)) {
+        return;
+      }
     }
     setRows(prev => {
       const map = new Map(prev.map(item => [item.recorded_at, item]));
