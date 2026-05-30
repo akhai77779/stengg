@@ -93,7 +93,8 @@ interface SharedProductCacheEntry {
 }
 const sharedProductCache = new Map<string, SharedProductCacheEntry>();
 const CACHE_MAX_ENTRIES = 24;
-const cacheKey = (productId: string, timeframe: SharedTimeframe) => `${productId}::${timeframe}`;
+// Cache by productId only — raw rows are timeframe-agnostic, aggregation is client-side.
+const cacheKey = (productId: string, _timeframe?: SharedTimeframe) => productId;
 function writeCache(key: string, entry: SharedProductCacheEntry) {
   sharedProductCache.set(key, entry);
   if (sharedProductCache.size > CACHE_MAX_ENTRIES) {
@@ -215,7 +216,7 @@ export function useSharedProductRealtime({
 }) {
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
-  const initialKey = isActive ? cacheKey(productId, timeframe) : null;
+  const initialKey = isActive ? cacheKey(productId) : null;
   const initialCache = initialKey ? sharedProductCache.get(initialKey) : undefined;
   const [rows, setRows] = useState<PriceHistoryRow[]>(() => initialCache?.rows ?? []);
   const [product, setProduct] = useState<ProductPayload | null>(() => initialCache?.product ?? null);
@@ -312,7 +313,7 @@ export function useSharedProductRealtime({
     }
     setStatus('connecting');
 
-    const key = cacheKey(productId, timeframe);
+    const key = cacheKey(productId);
     const cached = sharedProductCache.get(key);
     if (cached && cached.rows.length > 0) {
       // Hydrate instantly from cache; refresh in background without clearing the chart
@@ -332,7 +333,8 @@ export function useSharedProductRealtime({
     }
 
     const fetchInitial = async () => {
-      const since = new Date(Date.now() - LOOKBACK_MS[timeframe]).toISOString();
+      // Always fetch the largest lookback so user can switch timeframes without refetching.
+      const since = new Date(Date.now() - LOOKBACK_MS['1d']).toISOString();
       const { data, error } = await supabase
         .from('price_history')
         .select('product_id, recorded_at, open_price, high_price, low_price, close_price, volume')
@@ -406,7 +408,7 @@ export function useSharedProductRealtime({
         throttleRef.current = null;
       }
     };
-  }, [isActive, productId, timeframe]);
+  }, [isActive, productId]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -462,14 +464,14 @@ export function useSharedProductRealtime({
   useEffect(() => {
     if (!isActive) return;
     if (rows.length === 0 && !product) return;
-    writeCache(cacheKey(productId, timeframe), {
+    writeCache(cacheKey(productId), {
       rows,
       product,
       anchorPrice: anchorPriceRef.current,
       latestRealRowAt: latestRealRowAtRef.current,
       updatedAt: Date.now(),
     });
-  }, [isActive, productId, timeframe, rows, product]);
+  }, [isActive, productId, rows, product]);
 
   const candles = useMemo(() => aggregateOHLCData(rows, timeframe), [rows, timeframe]);
   const engineCandles = useMemo(() => ohlcToEngineCandles(candles), [candles]);
