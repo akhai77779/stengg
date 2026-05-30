@@ -1,51 +1,72 @@
-# Sửa hành vi chart ở /products/:id
+# Test cho cache productId + preserve visible range
 
-## Vấn đề
+## Mục tiêu
+Đảm bảo 2 hành vi đã sửa hôm trước không bị regression:
+1. Cache trong `useSharedProductRealtime` keyed theo `productId` thôi — đổi timeframe không tạo entry mới, không invalidate.
+2. Khi `setData` (đổi timeframe / có nến mới), visible range của người dùng được giữ nguyên thay vì reset về đầu hoặc fit-content.
 
-1. **Đổi timeframe (1m/5m/15m...) refetch DB không cần thiết**
-   `useSharedProductRealtime` có `timeframe` trong deps của effect fetch initial. Mỗi lần bấm sang timeframe khác (cache key khác) → `setRows([])` → chart blank → fetch lại Supabase. Trong khi `aggregateOHLCData` đã có khả năng nén cùng một `rows` thành mọi timeframe ở client.
+Cả hai test đều là pure unit tests (Vitest, không cần DOM/jsdom-canvas), chạy chung file hiện có.
 
-2. **Chart luôn reset zoom khi `resetZoomKey` đổi**
-   `CandlestickChart` đang gọi đồng thời `setVisibleLogicalRange({from: total-60, to: total+2})` + `scrollToRealTime()`. Hai lệnh đánh nhau, đôi khi nhảy giật. Mỗi lần đổi timeframe key đổi → reset. Mỗi lần unmount/remount (rời trang quay lại) → `hasInitialDataRef` mất → `isFirstLoad=true` → lại reset.
+## Thay đổi code (để có thể test)
 
-3. **Khi candle mới khiến `data.length` tăng** code chạy nhánh "full setData" (vì `!sameLength`). `setData` của lightweight-charts có thể auto-shift visible range → cảm giác nhảy.
+### A. `src/hooks/useSharedProductRealtime.tsx`
+Export thêm các helper test-only (không đổi behavior runtime):
+- `export const cacheKey` (hiện đang là module-private function)
+- `export function __getSharedProductCache()` → trả `sharedProductCache` (Map) để inspect.
+- `export function __resetSharedProductCache()` → `sharedProductCache.clear()` để cô lập test.
 
-## Thay đổi
+Tên có prefix `__` để rõ là internal/test-only.
 
-### A. `src/hooks/useSharedProductRealtime.tsx` — Tách fetch khỏi timeframe
+### B. `src/components/charts/CandlestickChart.tsx`
+Trích logic tính visible range mới ra thành pure helper export được:
 
-- **Cache theo `productId` thôi**, không kèm timeframe. Raw `rows` từ `price_history` dùng chung cho mọi timeframe.
-- Effect `fetchInitial` deps đổi từ `[isActive, productId, timeframe]` → `[isActive, productId]`. Khi đổi timeframe không refetch, không clear rows, không blank chart.
-- Lookback ban đầu: dùng lookback của timeframe **lớn nhất user có khả năng chọn** (`1d` = 60 ngày) hoặc lazy-extend: nếu sau khi đổi sang timeframe lớn hơn thấy `aggregateOHLCData(rows, tf).length < MIN_AGGREGATED_CANDLES[tf]` thì fetch bổ sung 1 lần. Triển khai đơn giản: luôn fetch với `LOOKBACK_MS['1d']` + `limit(1000)`. Nếu cần tiết kiệm, thêm effect riêng `[timeframe]` chỉ trigger fetch bổ sung khi candles không đủ.
-- Khi `productId` đổi mà cache có → hydrate ngay; không xoá rows trước khi fetch xong (đã làm).
-- Synthetic interval giữ nguyên.
+```ts
+export function computeNextVisibleRange(
+  prevRange: { from: number; to: number } | null,
+  newTotal: number,
+  mode: 'reset' | 'preserve',
+  resetWindow = 60,
+): { from: number; to: number } | null
+```
 
-### B. `src/components/charts/CandlestickChart.tsx` — Reset có chủ đích và không xung đột
+- `mode='reset'`: trả `{ from: max(0, total-min(resetWindow,total)), to: total+2 }` (dùng cho first mount / đổi product).
+- `mode='preserve'`: clamp `prevRange` vào `newTotal` (đúng logic hiện tại trong nhánh "length changed"). Nếu `prevRange` null → null (giữ nguyên).
 
-- Bỏ `scrollToRealTime()`. Chỉ dùng `setVisibleLogicalRange` 1 lần khi cần reset.
-- Logic mới:
-  - **First mount** (chưa có data lần nào): set visible range = last `min(60, total)` candles.
-  - **`resetZoomKey` đổi**: tương tự — set visible range last 60. Nhưng `resetZoomKey` ProductDetail sẽ truyền chỉ `${productId}` (xem mục C) → chỉ reset khi đổi sản phẩm, không reset khi đổi timeframe.
-  - **Cùng key, data update**: dùng `series.update(last)` nếu length không đổi; nếu length tăng (candle mới) dùng `update()` cho candle cuối (vẫn incremental) — chỉ fallback `setData` khi length giảm hoặc out-of-order.
-- Lưu visible logical range vào `useRef` trước khi `setData` (khi buộc phải setData) và restore sau khi setData để khỏi giật.
-- Bỏ `hasInitialDataRef` reset theo unmount: vẫn cần local, nhưng kết hợp với restore range ở trên để remount không nhảy.
+`useEffect` trong component gọi helper này thay vì tính inline. Hành vi giữ nguyên 100%.
 
-### C. `src/pages/ProductDetail.tsx`
+## Test mới
 
-- Đổi `resetZoomKey` từ `${id}-${timeframe}` → chỉ `${id}`. Đổi timeframe không kích hoạt reset zoom (chart tự tái aggregate, chỉ là dataset khác).
-- Không cần đổi gì khác.
+### `src/hooks/useSharedProductRealtime.test.ts` (mở rộng)
 
-## Kết quả mong đợi
+Mock `@/integrations/supabase/client` ở đầu file (tối thiểu, không cần real network):
+```ts
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => ({}), channel: () => ({}) } }));
+```
 
-- Đổi 1m → 5m → 15m: chart đổi candle mượt, không blank, không nhảy về cuối, không refetch DB.
-- Quay ra rồi vào lại `/products/:id`: hydrate từ cache, hiển thị đúng nơi đang xem (60 nến cuối) không "chạy từ đầu".
-- Candle realtime mới về: chỉ update nến cuối, người dùng đang pan/zoom không bị kéo.
+Thêm `describe('shared product cache key')`:
+- `cacheKey(id, '1m') === cacheKey(id, '5m') === cacheKey(id, '1h')` — không phụ thuộc timeframe.
+- `cacheKey(idA) !== cacheKey(idB)` — khác product khác key.
 
-## Phạm vi không đụng
+Thêm `describe('shared product cache storage')`:
+- `__resetSharedProductCache()` trước mỗi test.
+- Ghi entry cho `(id, '1m')` xong đọc lại bằng `(id, '5m')` → nhận đúng entry (chứng minh raw rows dùng chung mọi timeframe).
+- Cache size không tăng khi cùng productId, chỉ tăng khi product khác.
 
-- Edge function, DB schema, market engine, `MiniCandleChart`, `ProductList` — không thay đổi.
-- API public của hook (`candles`, `latestPrice`, ...) giữ nguyên.
+### `src/components/charts/CandlestickChart.test.ts` (mới)
 
-## Rủi ro
+`describe('computeNextVisibleRange')`:
+- `mode='reset'`, total=200 → `{ from: 140, to: 202 }`.
+- `mode='reset'`, total=10 → `{ from: 0, to: 12 }` (ít hơn window).
+- `mode='reset'`, total=0 → `null` hoặc range trống (theo impl — assert đúng cái đã chọn).
+- `mode='preserve'`, prev `{from:100,to:160}`, newTotal=180 → `{from:100,to:160}` (vẫn nằm trong).
+- `mode='preserve'`, prev `{from:100,to:160}`, newTotal=120 → clamp `to=122`, `from=62` (giữ width=60).
+- `mode='preserve'`, prev=null → null (không can thiệp).
+- Width của range được bảo toàn khi clamp.
 
-- Fetch ban đầu với lookback 60 ngày + limit 1000 có thể nặng hơn cho sản phẩm ít hoạt động. Mitigate: vẫn `.limit(1000)` như hiện tại, chỉ thay đổi `since`. Có thể thêm lazy-extend nếu cần sau.
+## Không đụng tới
+- Logic edge function, DB, market engine.
+- Public API hook (`candles`, `latestPrice`, ...).
+- Hành vi runtime của chart (chỉ refactor inline math thành helper export).
+
+## Chạy test
+`bunx vitest run src/hooks/useSharedProductRealtime.test.ts src/components/charts/CandlestickChart.test.ts`
