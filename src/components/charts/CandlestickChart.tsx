@@ -21,6 +21,8 @@ interface CandlestickChartProps {
    * current pan/zoom is preserved across data updates.
    */
   resetZoomKey?: string;
+  /** Persist the user's visible range across route changes and page reloads. */
+  visibleRangeKey?: string;
 }
 
 export interface CandlestickChartRef {
@@ -52,6 +54,50 @@ export function computeNextVisibleRange(
   const to = Math.min(prevRange.to, newTotal + 2);
   const from = Math.max(0, to - width);
   return { from, to };
+}
+
+const VISIBLE_RANGE_STORAGE_PREFIX = 'stengg:chart-visible-range:v1:';
+type VisibleLogicalRange = { from: number; to: number };
+
+function getSessionStorage(): Storage | null {
+  try {
+    return typeof globalThis !== 'undefined' && globalThis.sessionStorage ? globalThis.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+export function chartVisibleRangeStorageKey(key: string) {
+  return `${VISIBLE_RANGE_STORAGE_PREFIX}${key}`;
+}
+
+function isValidVisibleRange(range: unknown): range is VisibleLogicalRange {
+  if (!range || typeof range !== 'object') return false;
+  const value = range as { from?: unknown; to?: unknown };
+  return typeof value.from === 'number' && typeof value.to === 'number' && Number.isFinite(value.from) && Number.isFinite(value.to) && value.to > value.from;
+}
+
+export function readStoredVisibleRange(key: string | undefined, newTotal: number): VisibleLogicalRange | null {
+  const storage = getSessionStorage();
+  if (!key || !storage) return null;
+  try {
+    const parsed = JSON.parse(storage.getItem(chartVisibleRangeStorageKey(key)) || 'null');
+    if (!isValidVisibleRange(parsed)) return null;
+    return computeNextVisibleRange(parsed, newTotal, 'preserve');
+  } catch {
+    storage.removeItem(chartVisibleRangeStorageKey(key));
+    return null;
+  }
+}
+
+export function writeStoredVisibleRange(key: string | undefined, range: VisibleLogicalRange | null) {
+  const storage = getSessionStorage();
+  if (!key || !storage || !isValidVisibleRange(range)) return;
+  try {
+    storage.setItem(chartVisibleRangeStorageKey(key), JSON.stringify({ from: range.from, to: range.to }));
+  } catch {
+    storage.removeItem(chartVisibleRangeStorageKey(key));
+  }
 }
 
 // Convert ISO time to UTC timestamp
@@ -90,15 +136,22 @@ const dedupeAndSortIndicator = (indicatorData: { time: string; value: number }[]
 };
 
 export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChartProps>(
-  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate, resetZoomKey }, ref) => {
+  ({ data, height = 280, indicatorConfig = defaultIndicatorConfig, onCandleUpdate, resetZoomKey, visibleRangeKey }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const maSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const lastDataRef = useRef<string>('');
+    const lastShapeRef = useRef<string>('');
     const lastResetKeyRef = useRef<string | undefined>(undefined);
     const hasInitialDataRef = useRef<boolean>(false);
+    const visibleRangeKeyRef = useRef<string | undefined>(visibleRangeKey);
+    const visibleRangeAppliedKeyRef = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+      visibleRangeKeyRef.current = visibleRangeKey;
+    }, [visibleRangeKey]);
     
     // Calculate indicators
     const maData = useMemo(() => {
@@ -244,8 +297,14 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       
       window.addEventListener('resize', handleResize);
 
+      const handleVisibleRangeChange = (range: VisibleLogicalRange | null) => {
+        writeStoredVisibleRange(visibleRangeKeyRef.current, range);
+      };
+      chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+
       return () => {
         window.removeEventListener('resize', handleResize);
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
         chart.remove();
         chartRef.current = null;
         candleSeriesRef.current = null;
@@ -260,34 +319,49 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
       // Create a simple hash to detect actual data changes
       const dataHash = data.length + '_' + (data[data.length - 1]?.time || '') + '_' + (data[data.length - 1]?.close || '');
+      const dataShape = [
+        data.length,
+        data[0]?.time || '',
+        data[data.length - 2]?.time || '',
+        data[data.length - 1]?.time || '',
+      ].join('_');
+      const visibleRangeChanged = visibleRangeKey !== visibleRangeAppliedKeyRef.current;
       
-      if (dataHash === lastDataRef.current) {
+      if (dataHash === lastDataRef.current && !visibleRangeChanged) {
         return; // No actual changes
       }
       const prevHash = lastDataRef.current;
+      const prevShape = lastShapeRef.current;
       lastDataRef.current = dataHash;
+      lastShapeRef.current = dataShape;
 
       const formattedData = dedupeAndSortOHLC(data);
       const resetChanged = resetZoomKey !== lastResetKeyRef.current;
       const isFirstLoad = !hasInitialDataRef.current;
-      const sameLength = prevHash && Number(prevHash.split('_')[0]) === data.length;
+      const sameShape = !!prevHash && prevShape === dataShape;
 
       const ts = chartRef.current.timeScale();
       const shouldResetView = isFirstLoad || resetChanged;
 
       if (shouldResetView) {
-        // First mount or product switch: snap to last ~60 candles.
+        // First mount or product switch: restore the saved view if available,
+        // otherwise snap to the last ~60 candles.
         candleSeriesRef.current.setData(formattedData);
-        const next = computeNextVisibleRange(null, formattedData.length, 'reset');
+        const next = readStoredVisibleRange(visibleRangeKey, formattedData.length)
+          ?? computeNextVisibleRange(null, formattedData.length, 'reset');
         if (next) ts.setVisibleLogicalRange(next);
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
-      } else if (sameLength) {
+        visibleRangeAppliedKeyRef.current = visibleRangeKey;
+      } else if (sameShape) {
         // Same dataset shape, last candle likely changed — incremental update.
         const last = formattedData[formattedData.length - 1];
         if (last) {
           try {
             candleSeriesRef.current.update(last);
+            const restoredRange = visibleRangeChanged ? readStoredVisibleRange(visibleRangeKey, formattedData.length) : null;
+            if (restoredRange) ts.setVisibleLogicalRange(restoredRange);
+            visibleRangeAppliedKeyRef.current = visibleRangeKey;
           } catch {
             const prevRange = ts.getVisibleLogicalRange();
             candleSeriesRef.current.setData(formattedData);
@@ -299,8 +373,12 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         // Preserve the user's current visible range across setData to avoid jumps.
         const prevRange = ts.getVisibleLogicalRange();
         candleSeriesRef.current.setData(formattedData);
-        const next = computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
+        const restoredRange = visibleRangeKey !== visibleRangeAppliedKeyRef.current
+          ? readStoredVisibleRange(visibleRangeKey, formattedData.length)
+          : null;
+        const next = restoredRange ?? computeNextVisibleRange(prevRange, formattedData.length, 'preserve');
         if (next) ts.setVisibleLogicalRange(next);
+        visibleRangeAppliedKeyRef.current = visibleRangeKey;
       }
 
       // Update MA series
@@ -334,7 +412,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         chartRef.current.removeSeries(emaSeriesRef.current);
         emaSeriesRef.current = null;
       }
-    }, [data, indicatorConfig, maData, emaData, resetZoomKey]);
+    }, [data, indicatorConfig, maData, emaData, resetZoomKey, visibleRangeKey]);
 
     if (data.length === 0) {
       return (

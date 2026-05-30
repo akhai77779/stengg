@@ -5,7 +5,9 @@ import {
   aggregateOHLCData,
   cacheKey,
   __getSharedProductCache,
+  __readSharedProductCacheEntry,
   __resetSharedProductCache,
+  __writeSharedProductCacheEntry,
 } from './useSharedProductRealtime';
 
 vi.mock('@/integrations/supabase/client', () => ({
@@ -112,6 +114,7 @@ describe('shared product cache storage', () => {
 
   beforeEach(() => {
     __resetSharedProductCache();
+    sessionStorage.clear();
   });
 
   it('writes via 1m key and reads via 5m key (same product)', () => {
@@ -135,5 +138,13 @@ describe('shared product cache storage', () => {
     cache.set(cacheKey(id), sampleEntry);
     cache.set(cacheKey(idB), sampleEntry);
     expect(cache.size).toBe(2);
+  });
+
+  it('restores cache from sessionStorage after memory cache is cleared', () => {
+    __writeSharedProductCacheEntry(cacheKey(id), sampleEntry);
+    __getSharedProductCache().clear();
+    const restored = __readSharedProductCacheEntry(cacheKey(id, '1h'));
+    expect(restored?.rows).toHaveLength(1);
+    expect(restored?.anchorPrice).toBe(1.5);
   });
 });

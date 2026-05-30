@@ -82,9 +82,9 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export const isValidProductId = (id: string | undefined | null): boolean =>
   !!id && UUID_REGEX.test(id);
 
-// Module-level cache so chart data survives unmount/remount when navigating
-// away and back to the same product. Keyed by `${productId}::${timeframe}`.
-interface SharedProductCacheEntry {
+// Module-level + session cache so chart data survives unmount/remount and page reload
+// in the same tab. Keyed by productId only; aggregation is client-side per timeframe.
+export interface SharedProductCacheEntry {
   rows: PriceHistoryRow[];
   product: ProductPayload | null;
   anchorPrice: number | null;
@@ -93,8 +93,62 @@ interface SharedProductCacheEntry {
 }
 const sharedProductCache = new Map<string, SharedProductCacheEntry>();
 const CACHE_MAX_ENTRIES = 24;
+const CACHE_STORAGE_PREFIX = 'stengg:shared-product-cache:v1:';
+const CACHE_TTL_MS = 15 * 60 * 1000;
 // Cache by productId only — raw rows are timeframe-agnostic, aggregation is client-side.
 export const cacheKey = (productId: string, _timeframe?: SharedTimeframe) => productId;
+
+function getSessionStorage(): Storage | null {
+  try {
+    return typeof globalThis !== 'undefined' && globalThis.sessionStorage ? globalThis.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredCache(key: string): SharedProductCacheEntry | undefined {
+  const storage = getSessionStorage();
+  if (!storage) return undefined;
+  try {
+    const raw = storage.getItem(`${CACHE_STORAGE_PREFIX}${key}`);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as SharedProductCacheEntry;
+    if (!parsed || !Array.isArray(parsed.rows) || Date.now() - Number(parsed.updatedAt || 0) > CACHE_TTL_MS) {
+      storage.removeItem(`${CACHE_STORAGE_PREFIX}${key}`);
+      return undefined;
+    }
+    return parsed;
+  } catch {
+    storage.removeItem(`${CACHE_STORAGE_PREFIX}${key}`);
+    return undefined;
+  }
+}
+
+function pruneStoredCache(storage: Storage) {
+  const entries: Array<{ key: string; updatedAt: number }> = [];
+  for (let i = 0; i < storage.length; i += 1) {
+    const key = storage.key(i);
+    if (!key?.startsWith(CACHE_STORAGE_PREFIX)) continue;
+    try {
+      const parsed = JSON.parse(storage.getItem(key) || '{}') as { updatedAt?: number };
+      entries.push({ key, updatedAt: Number(parsed.updatedAt || 0) });
+    } catch {
+      storage.removeItem(key);
+    }
+  }
+  entries
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(CACHE_MAX_ENTRIES)
+    .forEach(entry => storage.removeItem(entry.key));
+}
+
+function readCache(key: string): SharedProductCacheEntry | undefined {
+  const memoryCache = sharedProductCache.get(key);
+  if (memoryCache) return memoryCache;
+  const storedCache = readStoredCache(key);
+  if (storedCache) sharedProductCache.set(key, storedCache);
+  return storedCache;
+}
 
 // Test-only helpers. Do NOT use from runtime code.
 export function __getSharedProductCache() {
@@ -102,6 +156,18 @@ export function __getSharedProductCache() {
 }
 export function __resetSharedProductCache() {
   sharedProductCache.clear();
+  const storage = getSessionStorage();
+  if (!storage) return;
+  for (let i = storage.length - 1; i >= 0; i -= 1) {
+    const key = storage.key(i);
+    if (key?.startsWith(CACHE_STORAGE_PREFIX)) storage.removeItem(key);
+  }
+}
+export function __readSharedProductCacheEntry(key: string) {
+  return readCache(key);
+}
+export function __writeSharedProductCacheEntry(key: string, entry: SharedProductCacheEntry) {
+  writeCache(key, entry);
 }
 function writeCache(key: string, entry: SharedProductCacheEntry) {
   sharedProductCache.set(key, entry);
@@ -109,6 +175,14 @@ function writeCache(key: string, entry: SharedProductCacheEntry) {
     // Evict the oldest entry (insertion order)
     const firstKey = sharedProductCache.keys().next().value;
     if (firstKey && firstKey !== key) sharedProductCache.delete(firstKey);
+  }
+  const storage = getSessionStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(`${CACHE_STORAGE_PREFIX}${key}`, JSON.stringify(entry));
+    pruneStoredCache(storage);
+  } catch {
+    storage.removeItem(`${CACHE_STORAGE_PREFIX}${key}`);
   }
 }
 
@@ -225,7 +299,7 @@ export function useSharedProductRealtime({
   // Internal guard: invalid/empty productId must never open a subscription
   const isActive = enabled && isValidProductId(productId);
   const initialKey = isActive ? cacheKey(productId) : null;
-  const initialCache = initialKey ? sharedProductCache.get(initialKey) : undefined;
+  const initialCache = initialKey ? readCache(initialKey) : undefined;
   const [rows, setRows] = useState<PriceHistoryRow[]>(() => initialCache?.rows ?? []);
   const [product, setProduct] = useState<ProductPayload | null>(() => initialCache?.product ?? null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
@@ -322,7 +396,7 @@ export function useSharedProductRealtime({
     setStatus('connecting');
 
     const key = cacheKey(productId);
-    const cached = sharedProductCache.get(key);
+    const cached = readCache(key);
     if (cached && cached.rows.length > 0) {
       // Hydrate instantly from cache; refresh in background without clearing the chart
       setRows(cached.rows);
