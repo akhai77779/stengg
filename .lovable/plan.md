@@ -1,66 +1,51 @@
-# Rà soát & sửa logic biểu đồ ở /products/:id
+# Sửa hành vi chart ở /products/:id
 
-## Vấn đề phát hiện
+## Vấn đề
 
-### 1. Hai pipeline dữ liệu chạy song song và xung đột nhau
-`ProductDetail.tsx` vừa dùng `useSharedProductRealtime` (nguồn đang được render ra chart qua `effectiveCandleData`), vừa giữ nguyên pipeline cũ:
-- `fetchProduct`, `fetchPriceHistory` → `fetchLocalPriceHistory` → `processLocalCandles`
-- `refreshLatestCandles` + `fallbackIntervalRef` (polling 5s)
-- `handleCandleUpdate` (định nghĩa nhưng **không** truyền cho chart, dead code)
-- `candleCache`, `CACHE_TTL`, `nextCursor`, `loadMoreHistory`, `aggregateCandles` cục bộ
-- `useEffect` copy `sharedRealtime.lineData` → `setChartData`, nhưng `chartData` cũng bị `fetchLocalPriceHistory`/`refreshLatestCandles` ghi đè
+1. **Đổi timeframe (1m/5m/15m...) refetch DB không cần thiết**
+   `useSharedProductRealtime` có `timeframe` trong deps của effect fetch initial. Mỗi lần bấm sang timeframe khác (cache key khác) → `setRows([])` → chart blank → fetch lại Supabase. Trong khi `aggregateOHLCData` đã có khả năng nén cùng một `rows` thành mọi timeframe ở client.
 
-Hậu quả: query DB trùng lặp (hook đã fetch initial rows), state `highPrice/lowPrice` bị tranh chấp, polling chạy vô ích trong khi realtime đã connected, logic khó debug.
+2. **Chart luôn reset zoom khi `resetZoomKey` đổi**
+   `CandlestickChart` đang gọi đồng thời `setVisibleLogicalRange({from: total-60, to: total+2})` + `scrollToRealTime()`. Hai lệnh đánh nhau, đôi khi nhảy giật. Mỗi lần đổi timeframe key đổi → reset. Mỗi lần unmount/remount (rời trang quay lại) → `hasInitialDataRef` mất → `isFirstLoad=true` → lại reset.
 
-### 2. High/Low từ `product.high_24h ?? max(candles)` dùng nullish coalescing
-Khi DB lưu `high_24h = 0` (đã từng xảy ra), `??` giữ lại `0` thay vì fallback sang candles → hiển thị `$0.00` hoặc lệch.
+3. **Khi candle mới khiến `data.length` tăng** code chạy nhánh "full setData" (vì `!sameLength`). `setData` của lightweight-charts có thể auto-shift visible range → cảm giác nhảy.
 
-### 3. `CandlestickChart` reset zoom mỗi tick
-`useEffect` cập nhật data luôn gọi `chartRef.current.timeScale().fitContent()` → người dùng zoom/pan xong tick kế tiếp bị kéo lại fitContent. Cần chỉ fit lần đầu hoặc khi đổi timeframe/sản phẩm.
+## Thay đổi
 
-### 4. `CandlestickChart` setData full thay vì update incremental
-Đã có API `updateCandle` (incremental) nhưng `ProductDetail` không dùng — mỗi tick re-flatten cả mảng → lag khi data nhiều.
+### A. `src/hooks/useSharedProductRealtime.tsx` — Tách fetch khỏi timeframe
 
-### 5. Synthetic row trong hook có thể đè real row
-`buildSyntheticLiveRow` set `recorded_at` = đầu phút hiện tại. Nếu DB có row thật cùng phút, map key trùng → real row bị synthetic ghi đè (và ngược lại). Cần đánh dấu/tách synthetic ra khỏi map chính, hoặc chỉ append khi không có real row trong cùng bucket.
+- **Cache theo `productId` thôi**, không kèm timeframe. Raw `rows` từ `price_history` dùng chung cho mọi timeframe.
+- Effect `fetchInitial` deps đổi từ `[isActive, productId, timeframe]` → `[isActive, productId]`. Khi đổi timeframe không refetch, không clear rows, không blank chart.
+- Lookback ban đầu: dùng lookback của timeframe **lớn nhất user có khả năng chọn** (`1d` = 60 ngày) hoặc lazy-extend: nếu sau khi đổi sang timeframe lớn hơn thấy `aggregateOHLCData(rows, tf).length < MIN_AGGREGATED_CANDLES[tf]` thì fetch bổ sung 1 lần. Triển khai đơn giản: luôn fetch với `LOOKBACK_MS['1d']` + `limit(1000)`. Nếu cần tiết kiệm, thêm effect riêng `[timeframe]` chỉ trigger fetch bổ sung khi candles không đủ.
+- Khi `productId` đổi mà cache có → hydrate ngay; không xoá rows trước khi fetch xong (đã làm).
+- Synthetic interval giữ nguyên.
 
-### 6. Synthetic interval recreate liên tục
-`useEffect` synthetic phụ thuộc `product?.price` → mỗi lần product update interval bị dispose & dựng lại → có thể bỏ lỡ tick. Nên đọc qua ref.
+### B. `src/components/charts/CandlestickChart.tsx` — Reset có chủ đích và không xung đột
 
-### 7. AnimatedStat high/low trên page có 3 tầng fallback song song với hook
-Header dùng `product.high_24h ? ... : highPrice ? ... : max(effectiveCandleData)`. Trong khi hook cũng trả ra `highPrice/lowPrice`. Trùng logic, dễ lệch.
+- Bỏ `scrollToRealTime()`. Chỉ dùng `setVisibleLogicalRange` 1 lần khi cần reset.
+- Logic mới:
+  - **First mount** (chưa có data lần nào): set visible range = last `min(60, total)` candles.
+  - **`resetZoomKey` đổi**: tương tự — set visible range last 60. Nhưng `resetZoomKey` ProductDetail sẽ truyền chỉ `${productId}` (xem mục C) → chỉ reset khi đổi sản phẩm, không reset khi đổi timeframe.
+  - **Cùng key, data update**: dùng `series.update(last)` nếu length không đổi; nếu length tăng (candle mới) dùng `update()` cho candle cuối (vẫn incremental) — chỉ fallback `setData` khi length giảm hoặc out-of-order.
+- Lưu visible logical range vào `useRef` trước khi `setData` (khi buộc phải setData) và restore sau khi setData để khỏi giật.
+- Bỏ `hasInitialDataRef` reset theo unmount: vẫn cần local, nhưng kết hợp với restore range ở trên để remount không nhảy.
 
-## Thay đổi đề xuất
+### C. `src/pages/ProductDetail.tsx`
 
-### A. `src/pages/ProductDetail.tsx` — gỡ pipeline cũ, dùng hook làm single source
-- Xoá: `candleCache`, `CACHE_TTL`, `THROTTLE_MS` (đã pass vào hook, giữ tại 1 chỗ), `fetchProduct` riêng, `fetchPriceHistory`, `fetchLocalPriceHistory`, `processLocalCandles`, `refreshLatestCandles`, `loadMoreHistory`, `aggregateCandles`, `handleCandleUpdate`, `handleProductUpdate`, `fallbackIntervalRef`, `lastCandleTimeRef`, `candleFlash`, `nextCursor`, `paging`, `priceHistoryLoading` state cục bộ, các `useEffect` liên quan.
-- Giữ: `useSharedProductRealtime` + `useUserTradesRealtime` + `fetchActivePositionCount`.
-- `product`, `chartData`, `highPrice`, `lowPrice`, `isLoading` đọc trực tiếp từ hook (không copy vào state).
-- `OptionsTradeSheet`/`ActiveOptionTrade` lấy `product` từ hook (cần `name`/`symbol`/`id` — bổ sung select nếu thiếu, đã có sẵn trong hook).
-- Header high/low chỉ dùng `highPrice`/`lowPrice` từ hook, không tự fallback nữa.
+- Đổi `resetZoomKey` từ `${id}-${timeframe}` → chỉ `${id}`. Đổi timeframe không kích hoạt reset zoom (chart tự tái aggregate, chỉ là dataset khác).
+- Không cần đổi gì khác.
 
-### B. `src/hooks/useSharedProductRealtime.tsx`
-- Đổi `product?.high_24h ?? ...` → helper `pickValid(value, fallback)` coi `null/0/NaN/Infinity` là invalid.
-- `buildSyntheticLiveRow`: gắn `synthetic: true` (đã có) và **không** ghi đè row đã tồn tại tại cùng `recorded_at` nếu row đó không phải synthetic. Sửa `mergeRow`: nếu `row.synthetic` và map có key trùng không synthetic → bỏ qua.
-- Synthetic interval: thay deps `product?.price` bằng ref (`productPriceRef`) để interval ổn định.
+## Kết quả mong đợi
 
-### C. `src/components/charts/CandlestickChart.tsx`
-- Tách logic init data lần đầu vs update tiếp theo:
-  - Lần đầu (`prevSeriesEmpty` hoặc đổi key data theo `timeframe/productId`) → `setData(...)` + `fitContent()`.
-  - Tick tiếp theo cùng dataset → chỉ `series.update(lastCandle)` cho candle cuối, không gọi `fitContent`.
-- Cho phép caller truyền `resetZoomKey` (string) — chỉ khi key thay đổi mới fitContent (ProductDetail sẽ truyền `${productId}-${timeframe}`).
-- MA/EMA series: chỉ `setData` khi mảng indicator thực sự thay đổi (so length + last point).
-
-### D. Test
-- Mở rộng `useSharedProductRealtime.test.ts`:
-  - `pickValid` coi 0/NaN là invalid.
-  - `mergeRow`: synthetic không đè real cùng `recorded_at`.
-- Thêm test snapshot logic cho `ProductDetail` (mock hook) để đảm bảo high/low/price hiển thị đúng khi `high_24h = 0`.
+- Đổi 1m → 5m → 15m: chart đổi candle mượt, không blank, không nhảy về cuối, không refetch DB.
+- Quay ra rồi vào lại `/products/:id`: hydrate từ cache, hiển thị đúng nơi đang xem (60 nến cuối) không "chạy từ đầu".
+- Candle realtime mới về: chỉ update nến cuối, người dùng đang pan/zoom không bị kéo.
 
 ## Phạm vi không đụng
-- `MiniPriceChart`, `MiniCandleChart`, market-engine, `useProductEngineData`, edge functions `ohlc`/`run-live-price-sync` — không thay đổi.
-- Không đổi schema DB, không migration.
+
+- Edge function, DB schema, market engine, `MiniCandleChart`, `ProductList` — không thay đổi.
+- API public của hook (`candles`, `latestPrice`, ...) giữ nguyên.
 
 ## Rủi ro
-- Gỡ `loadMoreHistory` đồng nghĩa hết tính năng paging cũ. Hiện UI cũng không có nút gọi nó → an toàn xoá.
-- Polling fallback bị loại; nếu realtime disconnected lâu, chart không tự refresh. Hook đã có synthetic loop 3s + nút reconnect → chấp nhận được; nếu cần, bổ sung 1 polling đơn giản trong hook khi `status==='disconnected'`.
+
+- Fetch ban đầu với lookback 60 ngày + limit 1000 có thể nặng hơn cho sản phẩm ít hoạt động. Mitigate: vẫn `.limit(1000)` như hiện tại, chỉ thay đổi `since`. Có thể thêm lazy-extend nếu cần sau.

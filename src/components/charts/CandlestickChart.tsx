@@ -248,37 +248,45 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       const isFirstLoad = !hasInitialDataRef.current;
       const sameLength = prevHash && Number(prevHash.split('_')[0]) === data.length;
 
-      if (isFirstLoad || resetChanged || !sameLength) {
-        // Full reset path: first load, product/timeframe switch, or candle count changed.
+      const ts = chartRef.current.timeScale();
+      const shouldResetView = isFirstLoad || resetChanged;
+
+      if (shouldResetView) {
+        // First mount or product switch: snap to last ~60 candles.
         candleSeriesRef.current.setData(formattedData);
+        const total = formattedData.length;
+        if (total > 0) {
+          const visible = Math.min(60, total);
+          ts.setVisibleLogicalRange({
+            from: Math.max(0, total - visible),
+            to: total + 2,
+          });
+        }
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
-        if (isFirstLoad || resetChanged) {
-          // Scroll to the latest candle instead of fitContent (which zooms out to
-          // show the oldest data — feels like the chart "jumps back to the start"
-          // every time you switch timeframes or revisit the page).
-          const ts = chartRef.current.timeScale();
-          const total = formattedData.length;
-          if (total > 0) {
-            // Show ~last 60 candles by default, then anchor to real-time edge.
-            const visible = Math.min(60, total);
-            ts.setVisibleLogicalRange({
-              from: Math.max(0, total - visible),
-              to: total + 2,
-            });
-          }
-          ts.scrollToRealTime();
-        }
-      } else {
-        // Incremental: only the last candle changed (same length, different hash).
+      } else if (sameLength) {
+        // Same dataset shape, last candle likely changed — incremental update.
         const last = formattedData[formattedData.length - 1];
         if (last) {
           try {
             candleSeriesRef.current.update(last);
           } catch {
-            // Out-of-order or stale update — fall back to full setData
+            const prevRange = ts.getVisibleLogicalRange();
             candleSeriesRef.current.setData(formattedData);
+            if (prevRange) ts.setVisibleLogicalRange(prevRange);
           }
+        }
+      } else {
+        // Length changed (timeframe switch re-aggregated, or new candle appended).
+        // Preserve the user's current visible range across setData to avoid jumps.
+        const prevRange = ts.getVisibleLogicalRange();
+        candleSeriesRef.current.setData(formattedData);
+        if (prevRange) {
+          // Clamp `to` to new data end so we don't show empty space when length shrank.
+          const total = formattedData.length;
+          const to = Math.min(prevRange.to, total + 2);
+          const from = Math.max(0, to - (prevRange.to - prevRange.from));
+          ts.setVisibleLogicalRange({ from, to });
         }
       }
 
