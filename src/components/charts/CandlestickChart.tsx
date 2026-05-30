@@ -254,7 +254,20 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         hasInitialDataRef.current = true;
         lastResetKeyRef.current = resetZoomKey;
         if (isFirstLoad || resetChanged) {
-          chartRef.current.timeScale().fitContent();
+          // Scroll to the latest candle instead of fitContent (which zooms out to
+          // show the oldest data — feels like the chart "jumps back to the start"
+          // every time you switch timeframes or revisit the page).
+          const ts = chartRef.current.timeScale();
+          const total = formattedData.length;
+          if (total > 0) {
+            // Show ~last 60 candles by default, then anchor to real-time edge.
+            const visible = Math.min(60, total);
+            ts.setVisibleLogicalRange({
+              from: Math.max(0, total - visible),
+              to: total + 2,
+            });
+          }
+          ts.scrollToRealTime();
         }
       } else {
         // Incremental: only the last candle changed (same length, different hash).
