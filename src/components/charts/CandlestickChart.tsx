@@ -392,7 +392,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         chartRef.current.removeSeries(emaSeriesRef.current);
         emaSeriesRef.current = null;
       }
-    }, [data, indicatorConfig, maData, emaData, resetZoomKey]);
+    }, [data, indicatorConfig, maData, emaData, resetZoomKey, visibleRangeKey]);
 
     if (data.length === 0) {
       return (
