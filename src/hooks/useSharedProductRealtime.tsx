@@ -194,11 +194,34 @@ function pickValid(value: number | null | undefined, fallback: number | null): n
   return n;
 }
 
+/** True if `price` is a finite, positive number. */
+function isFinitePositive(price: unknown): price is number {
+  const n = Number(price);
+  return Number.isFinite(n) && n > 0;
+}
+
+/**
+ * Guard against corrupted realtime/synthetic prices that deviate wildly from
+ * the last known-good anchor. We allow up to 50% deviation; anything beyond
+ * that is treated as bad data and rejected by the caller.
+ */
+const MAX_PRICE_DEVIATION = 0.5;
+function isPriceSane(next: number, reference: number | null | undefined): boolean {
+  if (!isFinitePositive(next)) return false;
+  if (!isFinitePositive(reference)) return true; // no baseline yet
+  const ratio = Math.abs(next - reference) / reference;
+  return ratio <= MAX_PRICE_DEVIATION;
+}
+
 function hashProductSeed(productId: string) {
   return productId.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
 }
 
 function buildSyntheticLiveRow(productId: string, anchorPrice: number): PriceHistoryRow {
+  // Caller MUST validate anchorPrice; double-guard here to avoid emitting NaN candles.
+  if (!isFinitePositive(anchorPrice)) {
+    throw new Error('buildSyntheticLiveRow requires a finite positive anchorPrice');
+  }
   const seed = Math.abs(hashProductSeed(productId)) || 1;
   const tick = Math.floor(Date.now() / 3000);
   const minute = new Date();
@@ -324,8 +347,19 @@ export function useSharedProductRealtime({
       return;
     }
     if (!row.synthetic) {
-      anchorPriceRef.current = Number(row.close_price);
+      const close = Number(row.close_price);
+      // Reject corrupted real rows: must be positive/finite and within ±50% of anchor.
+      const reference = anchorPriceRef.current ?? productPriceRef.current ?? null;
+      if (!isPriceSane(close, reference)) {
+        return;
+      }
+      anchorPriceRef.current = close;
       latestRealRowAtRef.current = row.recorded_at;
+    } else {
+      // Synthetic rows should never push the anchor beyond sane bounds either.
+      if (!isPriceSane(Number(row.close_price), anchorPriceRef.current)) {
+        return;
+      }
     }
     setRows(prev => {
       const map = new Map(prev.map(item => [item.recorded_at, item]));
@@ -401,9 +435,17 @@ export function useSharedProductRealtime({
       // Hydrate instantly from cache; refresh in background without clearing the chart
       setRows(cached.rows);
       if (cached.product) setProduct(cached.product);
-      anchorPriceRef.current = cached.anchorPrice;
+      // Prefer a sane product.price over a possibly-corrupted cached anchor / last row.
+      const cachedProductPrice = cached.product?.price;
+      if (isFinitePositive(cachedProductPrice)) {
+        anchorPriceRef.current = Number(cachedProductPrice);
+      } else if (isFinitePositive(cached.anchorPrice)) {
+        anchorPriceRef.current = Number(cached.anchorPrice);
+      } else {
+        anchorPriceRef.current = null;
+      }
       latestRealRowAtRef.current = cached.latestRealRowAt;
-      if (cached.product?.price) productPriceRef.current = Number(cached.product.price);
+      if (isFinitePositive(cachedProductPrice)) productPriceRef.current = Number(cachedProductPrice);
       setIsLoading(false);
     } else {
       // No cache: clear stale data from previous product before fetching
@@ -447,7 +489,8 @@ export function useSharedProductRealtime({
       if (initialRows.length > 0) {
         setRows(initialRows);
         const last = initialRows[initialRows.length - 1];
-        anchorPriceRef.current = Number(last.close_price);
+        const lastClose = Number(last.close_price);
+        anchorPriceRef.current = isFinitePositive(lastClose) ? lastClose : null;
         latestRealRowAtRef.current = last.recorded_at;
       } else {
         const { data: fallback } = await supabase
@@ -461,7 +504,8 @@ export function useSharedProductRealtime({
           if (fallbackRows.length > 0) setRows(fallbackRows);
           const last = fallbackRows[fallbackRows.length - 1];
           if (last) {
-            anchorPriceRef.current = Number(last.close_price);
+            const lastClose = Number(last.close_price);
+            anchorPriceRef.current = isFinitePositive(lastClose) ? lastClose : null;
             latestRealRowAtRef.current = last.recorded_at;
           }
         }
@@ -474,8 +518,15 @@ export function useSharedProductRealtime({
         .maybeSingle();
       if (mounted && productRow) {
         setProduct(productRow as ProductPayload);
-        productPriceRef.current = pickValid(productRow.price as number | null, productPriceRef.current);
-        if (!anchorPriceRef.current && productRow.price) anchorPriceRef.current = Number(productRow.price);
+        const dbPrice = productRow.price as number | null;
+        productPriceRef.current = pickValid(dbPrice, productPriceRef.current);
+        // Prefer DB product.price as the anchor (more trusted than possibly-corrupted last row),
+        // but only if it's sane vs. the current anchor.
+        if (isFinitePositive(dbPrice) && isPriceSane(Number(dbPrice), anchorPriceRef.current)) {
+          anchorPriceRef.current = Number(dbPrice);
+        } else if (!anchorPriceRef.current && isFinitePositive(dbPrice)) {
+          anchorPriceRef.current = Number(dbPrice);
+        }
       }
       if (mounted) setIsLoading(false);
     };
@@ -508,8 +559,16 @@ export function useSharedProductRealtime({
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `id=eq.${productId}` }, payload => {
         const next = payload.new as ProductPayload;
         if (next?.id && next.id !== productId) return;
+        const nextPrice = next?.price as number | null;
+        const reference = productPriceRef.current ?? anchorPriceRef.current ?? null;
+        // Reject corrupted product.price updates that deviate >50% from the last known good price.
+        if (isFinitePositive(nextPrice) && !isPriceSane(Number(nextPrice), reference)) {
+          // Keep prior product fields visible but ignore the bad price field.
+          setProduct(prev => ({ ...(prev || {}), ...next, price: prev?.price ?? null }));
+          return;
+        }
         setProduct(next);
-        productPriceRef.current = pickValid(next?.price as number | null, productPriceRef.current);
+        productPriceRef.current = pickValid(nextPrice, productPriceRef.current);
       })
       .subscribe(subscriptionStatus => {
         if (subscriptionStatus === 'SUBSCRIBED') setStatus('connected');
@@ -529,7 +588,7 @@ export function useSharedProductRealtime({
 
     const interval = setInterval(() => {
       const anchorPrice = anchorPriceRef.current ?? productPriceRef.current ?? null;
-      if (!anchorPrice || anchorPrice <= 0) return;
+      if (!isFinitePositive(anchorPrice)) return;
 
       const latestRealAt = latestRealRowAtRef.current ? new Date(latestRealRowAtRef.current).getTime() : 0;
       const isRealtimeStale = !latestRealAt || Date.now() - latestRealAt > 10000;
