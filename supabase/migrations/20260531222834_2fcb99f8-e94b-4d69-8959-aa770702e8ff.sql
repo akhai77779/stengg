@@ -1,0 +1,1 @@
+DELETE FROM public.price_history WHERE recorded_at < now() - interval '30 days';
