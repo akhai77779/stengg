@@ -116,10 +116,11 @@ function maybeTransition(state: RegimeState, anchorPrice: number): RegimeState {
       ticksInRegime: 0,
       momentum: 0,
       vol: rand(REGIME_PARAMS[next].volMin, REGIME_PARAMS[next].volMax),
-      anchor: next === 'sideways' ? anchorPrice : undefined,
+      // Always anchor to basePrice so mean-reversion + hard band apply in every regime.
+      anchor: anchorPrice,
     };
   }
-  return state;
+  return { ...state, anchor: state.anchor ?? anchorPrice };
 }
 
 export interface GeneratedCandle {
