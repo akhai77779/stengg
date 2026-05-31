@@ -39,6 +39,25 @@ export interface RegimeState {
   anchor?: number; // mean for sideways
 }
 
+// Anchor prices per symbol — keeps long-running random walks from diverging.
+// Must mirror src/data/products.ts basePrice.
+export const BASE_PRICES: Record<string, number> = {
+  'AGIL/USDT': 601.94,
+  '360SA/USDT': 40.75,
+  'MCS/USDT': 14.51,
+  'SIM/USDT': 9.06,
+  'COTM/USDT': 9.12,
+  'IBMS/USDT': 2.69,
+  'VICS/USDT': 0.01,
+  'HED/USDT': 6.49,
+  'C5ISR/USDT': 1.00,
+  'WIG/USDT': 0.23,
+};
+export function getBasePrice(symbol: string | null | undefined, fallback: number): number {
+  if (symbol && BASE_PRICES[symbol]) return BASE_PRICES[symbol];
+  return fallback > 0 ? fallback : 1;
+}
+
 const REGIME_PARAMS: Record<Regime, {
   volMin: number; volMax: number;
   driftMin: number; driftMax: number;
@@ -112,11 +131,16 @@ export function generateRegimeCandle(
 ): { candle: GeneratedCandle; nextState: RegimeState } {
   const params = REGIME_PARAMS[state.regime];
 
-  // Drift in the regime's direction (per-tick), with mean-reversion for sideways
+  // Drift in the regime's direction (per-tick).
   let drift = rand(params.driftMin, params.driftMax);
-  if (state.regime === 'sideways' && state.anchor) {
+  // Mean-reversion toward anchor for ALL regimes (strong for sideways, mild for others)
+  // so long random walks don't diverge exponentially.
+  if (state.anchor && state.anchor > 0) {
     const dev = (prevClose - state.anchor) / state.anchor;
-    drift -= dev * 0.3; // pull back to anchor
+    const pull = state.regime === 'sideways' ? 0.30
+               : state.regime === 'volatile' ? 0.08
+               : 0.05;
+    drift -= dev * pull;
   }
 
   // Momentum accumulates for trends, decays fast for sideways/volatile
@@ -138,6 +162,14 @@ export function generateRegimeCandle(
     const lower = state.anchor * 0.995;
     if (close > upper) close = upper - Math.random() * (upper - state.anchor) * 0.3;
     if (close < lower) close = lower + Math.random() * (state.anchor - lower) * 0.3;
+  }
+
+  // Hard band around anchor for all regimes — prevents long-term drift to 0 or infinity.
+  if (state.anchor && state.anchor > 0) {
+    const hardMax = state.anchor * 2.0;
+    const hardMin = state.anchor * 0.5;
+    if (close > hardMax) close = hardMax - Math.random() * (hardMax - state.anchor) * 0.2;
+    if (close < hardMin) close = hardMin + Math.random() * (state.anchor - hardMin) * 0.2;
   }
 
   // Wick: based on regime, with intrabar pressure (gauss-driven)
@@ -177,7 +209,8 @@ export function initialRegimeState(anchorPrice: number, regime?: Regime): Regime
     ticksInRegime: 0,
     momentum: 0,
     vol: rand(REGIME_PARAMS[r].volMin, REGIME_PARAMS[r].volMax),
-    anchor: r === 'sideways' ? anchorPrice : undefined,
+    // Anchor every regime so mean-reversion works across long sessions.
+    anchor: anchorPrice,
   };
 }
 
@@ -190,7 +223,8 @@ export function loadRegimeState(extra: Record<string, unknown> | undefined, anch
     ticksInRegime: Number(e.ticksInRegime ?? 0),
     momentum: Number(e.momentum ?? 0),
     vol: Number(e.vol ?? REGIME_PARAMS[e.regime as Regime].volMin),
-    anchor: typeof e.anchor === 'number' ? e.anchor : (e.regime === 'sideways' ? anchor : undefined),
+    // Always re-anchor to the canonical basePrice so legacy state rows without an anchor still mean-revert.
+    anchor,
   };
 }
 
