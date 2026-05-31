@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
 
       const rows: any[] = [];
       for (let i = 0; i < totalCandles; i++) {
-        state = maybeTransition(state, price);
+        state = maybeTransition(state, basePrice);
         const { candle, nextState } = generateCandle(price, state);
         state = nextState;
         const recordedAt = new Date(startMinute + i * 60000).toISOString();
