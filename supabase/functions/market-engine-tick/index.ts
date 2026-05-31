@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
     // 1. Load active products
     const { data: products, error: prodErr } = await supabase
       .from('products')
-      .select('id, price, status')
+      .select('id, price, status, symbol')
       .eq('status', 'available');
     if (prodErr) throw prodErr;
     const list: ProductRow[] = products ?? [];
