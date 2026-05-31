@@ -28,6 +28,20 @@ const REGIME_PARAMS: Record<Regime, {
   volatile:      { volMin: 0.010, volMax: 0.020, driftMin: -0.0010, driftMax: 0.0010, wickMultMin: 1.0, wickMultMax: 4.0, volumeMult: 2.5 },
 };
 
+// Anchor prices per symbol — must mirror src/data/products.ts basePrice.
+const BASE_PRICES: Record<string, number> = {
+  'AGIL/USDT': 601.94,
+  '360SA/USDT': 40.75,
+  'MCS/USDT': 14.51,
+  'SIM/USDT': 9.06,
+  'COTM/USDT': 9.12,
+  'IBMS/USDT': 2.69,
+  'VICS/USDT': 0.01,
+  'HED/USDT': 6.49,
+  'C5ISR/USDT': 1.00,
+  'WIG/USDT': 0.23,
+};
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 function gauss() {
   const u = Math.max(1e-9, Math.random());
@@ -60,8 +74,10 @@ function maybeTransition(s: RegimeState, anchorPrice: number): RegimeState {
 function generateCandle(prevClose: number, s: RegimeState) {
   const params = REGIME_PARAMS[s.regime];
   let drift = rand(params.driftMin, params.driftMax);
-  if (s.regime === 'sideways' && s.anchor) {
-    drift -= ((prevClose - s.anchor) / s.anchor) * 0.3;
+  if (s.anchor && s.anchor > 0) {
+    const dev = (prevClose - s.anchor) / s.anchor;
+    const pull = s.regime === 'sideways' ? 0.30 : s.regime === 'volatile' ? 0.08 : 0.05;
+    drift -= dev * pull;
   }
   const momentumDecay = s.regime === 'sideways' ? 0.4 : s.regime === 'volatile' ? 0.5 : 0.85;
   const newMomentum = s.momentum * momentumDecay + drift * 0.5;
@@ -74,6 +90,12 @@ function generateCandle(prevClose: number, s: RegimeState) {
     const up = s.anchor * 1.005, lo = s.anchor * 0.995;
     if (close > up) close = up - Math.random() * (up - s.anchor) * 0.3;
     if (close < lo) close = lo + Math.random() * (s.anchor - lo) * 0.3;
+  }
+  // Hard band ±50% from anchor for any regime
+  if (s.anchor && s.anchor > 0) {
+    const hMax = s.anchor * 2.0, hMin = s.anchor * 0.5;
+    if (close > hMax) close = hMax - Math.random() * (hMax - s.anchor) * 0.2;
+    if (close < hMin) close = hMin + Math.random() * (s.anchor - hMin) * 0.2;
   }
 
   const bodyPct = Math.abs(close - open) / Math.max(open, 1e-9);
@@ -105,7 +127,7 @@ function initState(anchor: number): RegimeState {
   return {
     regime: r, ticksInRegime: 0, momentum: 0,
     vol: rand(REGIME_PARAMS[r].volMin, REGIME_PARAMS[r].volMax),
-    anchor: r === 'sideways' ? anchor : undefined,
+    anchor,
   };
 }
 
@@ -134,9 +156,9 @@ Deno.serve(async (req) => {
     const replace = body.replace !== false; // default: replace existing window
 
     // Resolve product list
-    let prodQuery = supabase.from('products').select('id, price').eq('status', 'available');
+    let prodQuery = supabase.from('products').select('id, price, symbol').eq('status', 'available');
     if (Array.isArray(body.productIds) && body.productIds.length > 0) {
-      prodQuery = supabase.from('products').select('id, price').in('id', body.productIds);
+      prodQuery = supabase.from('products').select('id, price, symbol').in('id', body.productIds);
     }
     const { data: products, error: prodErr } = await prodQuery;
     if (prodErr) throw prodErr;
@@ -153,16 +175,14 @@ Deno.serve(async (req) => {
     const summary: Array<{ product_id: string; rows: number; finalPrice: number }> = [];
 
     for (const p of products) {
-      const currentPrice = Number((p as any).price) > 0 ? Number((p as any).price) : 100;
+      const symbol = (p as any).symbol as string | null;
+      const basePrice = (symbol && BASE_PRICES[symbol])
+        ? BASE_PRICES[symbol]
+        : (Number((p as any).price) > 0 ? Number((p as any).price) : 100);
 
-      // Walk FORWARD from start, but we want to end at ~ currentPrice.
-      // Strategy: walk forward from a synthetic starting price chosen so the
-      // random walk has a mean ending close to currentPrice. Simplest: start
-      // at currentPrice and let regime drift wander naturally; then rescale
-      // the final series so the LAST close == currentPrice.
-      const startPrice = currentPrice;
-      let price = startPrice;
-      let state = initState(price);
+      // Walk forward from basePrice, anchored so the series stays realistic.
+      let price = basePrice;
+      let state = initState(basePrice);
 
       const rows: any[] = [];
       for (let i = 0; i < totalCandles; i++) {
@@ -183,14 +203,7 @@ Deno.serve(async (req) => {
       }
 
       // Rescale so the final close matches currentPrice (keeps live continuity).
-      const finalClose = rows[rows.length - 1].close_price;
-      const scale = currentPrice / finalClose;
-      for (const r of rows) {
-        r.open_price *= scale;
-        r.high_price *= scale;
-        r.low_price  *= scale;
-        r.close_price *= scale;
-      }
+      // No rescale — series is already anchored to basePrice, final close is realistic.
 
       // Optionally wipe the existing window so the new series fully replaces stale data
       if (replace) {
