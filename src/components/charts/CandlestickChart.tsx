@@ -324,6 +324,20 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       
       window.addEventListener('resize', handleResize);
 
+      // Observe container size changes (flex layouts where clientWidth=0 at mount,
+      // or sidebar toggles / fullscreen transitions that don't fire window resize).
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && chartContainerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (!chartContainerRef.current || !chartRef.current) return;
+          const w = chartContainerRef.current.clientWidth;
+          if (w > 0) {
+            chartRef.current.applyOptions({ width: w });
+          }
+        });
+        resizeObserver.observe(chartContainerRef.current);
+      }
+
       const handleVisibleRangeChange = (range: VisibleLogicalRange | null) => {
         if (suppressVisibleRangeWriteRef.current) return;
         writeStoredVisibleRange(visibleRangeKeyRef.current, range);
@@ -332,6 +346,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        if (resizeObserver) resizeObserver.disconnect();
         if (releaseRangeWriteTimerRef.current) clearTimeout(releaseRangeWriteTimerRef.current);
         if (releaseRangeWriteFrameRef.current) window.cancelAnimationFrame(releaseRangeWriteFrameRef.current);
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
