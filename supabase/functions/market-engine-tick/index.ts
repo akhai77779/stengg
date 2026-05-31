@@ -5,6 +5,7 @@ interface ProductRow {
   id: string;
   price: number | null;
   status: string;
+  symbol: string | null;
 }
 
 interface EngineStateRow {
@@ -293,8 +294,12 @@ Deno.serve(async (req) => {
 
     for (const p of list) {
       const state = stateMap.get(p.id);
-      let basePrice = state?.last_price ?? p.price ?? 100;
-      if (!Number.isFinite(basePrice) || basePrice <= 0) basePrice = 100;
+      const anchorPrice = getBasePrice(p.symbol, p.price ?? 100);
+      let basePrice = state?.last_price ?? p.price ?? anchorPrice;
+      if (!Number.isFinite(basePrice) || basePrice <= 0) basePrice = anchorPrice;
+      // If legacy data drifted way out of band, snap back into [anchor*0.5, anchor*2]
+      if (basePrice > anchorPrice * 2) basePrice = anchorPrice * 1.5;
+      if (basePrice < anchorPrice * 0.5) basePrice = anchorPrice * 0.7;
 
       // Apply pending shocks first
       const productShocks = shocksByProduct.get(p.id) ?? [];
@@ -303,9 +308,9 @@ Deno.serve(async (req) => {
         appliedShockIds.push(sh.id);
       }
 
-      // Load regime state, possibly transition, then generate a candle
-      let regimeState = loadRegimeState(state?.extra, basePrice);
-      regimeState = maybeTransition(regimeState, basePrice);
+      // Load regime state (anchored to canonical basePrice), possibly transition, then generate a candle
+      let regimeState = loadRegimeState(state?.extra, anchorPrice);
+      regimeState = maybeTransition(regimeState, anchorPrice);
       const { candle, nextState } = generateRegimeCandle(basePrice, regimeState);
 
       historyRows.push({
