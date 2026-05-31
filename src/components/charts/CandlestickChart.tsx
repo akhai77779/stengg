@@ -151,6 +151,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const suppressVisibleRangeWriteRef = useRef(false);
     const releaseRangeWriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const releaseRangeWriteFrameRef = useRef<number | null>(null);
+    const hasChartData = data.length > 0;
 
     const suppressVisibleRangeWrites = useCallback(() => {
       suppressVisibleRangeWriteRef.current = true;
@@ -251,8 +252,12 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       updateCandle,
     }), [handleZoomIn, handleZoomOut, handleResetZoom, updateCandle]);
 
-    // Initialize chart only once
+    // Initialize chart when the actual chart container exists.
+    // Important: first render can be the loading state (no ref). When data arrives,
+    // this boolean changes and the effect must run again; otherwise the chart only
+    // appears after a later height/layout change such as fullscreen.
     useEffect(() => {
+      if (!hasChartData) return;
       if (!chartContainerRef.current) return;
 
       // Create chart
@@ -356,7 +361,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         maSeriesRef.current = null;
         emaSeriesRef.current = null;
       };
-    }, [height]);
+    }, [height, hasChartData]);
 
     // Update data when it changes - use efficient comparison
     useEffect(() => {
