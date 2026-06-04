@@ -230,8 +230,16 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     [notificationEnabled, rooms]
   );
 
-  // Telegram notifications are now sent server-side via DB trigger -> telegram_outbox
-  // (see migration notify_telegram_on_live_chat). No client-side call needed.
+  // Send Telegram notification for new customer messages
+  const sendTelegramNotification = useCallback(async (senderName: string, message: string, roomId: string) => {
+    try {
+      await supabase.functions.invoke("telegram-notify", {
+        body: { sender_name: senderName, message: message || "Tệp đính kèm", room_id: roomId },
+      });
+    } catch (err) {
+      console.warn("Telegram notification failed:", err);
+    }
+  }, []);
 
   // Global realtime subscription for ALL new customer messages (not just selected room)
   useEffect(() => {
@@ -251,6 +259,9 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
           if (newMsg.sender_type === "customer") {
             // Always play sound for new customer messages
             playNotificationSound();
+            
+            // Send Telegram notification
+            sendTelegramNotification(newMsg.sender_name, newMsg.message, newMsg.room_id);
 
             // If this room is NOT currently selected, show desktop notification
             if (newMsg.room_id !== selectedRoom?.id) {
@@ -283,7 +294,7 @@ export function LiveChatAdminPanel({ isEmbedded = false, onClearUnread }: LiveCh
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedRoom?.id, rooms, notificationEnabled, playNotificationSound]);
+  }, [selectedRoom?.id, rooms, notificationEnabled, playNotificationSound, sendTelegramNotification]);
 
   // Send message handler
   const handleSend = async (
