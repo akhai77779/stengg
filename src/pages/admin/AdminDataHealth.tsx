@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, RefreshCw, Send, PlayCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const TABLES = [
   "profiles",
@@ -80,6 +81,7 @@ export default function AdminDataHealth() {
 
   return (
     <div className="space-y-4 p-4">
+      <TelegramOutboxPanel />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">Kiểm tra dữ liệu Cloud</h1>
