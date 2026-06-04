@@ -1201,6 +1201,42 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error: string | null
+          payload: Json
+          sent_at: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          payload: Json
+          sent_at?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          payload?: Json
+          sent_at?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -1504,6 +1540,10 @@ export type Database = {
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
+        Returns: number
+      }
+      enqueue_telegram: {
+        Args: { _payload: Json; _source?: string }
         Returns: number
       }
       get_all_charity_donations: {
