@@ -23,3 +23,6 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.backfill-price-history]
     verify_jwt = true
+
+  [functions.process-telegram-outbox]
+    verify_jwt = false
