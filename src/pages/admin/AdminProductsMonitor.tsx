@@ -256,9 +256,9 @@ export default function AdminProductsMonitor() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:h-[calc(100vh-180px)]">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:h-[calc(100vh-180px)] min-w-0">
         {/* Product Sidebar */}
-        <div className="md:w-72 md:flex-shrink-0 border rounded-lg bg-card max-h-[40vh] md:max-h-none">
+        <div className="w-full md:w-72 md:flex-shrink-0 border rounded-lg bg-card max-h-[40vh] md:max-h-none overflow-hidden min-w-0">
           <div className="p-3 border-b">
             <h2 className="text-sm font-semibold text-foreground">
               Products ({products.length})
@@ -309,7 +309,7 @@ export default function AdminProductsMonitor() {
         </div>
 
         {/* Chart Area */}
-        <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
+        <div className="flex-1 min-w-0 border rounded-lg bg-card overflow-hidden flex flex-col">
           {selectedProduct && effectiveProductId ? (
             <>
               {/* Chart Header */}
