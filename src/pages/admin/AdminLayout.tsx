@@ -261,8 +261,8 @@ export default function AdminLayout() {
             </div>
 
             {/* Page content */}
-            <div className="p-4 md:p-6">
-              <div className="rounded-xl border border-white/[0.06] bg-[#0d1117] overflow-hidden">
+            <div className="p-2 sm:p-4 md:p-6">
+              <div className="md:rounded-xl md:border md:border-white/[0.06] md:bg-[#0d1117] md:overflow-hidden">
                 <Outlet />
               </div>
             </div>

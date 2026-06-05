@@ -264,7 +264,8 @@ export function DashboardTransactions() {
           {transactions.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">Chưa có giao dịch nào</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+            <Table className="text-xs sm:text-sm min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Người dùng</TableHead>
@@ -311,6 +312,7 @@ export function DashboardTransactions() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

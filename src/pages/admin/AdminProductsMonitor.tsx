@@ -209,15 +209,15 @@ export default function AdminProductsMonitor() {
   );
 
   const content = isReady ? (
-    <div className="space-y-4 p-4">
+    <div className="space-y-3 p-3 md:p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">Product Chart Monitor</h1>
+            <h1 className="text-lg md:text-xl font-bold text-foreground">Product Chart Monitor</h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="hidden md:block text-sm text-muted-foreground mt-1">
             Server-side market engine · price_history is the single source of truth
           </p>
         </div>
@@ -256,9 +256,9 @@ export default function AdminProductsMonitor() {
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-4 h-[calc(100vh-180px)]">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:h-[calc(100vh-180px)] min-w-0">
         {/* Product Sidebar */}
-        <div className="w-72 flex-shrink-0 border rounded-lg bg-card">
+        <div className="w-full md:w-72 md:flex-shrink-0 border rounded-lg bg-card max-h-[40vh] md:max-h-none overflow-hidden min-w-0">
           <div className="p-3 border-b">
             <h2 className="text-sm font-semibold text-foreground">
               Products ({products.length})
@@ -309,7 +309,7 @@ export default function AdminProductsMonitor() {
         </div>
 
         {/* Chart Area */}
-        <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
+        <div className="flex-1 min-w-0 border rounded-lg bg-card overflow-hidden flex flex-col">
           {selectedProduct && effectiveProductId ? (
             <>
               {/* Chart Header */}
