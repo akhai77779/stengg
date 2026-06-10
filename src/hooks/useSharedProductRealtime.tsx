@@ -472,50 +472,17 @@ export function useSharedProductRealtime({
     const fetchInitial = async () => {
       // Always fetch the largest lookback so user can switch timeframes without refetching.
       const since = new Date(Date.now() - LOOKBACK_MS['1d']).toISOString();
+      const { data, error } = await supabase
+        .from('price_history')
+        .select('product_id, recorded_at, open_price, high_price, low_price, close_price, volume')
+        .eq('product_id', productId)
+        .gte('recorded_at', since)
+        .order('recorded_at', { ascending: true })
+        .limit(1000);
 
-      // For wide timeframes (1h/1d) the raw minute-row count over 60 days easily
-      // exceeds PostgREST's 1000-row cap, leaving only a few aggregated candles.
-      // Use the server-side aggregation RPC so we get one row per visible bucket.
-      const useAggregateRpc = timeframe === '1h' || timeframe === '1d';
-      let initialRows: PriceHistoryRow[] = [];
+      if (!mounted) return;
 
-      if (useAggregateRpc) {
-        const { data: agg, error: aggErr } = await supabase.rpc('get_ohlc_aggregated', {
-          p_product_id: productId,
-          p_bucket_seconds: BUCKET_SECONDS[timeframe],
-          p_since: since,
-        });
-        if (!mounted) return;
-        if (!aggErr && Array.isArray(agg)) {
-          initialRows = (agg as Array<{
-            bucket_start: string;
-            open_price: number;
-            high_price: number;
-            low_price: number;
-            close_price: number;
-            volume: number | null;
-          }>).map(r => ({
-            product_id: productId,
-            recorded_at: r.bucket_start,
-            open_price: Number(r.open_price),
-            high_price: Number(r.high_price),
-            low_price: Number(r.low_price),
-            close_price: Number(r.close_price),
-            volume: r.volume == null ? null : Number(r.volume),
-          }));
-        }
-      } else {
-        const { data, error } = await supabase
-          .from('price_history')
-          .select('product_id, recorded_at, open_price, high_price, low_price, close_price, volume')
-          .eq('product_id', productId)
-          .gte('recorded_at', since)
-          .order('recorded_at', { ascending: true })
-          .limit(1000);
-
-        if (!mounted) return;
-        initialRows = (!error && data ? data : []) as PriceHistoryRow[];
-      }
+      let initialRows = (!error && data ? data : []) as PriceHistoryRow[];
       const aggregatedCount = initialRows.length ? aggregateOHLCData(initialRows, timeframe).length : 0;
 
       if (initialRows.length > 0 && aggregatedCount < MIN_AGGREGATED_CANDLES[timeframe]) {

@@ -1591,21 +1591,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_ohlc_aggregated: {
-        Args: {
-          p_bucket_seconds: number
-          p_product_id: string
-          p_since: string
-        }
-        Returns: {
-          bucket_start: string
-          close_price: number
-          high_price: number
-          low_price: number
-          open_price: number
-          volume: number
-        }[]
-      }
       get_savings_package_stats: {
         Args: { _package_id: string }
         Returns: {
