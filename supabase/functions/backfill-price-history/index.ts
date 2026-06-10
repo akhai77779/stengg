@@ -147,16 +147,29 @@ function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[
     }
     if (!Number.isFinite(close) || close <= 0) close = price;
 
-    // Wicks scaled by phase volatility
+    // Realistic wicks: based on typical candle range (ATR-like), not just body.
+    // This produces visible wicks even on small/doji bodies, like real markets.
     const bodySize = Math.abs(close - open);
-    const wick = bodySize * phase.volMult * (0.4 + Math.random() * 0.8);
-    const high = Math.max(open, close) + wick * Math.random();
-    const low = Math.min(open, close) - wick * Math.random();
+    const typicalRange = open * cfg.volatility * phase.volMult * (0.6 + Math.random() * 0.9);
+    const candleRange = Math.max(bodySize * (1.1 + Math.random() * 1.4), typicalRange);
+    const extraWick = Math.max(0, candleRange - bodySize);
 
-    // Volume scales with move size and phase activity
+    // Asymmetric wick split — bias upper wick on up candles less often (rejection),
+    // and lower wick on down candles. Adds natural variety.
+    const isUp = close >= open;
+    const upperBias = isUp ? 0.35 + Math.random() * 0.4 : 0.45 + Math.random() * 0.45;
+    const upperWick = extraWick * upperBias;
+    const lowerWick = extraWick * (1 - upperBias);
+
+    const high = Math.max(open, close) + upperWick;
+    const low = Math.min(open, close) - lowerWick;
+
+    // Volume: stronger correlation with range + occasional volume spikes
     const baseVol = (base * 300) / totalMinutes;
-    const moveStrength = Math.abs(pctChange) / (cfg.volatility * 0.01 || 1);
-    const volume = baseVol * phase.volMult * (0.4 + Math.random() * 0.8) * (1 + moveStrength * 0.3);
+    const rangePct = candleRange / open;
+    const volNoise = 0.5 + Math.random() * 1.2;
+    const volSpike = Math.random() < 0.05 ? 1.8 + Math.random() * 1.5 : 1;
+    const volume = baseVol * phase.volMult * volNoise * (1 + rangePct * 40) * volSpike;
 
     const minuteMs = nowMinute - i * 60000;
 
