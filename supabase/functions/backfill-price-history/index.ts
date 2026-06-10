@@ -22,17 +22,12 @@ const BTC_PCT: number[] = [
   -0.00485, 0.00174, -0.00482, 0.004031, -0.003997, -0.001763, -0.003053, 0.002883, -0.003637, 0.002802,
 ];
 
-// ─── Trend phase engine ─────────────────────────────────────────────────────
-// Each product gets a sequence of "phases": markup, pullback, markdown, sideways
-// Phase lengths in minutes
+// ─── Phase system ───────────────────────────────────────────────────────────
 type Phase = "markup" | "pullback" | "markdown" | "relief" | "sideways" | "spike_up" | "spike_down";
 
 interface PhaseConfig {
-  // Per-minute drift added on top of BTC pattern
   drift: number;
-  // Volatility multiplier
   volMult: number;
-  // Minutes min/max
   minLen: number;
   maxLen: number;
 }
@@ -47,7 +42,6 @@ const PHASE_CFG: Record<Phase, PhaseConfig> = {
   spike_down: { drift: -0.005, volMult: 3.0, minLen: 5, maxLen: 20 },
 };
 
-// Transition table: realistic market cycle
 const TRANSITIONS: Record<Phase, Phase[]> = {
   markup: ["pullback", "pullback", "sideways", "spike_up"],
   pullback: ["markup", "markup", "sideways", "markdown"],
@@ -58,7 +52,6 @@ const TRANSITIONS: Record<Phase, Phase[]> = {
   spike_down: ["relief", "markdown"],
 };
 
-// Starting phase based on trend
 const START_PHASES: Record<string, Phase[]> = {
   bullish: ["markup", "sideways", "pullback"],
   bearish: ["markdown", "sideways", "relief"],
@@ -66,7 +59,7 @@ const START_PHASES: Record<string, Phase[]> = {
   neutral: ["sideways", "markup", "markdown"],
 };
 
-// Product config
+// ─── Product config ─────────────────────────────────────────────────────────
 interface ProductCfg {
   basePrice: number;
   volatility: number;
@@ -88,6 +81,7 @@ const PRODUCT_CONFIG: Record<string, ProductCfg> = {
 
 const BTC_BASE_VOL = 0.005;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+const pickFrom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 interface GeneratedCandle {
   recorded_at: string;
@@ -98,16 +92,6 @@ interface GeneratedCandle {
   volume: number;
 }
 
-function pickFrom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-/**
- * Generate 1M candles with:
- * 1. Real BTC % pattern for micro-structure
- * 2. Phase-based trend overlay (markup/pullback/markdown cycles)
- * 3. Exact UTC minute timestamps
- */
 function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[] {
   const cfg = PRODUCT_CONFIG[symbol];
   if (!cfg) return [];
@@ -115,21 +99,19 @@ function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[
   const base = cfg.basePrice;
   const volScale = cfg.volatility / BTC_BASE_VOL;
 
-  // Price band — hard clamp to prevent runaway
-  const bandPct = base < 1 ? 0.7 : base < 10 ? 0.6 : 0.5;
-  const minPrice = base * (1 - bandPct);
-  const maxPrice = base * (1 + bandPct);
+  // Hard clamp band: base * 0.3 to base * 1.7
+  const minPrice = base * 0.3;
+  const maxPrice = base * 1.7;
 
-  // Symbol hash → different start offset per product
+  // Symbol hash → BTC pattern offset
   const symbolHash = symbol.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const btcOffset = symbolHash % BTC_PCT.length;
 
-  // Align to exact minute boundary (UTC)
-  const nowMs = Date.now();
-  const nowMinute = Math.floor(nowMs / 60000) * 60000;
+  // Align to exact UTC minute
+  const nowMinute = Math.floor(Date.now() / 60000) * 60000;
 
-  // ── Build phase sequence covering totalMinutes ──────────────────────────
-  const startPhases = START_PHASES[cfg.trend] || START_PHASES["neutral"];
+  // Starting phase based on trend
+  const startPhases = START_PHASES[cfg.trend] || START_PHASES.neutral;
   let currentPhase: Phase = pickFrom(startPhases);
   let phaseRemaining = Math.floor(rand(PHASE_CFG[currentPhase].minLen, PHASE_CFG[currentPhase].maxLen));
 
@@ -137,56 +119,45 @@ function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[
   let price = base;
 
   for (let i = totalMinutes; i >= 1; i--) {
-    // Advance phase if current one expired
     if (phaseRemaining <= 0) {
-      const nextPhases = TRANSITIONS[currentPhase];
-      currentPhase = pickFrom(nextPhases);
+      currentPhase = pickFrom(TRANSITIONS[currentPhase]);
       phaseRemaining = Math.floor(rand(PHASE_CFG[currentPhase].minLen, PHASE_CFG[currentPhase].maxLen));
     }
     phaseRemaining--;
 
     const phase = PHASE_CFG[currentPhase];
-
-    // BTC micro-structure % change
     const idx = (btcOffset + (totalMinutes - i)) % BTC_PCT.length;
     const btcPct = BTC_PCT[idx];
 
-    // Combine BTC pattern with phase drift
-    // Phase drift dominates for trend clarity, BTC adds realistic noise
-    const combined = btcPct * volScale * phase.volMult + phase.drift;
-
-    // Spike probability (rare shock events in pattern)
-    const spike = Math.random() < 0.008 ? (2.5 + Math.random() * 2) * (Math.random() < 0.5 ? 1 : -1) : 1.0;
-    const pctChange = combined * (spike !== 1.0 ? Math.abs(spike) * Math.sign(spike) : 1.0);
+    // Per spec: pctChange = btcPct * volScale * phase.volMult + phase.drift
+    const pctChange = btcPct * volScale * phase.volMult + phase.drift;
 
     const open = price;
     let close = open * (1 + pctChange);
 
-    // Soft bounce at band edges
+    // Hard clamp + bounce + force phase switch
     if (close < minPrice) {
       close = minPrice + (minPrice - close) * 0.3;
-      currentPhase = "markup"; // bounce → switch to markup
-      phaseRemaining = Math.floor(rand(30, 90));
+      currentPhase = "markup";
+      phaseRemaining = Math.floor(rand(PHASE_CFG.markup.minLen, PHASE_CFG.markup.maxLen));
     } else if (close > maxPrice) {
       close = maxPrice - (close - maxPrice) * 0.3;
-      currentPhase = "markdown"; // top → switch to markdown
-      phaseRemaining = Math.floor(rand(30, 90));
+      currentPhase = "markdown";
+      phaseRemaining = Math.floor(rand(PHASE_CFG.markdown.minLen, PHASE_CFG.markdown.maxLen));
     }
     if (!Number.isFinite(close) || close <= 0) close = price;
 
-    // Wicks: larger during volatile phases
+    // Wicks scaled by phase volatility
     const bodySize = Math.abs(close - open);
-    const wickMult = phase.volMult * (0.4 + Math.random() * 0.8);
-    const wick = bodySize * wickMult;
+    const wick = bodySize * phase.volMult * (0.4 + Math.random() * 0.8);
     const high = Math.max(open, close) + wick * Math.random();
     const low = Math.min(open, close) - wick * Math.random();
 
-    // Volume: correlated with move size + phase activity
+    // Volume scales with move size and phase activity
     const baseVol = (base * 300) / totalMinutes;
-    const moveStrength = Math.abs(pctChange) / (cfg.volatility * 0.01);
+    const moveStrength = Math.abs(pctChange) / (cfg.volatility * 0.01 || 1);
     const volume = baseVol * phase.volMult * (0.4 + Math.random() * 0.8) * (1 + moveStrength * 0.3);
 
-    // Exact UTC minute timestamp
     const minuteMs = nowMinute - i * 60000;
 
     candles.push({
@@ -215,7 +186,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -230,7 +204,7 @@ Deno.serve(async (req) => {
     if (pErr || !products?.length) {
       return new Response(JSON.stringify({ ok: false, error: pErr?.message || "No products" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
 
@@ -244,13 +218,10 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Clear old data
         await supabase.from("price_history").delete().eq("product_id", product.id);
 
-        // Generate with phase-based trend
         const candles = generateCandles(symbol, totalMinutes);
 
-        // Batch upsert in chunks of 500
         let inserted = 0;
         const CHUNK = 500;
         for (let i = 0; i < candles.length; i += CHUNK) {
@@ -265,7 +236,6 @@ Deno.serve(async (req) => {
           inserted += chunk.length;
         }
 
-        // Update product current price
         const lastCandle = candles[candles.length - 1];
         if (lastCandle) {
           await supabase.from("products").update({ price: lastCandle.close_price }).eq("id", product.id);
@@ -283,7 +253,7 @@ Deno.serve(async (req) => {
   } catch (e: unknown) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
   }
 });
