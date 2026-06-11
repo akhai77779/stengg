@@ -325,7 +325,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         HistogramSeries,
         {
           priceFormat: { type: 'volume' },
-          priceScaleId: '',
+          priceScaleId: 'volume',
           lastValueVisible: false,
           priceLineVisible: false,
         },
@@ -337,7 +337,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       volumeSeriesRef.current = volumeSeries;
       const panes = chart.panes();
       if (panes.length > 1) {
-        panes[1].setHeight(Math.max(60, Math.round(height * 0.22)));
+        panes[1].setHeight(Math.max(60, Math.round(height * 0.25)));
       }
 
       // Responsive resize
@@ -410,11 +410,19 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
 
       const formattedData = dedupeAndSortOHLC(data);
       // Build volume histogram data colored by candle direction
-      const volumeData: HistogramData<UTCTimestamp>[] = formattedData.map((c) => ({
-        time: c.time,
-        value: (data.find((d) => toTimestamp(d.time) === c.time)?.volume) ?? 0,
-        color: c.close >= c.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
-      }));
+      const volumeData: HistogramData<UTCTimestamp>[] = formattedData
+        .map((c) => {
+          const volume = data.find((d) => toTimestamp(d.time) === c.time)?.volume;
+          return { time: c.time, volume, close: c.close, open: c.open };
+        })
+        .filter((item): item is { time: UTCTimestamp; volume: number; close: number; open: number } =>
+          typeof item.volume === 'number' && Number.isFinite(item.volume) && item.volume > 0
+        )
+        .map((item) => ({
+          time: item.time,
+          value: item.volume,
+          color: item.close >= item.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)',
+        }));
       if (volumeSeriesRef.current) {
         volumeSeriesRef.current.setData(volumeData);
       }

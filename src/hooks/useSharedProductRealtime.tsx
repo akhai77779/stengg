@@ -261,6 +261,7 @@ export function priceHistoryRowToOHLC(row: PriceHistoryRow): OHLCData {
     high: Number(row.high_price),
     low: Number(row.low_price),
     close: Number(row.close_price),
+    volume: row.volume ?? undefined,
   };
 }
 
@@ -298,6 +299,7 @@ export function aggregateOHLCData(rows: PriceHistoryRow[], timeframe: SharedTime
       high: candle.high,
       low: candle.low,
       close: candle.close,
+      volume: candle.volume,
     }));
 }
 
