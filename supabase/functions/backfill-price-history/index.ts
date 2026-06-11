@@ -90,6 +90,24 @@ Deno.serve(async (req) => {
         const last = rows[rows.length - 1];
         if (last) {
           await supabase.from("products").update({ price: last.close_price }).eq("id", product.id);
+
+          // Persist engine_state so live ticks continue from the backfilled endpoint
+          // instead of snapping back to a stale last_price on the next tick.
+          await supabase.from("engine_state").upsert(
+            {
+              product_id: product.id,
+              last_price: last.close_price,
+              last_recorded_at: last.recorded_at,
+              extra: {
+                regime: state.regime,
+                ticksInRegime: state.ticksInRegime,
+                momentum: state.momentum,
+                vol: state.vol,
+                anchor: state.anchor,
+              },
+            },
+            { onConflict: "product_id" },
+          );
         }
 
         results[product.id] = { inserted };
