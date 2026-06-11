@@ -61,7 +61,7 @@ export function ProductCard({ product, formatPrice, formatVolume, formatChange }
 
       {/* Info */}
       <div className="p-2 md:p-3 flex flex-col gap-1 flex-1">
-        <h3 className="font-semibold text-foreground text-xs md:text-sm line-clamp-1 group-hover:text-primary transition-colors">
+        <h3 className="font-semibold text-foreground text-xs md:text-sm line-clamp-2 group-hover:text-primary transition-colors">
           {product.name}
         </h3>
 
