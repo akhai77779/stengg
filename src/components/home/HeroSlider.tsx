@@ -95,14 +95,14 @@ export function HeroSlider() {
             </div>
             
             {/* Content */}
-            <div className="absolute inset-0 flex items-center">
-              <div className="container mx-auto px-4">
-                <div className="max-w-2xl animate-fade-in">
-                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">
-                    <span className="text-gradient">{banner.title}</span>
+            <div className="absolute inset-0 flex items-center overflow-hidden">
+              <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-full sm:max-w-2xl animate-fade-in pr-12 sm:pr-0">
+                  <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-4 break-words">
+                    <span className="text-gradient inline-block max-w-full">{banner.title}</span>
                   </h1>
                   {banner.subtitle && (
-                    <p className="text-lg md:text-xl text-muted-foreground mb-6">
+                    <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 break-words">
                       {banner.subtitle}
                     </p>
                   )}
