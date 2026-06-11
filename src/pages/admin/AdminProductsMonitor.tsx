@@ -12,8 +12,6 @@ import {
   Eye,
   Maximize2,
   Zap,
-  History,
-  Loader2,
 } from 'lucide-react';
 
 import { CandlestickChart } from '@/components/charts/CandlestickChart';
@@ -23,7 +21,7 @@ import { ShareButton } from '@/components/charts/ShareButton';
 
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
-import { SharedTimeframe, useSharedProductRealtime, clearSharedProductCache } from '@/hooks/useSharedProductRealtime';
+import { SharedTimeframe, useSharedProductRealtime } from '@/hooks/useSharedProductRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -57,45 +55,6 @@ export default function AdminProductsMonitor() {
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [pendingShockCount, setPendingShockCount] = useState(0);
-  const [isBackfilling, setIsBackfilling] = useState(false);
-  const [chartReloadToken, setChartReloadToken] = useState(0);
-
-  const handleBackfill = useCallback(async () => {
-    if (isBackfilling) return;
-    if (!confirm('Backfill 30 ngày dữ liệu nến cho TẤT CẢ sản phẩm? Quá trình có thể mất 1-3 phút.')) return;
-    setIsBackfilling(true);
-    try {
-      // Process one product per invocation to avoid the 150s edge function timeout.
-      const { data: prodRows, error: prodErr } = await supabase
-        .from('products').select('id, name').eq('status', 'available');
-      if (prodErr) throw prodErr;
-      const list = prodRows || [];
-      let done = 0;
-      for (const p of list) {
-        const { data, error } = await supabase.functions.invoke('backfill-price-history', {
-          body: { days: 30, productIds: [p.id] },
-        });
-        if (error) throw new Error(`${p.name}: ${error.message}`);
-        if (data?.ok === false) throw new Error(`${p.name}: ${data.error || 'Backfill failed'}`);
-        done += 1;
-      }
-      // Invalidate cached rows and force the hook to refetch from DB
-      clearSharedProductCache();
-      setChartReloadToken(t => t + 1);
-      toast({
-        title: 'Backfill hoàn tất',
-        description: `Đã seed ${done}/${list.length} sản phẩm với 30 ngày dữ liệu nến.`,
-      });
-    } catch (e: any) {
-      toast({
-        title: 'Backfill thất bại',
-        description: e?.message || String(e),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsBackfilling(false);
-    }
-  }, [isBackfilling]);
 
   // Fetch DB products + subscribe to realtime updates
   useEffect(() => {
@@ -170,7 +129,6 @@ export default function AdminProductsMonitor() {
     timeframe: ADMIN_TIMEFRAME_MAP[timeInterval],
     enabled: !!effectiveProductId,
     throttleMs: 150,
-    reloadToken: chartReloadToken,
   });
 
   const chartOHLCData = sharedRealtime.candles;
@@ -222,18 +180,6 @@ export default function AdminProductsMonitor() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5"
-            onClick={handleBackfill}
-            disabled={isBackfilling}
-          >
-            {isBackfilling
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <History className="h-3.5 w-3.5 text-blue-500" />}
-            Backfill 30 ngày
-          </Button>
           <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
             <Link to="/admin/shock-events">
               <Zap className="h-3.5 w-3.5 text-amber-500" />
