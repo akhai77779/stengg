@@ -40,6 +40,9 @@ for (let i = 0; i < Deno.args.length; i++) {
 }
 const HOURS = Number(args.get("hours") ?? 6);
 const PRODUCT_FILTER = args.get("product");
+const GRANULARITY = Math.max(1, Number(args.get("granularity") ?? 5)); // minutes per bucket
+const CSV_PATH = args.get("csv"); // optional
+const VERBOSE = args.get("verbose") === "true" || args.has("verbose");
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
