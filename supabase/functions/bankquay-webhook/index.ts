@@ -155,7 +155,15 @@ serve(async (req) => {
     // Verify signature from header
     const signatureHeader = req.headers.get("x-bankquay-signature") || req.headers.get("X-BankQuay-Signature");
     
-    if (webhookSecret && webhookSecret.length > 0) {
+    if (!webhookSecret || webhookSecret.length === 0) {
+      console.error("BANKQUAY_WEBHOOK_SECRET not configured - rejecting request");
+      return new Response(
+        JSON.stringify({ success: false, error: "Service misconfigured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    {
       if (!signatureHeader) {
         console.error("Missing signature header");
         return new Response(
@@ -187,8 +195,6 @@ serve(async (req) => {
       }
       
       console.log("Signature verified successfully");
-    } else {
-      console.warn("BANKQUAY_WEBHOOK_SECRET not configured - signature verification skipped");
     }
 
     // Parse webhook payload from raw body
