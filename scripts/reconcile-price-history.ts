@@ -5,20 +5,24 @@
  * Usage (Deno):
  *   deno run --allow-env --allow-net scripts/reconcile-price-history.ts
  *   deno run --allow-env --allow-net scripts/reconcile-price-history.ts --hours 6 --product agil
+ *   deno run --allow-env --allow-net scripts/reconcile-price-history.ts --granularity 1 --csv /mnt/documents/divergences.csv
  *
  * Required env:
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * What it checks per product:
  *   1. Candle count vs expected (1 per minute in the window)
- *   2. Missing minute buckets (gaps)
- *   3. OHLC sanity: high >= max(open,close), low <= min(open,close)
+ *   2. Missing minute buckets (gaps) — every missing minute is listed
+ *   3. OHLC sanity per candle (high/low must wrap open/close)
  *   4. Body / wick / volume stats (median, p95, max)
  *   5. Anchor drift: % distance of last close vs configured basePrice
  *   6. Live regime (engine_state.extra.regime) vs realised drift in last 30 candles
- *      → flags if regime says "trending_up" but realised drift < 0, etc.
- *   7. Compares median body% & volume of LAST hour (live ticks) vs PRIOR window (backfill)
- *      → flags >3x divergence as suspicious.
+ *   7. Per-bucket divergence (granularity in minutes, default 5):
+ *      compares median body% / volume of LIVE bucket (last hour) vs
+ *      ROLLING BACKFILL baseline. Flags |ratio| > 3x.
+ *   8. Per-candle outliers: body% > 8x rolling median or wick > 10x body or
+ *      volume > 10x rolling median → listed timestamp by timestamp.
+ *   9. Optional CSV export of every divergent timestamp (--csv <path>).
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
