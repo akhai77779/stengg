@@ -307,7 +307,7 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              {t('options.buyUp')}
+              MUA
             </Button>
             <Button
               className="flex-1 min-h-[52px] h-13 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-base font-semibold rounded-lg touch-action-manipulation transition-colors"
@@ -321,7 +321,7 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              {t('options.buyDown')}
+              BÁN
             </Button>
           </div>
         </div>
