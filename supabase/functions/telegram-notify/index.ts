@@ -57,21 +57,29 @@ Deno.serve(async (req) => {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
       const authHeader = req.headers.get("Authorization");
-      if (authHeader) {
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (user) {
-          const { data: hasRole } = await supabase.rpc("has_role", {
-            _user_id: user.id,
-            _role: "admin",
-          });
-          if (!hasRole) {
-            return new Response(JSON.stringify({ error: "Unauthorized" }), {
-              status: 403,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: hasRole } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      if (!hasRole) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const { sender_name, message, room_id } = body;
