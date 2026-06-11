@@ -129,11 +129,31 @@ function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[
     const idx = (btcOffset + (totalMinutes - i)) % BTC_PCT.length;
     const btcPct = BTC_PCT[idx];
 
-    // Per spec: pctChange = btcPct * volScale * phase.volMult + phase.drift
-    const pctChange = btcPct * volScale * phase.volMult + phase.drift;
+    // Base % change from BTC pattern + phase drift
+    let pctChange = btcPct * volScale * phase.volMult + phase.drift;
+
+    // Natural noise so trending phases still alternate up/down between candles
+    pctChange += (Math.random() - 0.5) * 0.004;
 
     const open = price;
     let close = open * (1 + pctChange);
+
+    // Directional bias per phase so green/red mix matches the trend feel
+    let upBias = 0.5;
+    if (currentPhase === "markup" || currentPhase === "relief" || currentPhase === "spike_up") upBias = 0.6;
+    else if (currentPhase === "markdown" || currentPhase === "spike_down") upBias = 0.35;
+    else if (currentPhase === "pullback") upBias = 0.45;
+    const wantUp = Math.random() < upBias;
+    if (wantUp && close < open) close = open + (open - close);
+    else if (!wantUp && close > open) close = open - (close - open);
+
+    // Minimum visible body: at least 0.2% of open; if too small, randomize to 0.2–0.8%
+    const minBody = open * 0.002;
+    if (Math.abs(close - open) < minBody) {
+      const bodyPct = 0.002 + Math.random() * 0.006;
+      const dir = wantUp ? 1 : -1;
+      close = open * (1 + dir * bodyPct);
+    }
 
     // Hard clamp + bounce + force phase switch
     if (close < minPrice) {
@@ -164,12 +184,12 @@ function generateCandles(symbol: string, totalMinutes: number): GeneratedCandle[
     const high = Math.max(open, close) + upperWick;
     const low = Math.min(open, close) - lowerWick;
 
-    // Volume: stronger correlation with range + occasional volume spikes
-    const baseVol = (base * 300) / totalMinutes;
+    // Volume: realistic floor 50–500 units, scaled by range and phase activity
     const rangePct = candleRange / open;
-    const volNoise = 0.5 + Math.random() * 1.2;
-    const volSpike = Math.random() < 0.05 ? 1.8 + Math.random() * 1.5 : 1;
-    const volume = baseVol * phase.volMult * volNoise * (1 + rangePct * 40) * volSpike;
+    const baseUnits = 80 + Math.random() * 220; // 80–300 baseline
+    const volNoise = 0.6 + Math.random() * 1.1;
+    const volSpike = Math.random() < 0.06 ? 2 + Math.random() * 2 : 1;
+    const volume = Math.max(50, baseUnits * phase.volMult * volNoise * (1 + rangePct * 50) * volSpike);
 
     const minuteMs = nowMinute - i * 60000;
 
