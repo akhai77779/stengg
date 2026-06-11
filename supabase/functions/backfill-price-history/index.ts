@@ -25,6 +25,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const days: number = Number(body?.days ?? 30);
     const productIds: string[] | undefined = body?.productIds;
+    const force: boolean = Boolean(body?.force ?? false);
+    const SKIP_THRESHOLD = Number(body?.skipThreshold ?? 100);
     const totalMinutes = Math.max(1, Math.floor(days * 24 * 60));
 
     let query = supabase
@@ -42,26 +44,70 @@ Deno.serve(async (req) => {
     }
 
     const nowMinute = Math.floor(Date.now() / 60000) * 60000;
-    const results: Record<string, { inserted: number; error?: string }> = {};
+    const results: Record<string, { inserted: number; skipped?: boolean; reason?: string; error?: string }> = {};
 
     for (const product of products) {
       try {
-        const anchor = getBasePrice(product.symbol, product.price ?? 100);
+        // 1. Check existing history: count + oldest timestamp
+        const { count: existingCount } = await supabase
+          .from("price_history")
+          .select("*", { count: "exact", head: true })
+          .eq("product_id", product.id);
 
-        // Initialize regime state at sideways anchored to basePrice
+        if (!force && (existingCount ?? 0) >= SKIP_THRESHOLD) {
+          results[product.id] = {
+            inserted: 0,
+            skipped: true,
+            reason: `has ${existingCount} candles (>= ${SKIP_THRESHOLD}); pass force=true to override`,
+          };
+          continue;
+        }
+
+        // 2. Find oldest existing candle so we only fill the gap before it
+        const { data: oldestRow } = await supabase
+          .from("price_history")
+          .select("recorded_at, open_price")
+          .eq("product_id", product.id)
+          .order("recorded_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        // 3. Starting price: prefer engine_state.last_price (continues live tick data),
+        //    else oldest existing open (so the gap connects), else basePrice.
+        const { data: engineState } = await supabase
+          .from("engine_state")
+          .select("last_price, extra")
+          .eq("product_id", product.id)
+          .maybeSingle();
+
+        const seedFromState = Number(engineState?.last_price);
+        const seedFromOldest = oldestRow ? Number(oldestRow.open_price) : NaN;
+        const fallback = getBasePrice(product.symbol, product.price ?? 100);
+        const anchor = Number.isFinite(seedFromState) && seedFromState > 0
+          ? seedFromState
+          : Number.isFinite(seedFromOldest) && seedFromOldest > 0
+            ? seedFromOldest
+            : fallback;
+
+        // Initialize regime state at sideways anchored to chosen anchor
         let state: RegimeState = initialRegimeState(anchor, "sideways");
 
         // Walk forward in chronological order so transitions/momentum evolve naturally,
         // then assign timestamps from oldest -> newest.
         const rows: any[] = [];
         let price = anchor;
+        // End timestamp: just before oldest existing candle (gap fill), else nowMinute.
+        const endMinute = oldestRow
+          ? Math.floor(new Date(oldestRow.recorded_at).getTime() / 60000) * 60000 - 60000
+          : nowMinute;
+
         for (let step = 0; step < totalMinutes; step++) {
           state = maybeTransition(state, anchor);
           const { candle, nextState } = generateRegimeCandle(price, state);
           state = nextState;
           price = candle.close;
 
-          const minuteMs = nowMinute - (totalMinutes - step) * 60000;
+          const minuteMs = endMinute - (totalMinutes - 1 - step) * 60000;
           rows.push({
             product_id: product.id,
             recorded_at: new Date(minuteMs).toISOString(),
@@ -73,8 +119,8 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Clear old history then chunk-upsert
-        await supabase.from("price_history").delete().eq("product_id", product.id);
+        // GAP-FILL ONLY: never delete existing rows. Upsert with ignoreDuplicates
+        // so any overlap with existing candles is left untouched.
 
         let inserted = 0;
         const CHUNK = 500;
@@ -82,17 +128,17 @@ Deno.serve(async (req) => {
           const chunk = rows.slice(i, i + CHUNK);
           const { error: insErr } = await supabase
             .from("price_history")
-            .upsert(chunk, { onConflict: "product_id,recorded_at", ignoreDuplicates: false });
+            .upsert(chunk, { onConflict: "product_id,recorded_at", ignoreDuplicates: true });
           if (insErr) throw new Error(insErr.message);
           inserted += chunk.length;
         }
 
+        // Only update products.price / engine_state when there was NO prior data
+        // (fresh setup). Gap-fill must not overwrite live tick state.
         const last = rows[rows.length - 1];
-        if (last) {
+        if (last && !oldestRow) {
           await supabase.from("products").update({ price: last.close_price }).eq("id", product.id);
 
-          // Persist engine_state so live ticks continue from the backfilled endpoint
-          // instead of snapping back to a stale last_price on the next tick.
           await supabase.from("engine_state").upsert(
             {
               product_id: product.id,
