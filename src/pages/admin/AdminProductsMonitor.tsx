@@ -227,19 +227,19 @@ export default function AdminProductsMonitor() {
                         : 'border-border hover:border-primary/50 hover:bg-accent/50'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <Activity className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 ml-2 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{product.symbol || '—'}</p>
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <Activity className="w-4 h-4 text-primary flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{product.symbol || '—'}</p>
+                        </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-bold text-foreground font-mono">
+                        <p className="text-sm font-bold text-foreground font-mono tabular-nums whitespace-nowrap">
                           ${price.toFixed(2)}
                         </p>
-                        <p className={`text-xs font-mono flex items-center gap-0.5 justify-end ${
+                        <p className={`text-xs font-mono tabular-nums whitespace-nowrap flex items-center gap-0.5 justify-end ${
                           change >= 0 ? 'text-green-500' : 'text-red-500'
                         }`}>
                           {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
