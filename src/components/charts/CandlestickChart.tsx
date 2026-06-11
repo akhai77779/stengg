@@ -1,5 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, UTCTimestamp, LineData, ISeriesApi } from 'lightweight-charts';
+import { createChart, IChartApi, CandlestickData, ColorType, CandlestickSeries, LineSeries, HistogramSeries, UTCTimestamp, LineData, HistogramData, ISeriesApi } from 'lightweight-charts';
 import { IndicatorConfig, defaultIndicatorConfig } from './ChartIndicators';
 import { calculateMA, calculateEMA } from '@/lib/indicators';
 
@@ -9,6 +9,7 @@ export interface OHLCData {
   high: number;
   low: number;
   close: number;
+  volume?: number;
 }
 
 interface CandlestickChartProps {
@@ -142,6 +143,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const maSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
     const lastDataRef = useRef<string>('');
     const lastShapeRef = useRef<string>('');
     const lastResetKeyRef = useRef<string | undefined>(undefined);
@@ -318,6 +320,26 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       chartRef.current = chart;
       candleSeriesRef.current = candleSeries;
 
+      // Add volume histogram on a separate pane below the candles
+      const volumeSeries = chart.addSeries(
+        HistogramSeries,
+        {
+          priceFormat: { type: 'volume' },
+          priceScaleId: '',
+          lastValueVisible: false,
+          priceLineVisible: false,
+        },
+        1,
+      );
+      volumeSeries.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0 },
+      });
+      volumeSeriesRef.current = volumeSeries;
+      const panes = chart.panes();
+      if (panes.length > 1) {
+        panes[1].setHeight(Math.max(60, Math.round(height * 0.22)));
+      }
+
       // Responsive resize
       const handleResize = () => {
         if (chartContainerRef.current && chartRef.current) {
@@ -360,6 +382,7 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
         candleSeriesRef.current = null;
         maSeriesRef.current = null;
         emaSeriesRef.current = null;
+        volumeSeriesRef.current = null;
       };
     }, [height, hasChartData]);
 
@@ -386,6 +409,15 @@ export const CandlestickChart = forwardRef<CandlestickChartRef, CandlestickChart
       lastShapeRef.current = dataShape;
 
       const formattedData = dedupeAndSortOHLC(data);
+      // Build volume histogram data colored by candle direction
+      const volumeData: HistogramData<UTCTimestamp>[] = formattedData.map((c) => ({
+        time: c.time,
+        value: (data.find((d) => toTimestamp(d.time) === c.time)?.volume) ?? 0,
+        color: c.close >= c.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+      }));
+      if (volumeSeriesRef.current) {
+        volumeSeriesRef.current.setData(volumeData);
+      }
       const resetChanged = resetZoomKey !== lastResetKeyRef.current;
       const isFirstLoad = !hasInitialDataRef.current;
       const sameShape = !!prevHash && prevShape === dataShape;
