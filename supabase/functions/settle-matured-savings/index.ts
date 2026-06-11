@@ -14,6 +14,18 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") || "";
+    const serviceRoleAuth = `Bearer ${supabaseServiceKey}`;
+    const cronAuth = cronSecret ? `Bearer ${cronSecret}` : null;
+
+    if (authHeader !== serviceRoleAuth && (!cronAuth || authHeader !== cronAuth)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("[settle-matured-savings] Starting auto-settle check...");
