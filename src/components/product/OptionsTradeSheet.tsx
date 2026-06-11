@@ -287,7 +287,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
                   "font-medium",
                   direction === 'buy' ? "text-green-500" : "text-red-500"
                 )}>
-                  {direction === 'buy' ? t('options.buyUp') : t('options.buyDown')}
+                  {direction === 'buy' ? 'MUA' : 'BÁN'}
                 </span>
                 <span className={cn(
                   "font-bold text-lg",
@@ -420,7 +420,7 @@ export const OptionsTradeSheet = forwardRef<HTMLDivElement, OptionsTradeSheetPro
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : null}
-              {direction === 'buy' ? t('options.buyNow') : t('options.sellNow')}
+              {direction === 'buy' ? 'MUA' : 'BÁN'}
             </Button>
           </div>
         </SheetContent>

@@ -321,7 +321,7 @@ const ProductDetail = () => {
                 setOptionsSheetOpen(true);
               }}
             >
-              {t('options.buyDown')}
+              BÁN
             </Button>
           </div>
         </div>
