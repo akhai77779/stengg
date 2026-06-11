@@ -12,8 +12,6 @@ import {
   Eye,
   Maximize2,
   Zap,
-  History,
-  Loader2,
 } from 'lucide-react';
 
 import { CandlestickChart } from '@/components/charts/CandlestickChart';
