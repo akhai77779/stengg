@@ -95,6 +95,9 @@ async function main() {
   );
 
   const issues: string[] = [];
+  // CSV rows: product_symbol, recorded_at, kind, detail, open, high, low, close, volume
+  const csvRows: string[][] = [];
+  const liveCutoffMs = nowMs - 60 * 60 * 1000; // last hour = live ticks
 
   for (const p of products) {
     const [{ data: rows }, { data: state }] = await Promise.all([
@@ -118,27 +121,67 @@ async function main() {
       continue;
     }
 
-    // 1. Gaps
+    // 1. Gaps (collect every missing minute timestamp)
     const buckets = new Set(
       data.map((r) => Math.floor(new Date(r.recorded_at).getTime() / 60000)),
     );
     const firstB = Math.floor(new Date(data[0].recorded_at).getTime() / 60000);
     const lastB = Math.floor(new Date(data[data.length - 1].recorded_at).getTime() / 60000);
-    let gaps = 0;
-    for (let b = firstB; b <= lastB; b++) if (!buckets.has(b)) gaps++;
+    const gapMinutes: number[] = [];
+    for (let b = firstB; b <= lastB; b++) if (!buckets.has(b)) gapMinutes.push(b);
+    const gaps = gapMinutes.length;
+    for (const b of gapMinutes) {
+      const ts = new Date(b * 60000).toISOString();
+      csvRows.push([p.symbol, ts, "gap", "missing minute bucket", "", "", "", "", ""]);
+    }
 
-    // 2. OHLC sanity
+    // 2. OHLC sanity + per-candle outlier detection (rolling median over 30 prior candles)
     let badOHLC = 0;
     const bodies: number[] = [];
     const wicks: number[] = [];
     const vols: number[] = [];
-    for (const r of data) {
+    const bodyPctArr = data.map((r) => Math.abs(r.close_price - r.open_price) / r.open_price);
+    const volArr = data.map((r) => r.volume);
+    const rollMed = (arr: number[], end: number, win = 30) => {
+      const slice = arr.slice(Math.max(0, end - win), end).slice().sort((a, b) => a - b);
+      return slice.length ? slice[Math.floor(slice.length / 2)] : 0;
+    };
+    let outlierCount = 0;
+    for (let i = 0; i < data.length; i++) {
+      const r = data[i];
       const hi = Math.max(r.open_price, r.close_price);
       const lo = Math.min(r.open_price, r.close_price);
-      if (r.high_price + 1e-9 < hi || r.low_price - 1e-9 > lo) badOHLC++;
+      if (r.high_price + 1e-9 < hi || r.low_price - 1e-9 > lo) {
+        badOHLC++;
+        csvRows.push([
+          p.symbol, r.recorded_at, "bad_ohlc", "high<max(o,c) or low>min(o,c)",
+          String(r.open_price), String(r.high_price), String(r.low_price), String(r.close_price), String(r.volume),
+        ]);
+      }
       bodies.push(Math.abs(r.close_price - r.open_price) / r.open_price);
       wicks.push((r.high_price - r.low_price) / r.open_price);
       vols.push(r.volume);
+
+      if (i >= 30) {
+        const bodyPct = bodyPctArr[i];
+        const wickPct = (r.high_price - r.low_price) / r.open_price;
+        const medB = rollMed(bodyPctArr, i);
+        const medV = rollMed(volArr, i);
+        const bodyRatio = medB > 0 ? bodyPct / medB : 0;
+        const volRatio = medV > 0 ? r.volume / medV : 0;
+        const wickToBody = bodyPct > 0 ? wickPct / bodyPct : 0;
+        const reasons: string[] = [];
+        if (bodyRatio > 8) reasons.push(`body x${bodyRatio.toFixed(1)}`);
+        if (volRatio > 10) reasons.push(`vol x${volRatio.toFixed(1)}`);
+        if (wickToBody > 10 && bodyPct > 0.0005) reasons.push(`wick/body x${wickToBody.toFixed(1)}`);
+        if (reasons.length) {
+          outlierCount++;
+          csvRows.push([
+            p.symbol, r.recorded_at, "outlier", reasons.join("; "),
+            String(r.open_price), String(r.high_price), String(r.low_price), String(r.close_price), String(r.volume),
+          ]);
+        }
+      }
     }
     bodies.sort((a, b) => a - b);
     wicks.sort((a, b) => a - b);
@@ -160,28 +203,46 @@ async function main() {
     else if (regime === "trending_down" && realised > 0.003) regimeFlag = "⚠ trending_down but realised ↑";
     else if (regime === "sideways" && Math.abs(realised) > 0.02) regimeFlag = "⚠ sideways but realised >2%";
 
-    // 5. Live vs backfill divergence (last 60min vs prior)
-    const splitTs = nowMs - 60 * 60 * 1000;
-    const live = data.filter((r) => new Date(r.recorded_at).getTime() >= splitTs);
-    const back = data.filter((r) => new Date(r.recorded_at).getTime() < splitTs);
-    const medBody = (arr: Row[]) => {
-      const xs = arr.map((r) => Math.abs(r.close_price - r.open_price) / r.open_price).sort((a, b) => a - b);
-      return quantile(xs, 0.5);
-    };
-    const medVol = (arr: Row[]) => {
-      const xs = arr.map((r) => r.volume).sort((a, b) => a - b);
-      return quantile(xs, 0.5);
-    };
-    const liveBody = medBody(live);
-    const backBody = medBody(back);
-    const liveVol = medVol(live);
-    const backVol = medVol(back);
-    const bodyRatio = backBody > 0 ? liveBody / backBody : 1;
-    const volRatio = backVol > 0 ? liveVol / backVol : 1;
-    const divergeFlag: string[] = [];
-    if (back.length > 20 && live.length > 5) {
-      if (bodyRatio > 3 || bodyRatio < 0.33) divergeFlag.push(`body x${bodyRatio.toFixed(2)}`);
-      if (volRatio > 3 || volRatio < 0.33) divergeFlag.push(`vol x${volRatio.toFixed(2)}`);
+    // 5. Per-bucket divergence (granularity = N minutes).
+    //    Bucket each candle into [start, start+N). For each bucket compute median
+    //    body% & volume. Backfill baseline = median across all backfill buckets
+    //    (recorded_at < nowMs - 1h). Live buckets = last hour. Any bucket whose
+    //    body or vol diverges >3x from baseline is listed.
+    const bucketSize = GRANULARITY * 60000;
+    type Bucket = { startMs: number; rows: Row[]; live: boolean };
+    const bMap = new Map<number, Bucket>();
+    for (const r of data) {
+      const t = new Date(r.recorded_at).getTime();
+      const start = Math.floor(t / bucketSize) * bucketSize;
+      let b = bMap.get(start);
+      if (!b) { b = { startMs: start, rows: [], live: start >= liveCutoffMs }; bMap.set(start, b); }
+      b.rows.push(r);
+    }
+    const allBuckets = [...bMap.values()].sort((a, b) => a.startMs - b.startMs);
+    const bucketBody = (b: Bucket) =>
+      quantile(b.rows.map((r) => Math.abs(r.close_price - r.open_price) / r.open_price).sort((a, b) => a - b), 0.5);
+    const bucketVol = (b: Bucket) =>
+      quantile(b.rows.map((r) => r.volume).sort((a, b) => a - b), 0.5);
+    const backBuckets = allBuckets.filter((b) => !b.live);
+    const baseBody = backBuckets.length
+      ? quantile(backBuckets.map(bucketBody).sort((a, b) => a - b), 0.5) : 0;
+    const baseVol = backBuckets.length
+      ? quantile(backBuckets.map(bucketVol).sort((a, b) => a - b), 0.5) : 0;
+    const divergentBuckets: { ts: string; bRatio: number; vRatio: number; live: boolean }[] = [];
+    for (const b of allBuckets) {
+      const bb = bucketBody(b);
+      const bv = bucketVol(b);
+      const br = baseBody > 0 ? bb / baseBody : 1;
+      const vr = baseVol > 0 ? bv / baseVol : 1;
+      if ((br > 3 || (br > 0 && br < 0.33)) || (vr > 3 || (vr > 0 && vr < 0.33))) {
+        const ts = new Date(b.startMs).toISOString();
+        divergentBuckets.push({ ts, bRatio: br, vRatio: vr, live: b.live });
+        csvRows.push([
+          p.symbol, ts, b.live ? "bucket_diverge_live" : "bucket_diverge_back",
+          `body x${br.toFixed(2)} vol x${vr.toFixed(2)} (granularity=${GRANULARITY}m)`,
+          "", "", "", "", "",
+        ]);
+      }
     }
 
     const okCount = data.length >= expectedCount * 0.9;
@@ -191,6 +252,8 @@ async function main() {
       ` candles=${String(data.length).padStart(4)}/${expectedCount}` +
       ` gaps=${String(gaps).padStart(3)}` +
       ` badOHLC=${badOHLC}` +
+      ` outliers=${outlierCount}` +
+      ` divBkt=${divergentBuckets.length}` +
       ` regime=${regime.padEnd(13)}` +
       ` anchor=${fmt(anchor)} last=${fmt(last.close_price)} drift=${pct(drift)}`;
     console.log(head);
@@ -206,16 +269,36 @@ async function main() {
       console.log("   " + color(regimeFlag + ` (Δ=${pct(realised)})`, "yellow"));
       issues.push(`${p.symbol}: ${regimeFlag}`);
     }
-    if (divergeFlag.length) {
-      console.log("   " + color(`⚠ live vs backfill divergence: ${divergeFlag.join(", ")}`, "yellow"));
-      issues.push(`${p.symbol}: ${divergeFlag.join(", ")}`);
+    if (divergentBuckets.length) {
+      const show = VERBOSE ? divergentBuckets : divergentBuckets.slice(0, 5);
+      for (const d of show) {
+        console.log(
+          "   " +
+            color(
+              `⚠ ${d.live ? "LIVE " : "BACK "}${d.ts}  body x${d.bRatio.toFixed(2)}  vol x${d.vRatio.toFixed(2)}`,
+              "yellow",
+            ),
+        );
+      }
+      if (!VERBOSE && divergentBuckets.length > 5) {
+        console.log(color(`   … +${divergentBuckets.length - 5} more (use --verbose or --csv)`, "dim"));
+      }
+      issues.push(`${p.symbol}: ${divergentBuckets.length} divergent ${GRANULARITY}m buckets`);
     }
+    if (outlierCount > 0) issues.push(`${p.symbol}: ${outlierCount} candle outliers`);
     if (gaps > expectedCount * 0.05) issues.push(`${p.symbol}: ${gaps} minute gaps`);
     if (badOHLC > 0) issues.push(`${p.symbol}: ${badOHLC} invalid OHLC rows`);
     if (Math.abs(drift) > 0.5) issues.push(`${p.symbol}: anchor drift ${pct(drift)}`);
   }
 
   console.log();
+  if (CSV_PATH) {
+    const header = ["product", "recorded_at", "kind", "detail", "open", "high", "low", "close", "volume"];
+    const esc = (s: string) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    const body = [header, ...csvRows].map((r) => r.map(esc).join(",")).join("\n");
+    await Deno.writeTextFile(CSV_PATH, body + "\n");
+    console.log(color(`Wrote ${csvRows.length} divergent rows → ${CSV_PATH}`, "green"));
+  }
   if (issues.length === 0) {
     console.log(color("All products OK.", "green"));
   } else {
