@@ -22,6 +22,19 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Authorization: only the cron job (using service role key) or an
+    // explicit CRON_SECRET may invoke this function. Any other JWT is rejected.
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") || "";
+    const serviceRoleAuth = `Bearer ${supabaseServiceKey}`;
+    const cronAuth = cronSecret ? `Bearer ${cronSecret}` : null;
+    if (authHeader !== serviceRoleAuth && (!cronAuth || authHeader !== cronAuth)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Use service role key to bypass RLS
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
