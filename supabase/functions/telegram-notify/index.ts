@@ -2,6 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 
+function escapeHtml(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -46,9 +55,9 @@ Deno.serve(async (req) => {
       };
       const emoji = typeEmoji[notification_type] || "🔔";
 
-      text = `${emoji} <b>${title}</b>\n\n💬 ${message}`;
+      text = `${emoji} <b>${escapeHtml(title)}</b>\n\n💬 ${escapeHtml(message)}`;
       if (user_email) {
-        text += `\n👤 <b>User:</b> ${user_email}`;
+        text += `\n👤 <b>User:</b> ${escapeHtml(user_email)}`;
       }
     } else {
       // Live chat message - verify admin
@@ -90,7 +99,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      text = `💬 <b>Tin nhắn mới từ Live Chat</b>\n\n👤 <b>Khách hàng:</b> ${sender_name}\n💬 <b>Nội dung:</b> ${message}\n🆔 <b>Phòng:</b> ${room_id || "N/A"}`;
+      text = `💬 <b>Tin nhắn mới từ Live Chat</b>\n\n👤 <b>Khách hàng:</b> ${escapeHtml(sender_name)}\n💬 <b>Nội dung:</b> ${escapeHtml(message)}\n🆔 <b>Phòng:</b> ${escapeHtml(room_id || "N/A")}`;
     }
 
     console.log(`[telegram-notify] Sending to ${TELEGRAM_CHAT_ID}, type: ${type || "chat"}`);
