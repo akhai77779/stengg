@@ -8,7 +8,6 @@ import { AdminNotificationsProvider } from "@/hooks/useAdminNotifications";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
-import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
 import { AdminRouteGuard } from "@/components/auth/AdminRouteGuard";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
