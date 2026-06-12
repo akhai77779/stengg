@@ -8,22 +8,41 @@ export interface GuestChatSession {
   room_id: string;
 }
 
+function setHeader(h: unknown, key: string, value: string) {
+  if (!h) return;
+  if (typeof (h as Headers).set === "function") {
+    (h as Headers).set(key, value);
+  } else {
+    (h as Record<string, string>)[key] = value;
+  }
+}
+
+function deleteHeader(h: unknown, key: string) {
+  if (!h) return;
+  if (typeof (h as Headers).delete === "function") {
+    (h as Headers).delete(key);
+  } else {
+    delete (h as Record<string, string>)[key];
+  }
+}
+
 function applyHeaders(guest_id: string, token: string) {
   try {
-    // PostgrestClient exposes a mutable `headers` object — mutate so
-    // subsequent .from() calls include guest credentials in RLS checks.
-    const rest = (supabase as unknown as { rest: { headers: Record<string, string> } }).rest;
-    if (rest?.headers) {
-      rest.headers["x-guest-id"] = guest_id;
-      rest.headers["x-guest-token"] = token;
+    const rest = (supabase as unknown as { rest?: { headers?: unknown } }).rest;
+    setHeader(rest?.headers, "x-guest-id", guest_id);
+    setHeader(rest?.headers, "x-guest-token", token);
+
+    // Also mutate the SupabaseClient-level headers (passed by reference to
+    // realtime/storage/functions/rest). Plain Record<string,string>.
+    const top = (supabase as unknown as { headers?: Record<string, string> }).headers;
+    if (top) {
+      top["x-guest-id"] = guest_id;
+      top["x-guest-token"] = token;
     }
-    // Functions client also has headers (used by edge function invokes)
-    const fns = (supabase as unknown as { functions: { headers?: Record<string, string> } })
-      .functions;
-    if (fns && fns.headers) {
-      fns.headers["x-guest-id"] = guest_id;
-      fns.headers["x-guest-token"] = token;
-    }
+
+    const fns = (supabase as unknown as { functions?: { headers?: unknown } }).functions;
+    setHeader(fns?.headers, "x-guest-id", guest_id);
+    setHeader(fns?.headers, "x-guest-token", token);
   } catch (e) {
     console.warn("[guestChatAuth] failed to apply headers", e);
   }
@@ -31,17 +50,17 @@ function applyHeaders(guest_id: string, token: string) {
 
 export function clearGuestHeaders() {
   try {
-    const rest = (supabase as unknown as { rest: { headers: Record<string, string> } }).rest;
-    if (rest?.headers) {
-      delete rest.headers["x-guest-id"];
-      delete rest.headers["x-guest-token"];
+    const rest = (supabase as unknown as { rest?: { headers?: unknown } }).rest;
+    deleteHeader(rest?.headers, "x-guest-id");
+    deleteHeader(rest?.headers, "x-guest-token");
+    const top = (supabase as unknown as { headers?: Record<string, string> }).headers;
+    if (top) {
+      delete top["x-guest-id"];
+      delete top["x-guest-token"];
     }
-    const fns = (supabase as unknown as { functions: { headers?: Record<string, string> } })
-      .functions;
-    if (fns?.headers) {
-      delete fns.headers["x-guest-id"];
-      delete fns.headers["x-guest-token"];
-    }
+    const fns = (supabase as unknown as { functions?: { headers?: unknown } }).functions;
+    deleteHeader(fns?.headers, "x-guest-id");
+    deleteHeader(fns?.headers, "x-guest-token");
   } catch {
     /* noop */
   }
