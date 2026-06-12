@@ -54,8 +54,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit OTP using a CSPRNG
+    const _rand = new Uint32Array(1);
+    crypto.getRandomValues(_rand);
+    const code = String(100000 + (_rand[0] % 900000)).padStart(6, "0");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
     // Store OTP
