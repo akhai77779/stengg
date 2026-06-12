@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,17 +12,54 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, addinfo, apiKey } = await req.json();
-
-    if (!amount || !apiKey) {
+    // Require an authenticated admin caller
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters: amount and apiKey" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { data: hasRole } = await supabase.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+    if (!hasRole) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch QR image from BankQuay API
-    const bankQuayUrl = `http://api.bankquay.com/${apiKey}?amount=${amount}&addinfo=${addinfo || ''}`;
+    const { amount, addinfo } = await req.json();
+    const apiKey = Deno.env.get("BANKQUAY_API_KEY");
+
+    if (!amount || typeof amount !== "number" || amount <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid amount" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "BANKQUAY_API_KEY is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch QR image from BankQuay API (URL-encode caller-supplied params)
+    const bankQuayUrl = `http://api.bankquay.com/${encodeURIComponent(apiKey)}?amount=${encodeURIComponent(String(amount))}&addinfo=${encodeURIComponent(addinfo || "")}`;
     
     const response = await fetch(bankQuayUrl);
     
