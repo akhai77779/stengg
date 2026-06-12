@@ -8,7 +8,6 @@ import { AdminNotificationsProvider } from "@/hooks/useAdminNotifications";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
-import { MobileSupportButton } from "@/components/layout/MobileSupportButton";
 import { AdminRouteGuard } from "@/components/auth/AdminRouteGuard";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -32,6 +31,7 @@ import SwitchAccount from "./pages/SwitchAccount";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import Support from "./pages/Support";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminBanners from "./pages/admin/AdminBanners";
@@ -65,14 +65,13 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <CurrencyProvider>
-        <LiveChatProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <LiveChatProvider>
               <AuthProvider>
                 <AdminNotificationsProvider>
-                  <MobileSupportButton />
                   <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
@@ -114,14 +113,15 @@ const App = () => (
                   <Route path="/switch-account" element={<SwitchAccount />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
+                  <Route path="/support" element={<Support />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AdminNotificationsProvider>
               </AuthProvider>
-            </BrowserRouter>
-          </TooltipProvider>
-        </LiveChatProvider>
+            </LiveChatProvider>
+          </BrowserRouter>
+        </TooltipProvider>
       </CurrencyProvider>
     </LanguageProvider>
   </QueryClientProvider>
