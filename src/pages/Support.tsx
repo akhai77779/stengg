@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Paperclip, X, FileText, Loader2, Bot } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, FileText, Loader2, Bot, RefreshCcw, RotateCcw, Type, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -199,14 +199,44 @@ export default function Support() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold leading-tight">ST Engineering Support</h1>
-            <p className="flex items-center gap-1.5 text-xs text-white/70">
-              <span className={cn(
-                "inline-block h-1.5 w-1.5 rounded-full",
-                hasOnlineAgent ? "bg-emerald-400" : "bg-amber-400"
-              )} />
-              {statusText}
+            <p className="truncate text-xs text-white/70">
+              Trợ lý nội bộ • Defence • Aerospace • Smart City • Digital
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setInput("");
+              clearFile();
+              scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+              textareaRef.current?.focus();
+            }}
+            className="hidden h-9 gap-2 text-white/90 hover:bg-white/10 hover:text-white sm:inline-flex"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">Cuộc trò chuyện mới</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setInput("");
+              clearFile();
+              scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="h-9 w-9 text-white hover:bg-white/10 sm:hidden"
+            aria-label="Cuộc trò chuyện mới"
+          >
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="mx-auto -mt-1 flex w-full max-w-3xl items-center gap-1.5 px-4 pb-2 text-[11px] text-white/60">
+          <span className={cn(
+            "inline-block h-1.5 w-1.5 rounded-full",
+            hasOnlineAgent ? "bg-emerald-400" : "bg-amber-400"
+          )} />
+          {statusText}
         </div>
       </header>
 
@@ -268,7 +298,7 @@ export default function Support() {
             </div>
           )}
 
-          <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
             <input
               ref={fileInputRef}
               type="file"
@@ -276,16 +306,6 @@ export default function Support() {
               onChange={handleFile}
               className="hidden"
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0 text-slate-500 hover:bg-slate-100"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!roomId || uploading}
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
             <Textarea
               ref={textareaRef}
               value={input}
@@ -296,23 +316,69 @@ export default function Support() {
                   void handleSubmit();
                 }
               }}
-              placeholder="Nhập tin nhắn của bạn..."
+              placeholder="Hỏi về sản phẩm, dịch vụ, tin tức hoặc sự kiện của ST Engineering..."
               rows={1}
-              className="min-h-[40px] resize-none border-0 bg-transparent px-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-none focus-visible:ring-0"
+              className="min-h-[44px] resize-none border-0 bg-transparent px-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-none focus-visible:ring-0"
               disabled={!roomId}
             />
-            <Button
-              type="submit"
-              size="icon"
-              className="h-9 w-9 shrink-0 bg-slate-900 text-white hover:bg-slate-800"
-              disabled={!roomId || uploading || isSending || (!input.trim() && !selectedFile)}
-            >
-              {uploading || isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="mt-1 flex items-center justify-between gap-1 px-1">
+              <div className="flex items-center gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => setInput("")}
+                  disabled={!input}
+                  title="Soạn lại"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => setInput((v) => v + "\n")}
+                  title="Định dạng văn bản"
+                >
+                  <Type className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!roomId || uploading}
+                  title="Đính kèm tệp"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  disabled
+                  title="Nhập bằng giọng nói (sắp có)"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                type="submit"
+                size="icon"
+                className="h-9 w-9 shrink-0 bg-slate-900 text-white hover:bg-slate-800"
+                disabled={!roomId || uploading || isSending || (!input.trim() && !selectedFile)}
+              >
+                {uploading || isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
           <p className="mt-2 text-center text-[11px] text-slate-400">
             Hỗ trợ viên của ST Engineering sẽ phản hồi trong thời gian sớm nhất.
