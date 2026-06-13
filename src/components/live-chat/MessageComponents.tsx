@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
+import { useSignedUploadUrl } from "@/hooks/useSignedUploadUrl";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -320,34 +321,11 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
 
                     {/* Attachment */}
                     {message.attachment_url && (
-                      <div className="mt-2">
-                        {message.attachment_type === "image" ? (
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <img
-                              src={message.attachment_url}
-                              alt={message.attachment_name || "Image"}
-                              className="max-w-full rounded-lg max-h-48 object-cover"
-                            />
-                          </a>
-                        ) : (
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="text-sm truncate">
-                              {message.attachment_name || "File"}
-                            </span>
-                            <Download className="h-4 w-4 ml-auto" />
-                          </a>
-                        )}
-                      </div>
+                      <MessageAttachment
+                        url={message.attachment_url}
+                        name={message.attachment_name}
+                        type={message.attachment_type}
+                      />
                     )}
 
                     <p className="text-[10px] opacity-50 mt-1 text-right">
