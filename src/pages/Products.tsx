@@ -30,6 +30,11 @@ export default function Products() {
 
   return (
     <Layout hideFooter>
+      <PageSeo
+        title="Products & Solutions — ST Engineering"
+        description="Explore ST Engineering products and solutions across Aerospace, Smart City, Defence and Digital."
+        path="/products"
+      />
       <div className="min-h-screen pb-20 md:pb-8 my-0">
         <div className="bg-card/50 backdrop-blur-sm border-b border-border/50 sticky top-0 md:top-16 z-10">
           <div className="container mx-auto px-4 py-4">
