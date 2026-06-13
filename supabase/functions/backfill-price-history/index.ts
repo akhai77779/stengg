@@ -1,15 +1,165 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import {
-  generateRegimeCandle,
-  initialRegimeState,
-  maybeTransition,
-  getBasePrice,
-  type RegimeState,
-} from "../market-engine-tick/index.ts";
 
 // Backfill candles using the SAME regime engine as live ticks so historical
 // candles look identical to live-generated ones.
+
+type Regime = "sideways" | "trending_up" | "trending_down" | "volatile";
+
+interface RegimeState {
+  regime: Regime;
+  ticksInRegime: number;
+  momentum: number;
+  vol: number;
+  anchor?: number;
+}
+
+interface GeneratedCandle {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+const BASE_PRICES: Record<string, number> = {
+  "AGIL/USDT": 601.94,
+  "360SA/USDT": 40.75,
+  "MCS/USDT": 14.51,
+  "SIM/USDT": 9.06,
+  "COTM/USDT": 9.12,
+  "IBMS/USDT": 2.69,
+  "VICS/USDT": 0.01,
+  "HED/USDT": 6.49,
+  "C5ISR/USDT": 1.0,
+  "WIG/USDT": 0.23,
+};
+
+const REGIME_PARAMS: Record<Regime, {
+  volMin: number;
+  volMax: number;
+  driftMin: number;
+  driftMax: number;
+  wickMultMin: number;
+  wickMultMax: number;
+  volumeMult: number;
+}> = {
+  sideways: { volMin: 0.001, volMax: 0.003, driftMin: -0.0002, driftMax: 0.0002, wickMultMin: 0.3, wickMultMax: 1.2, volumeMult: 0.5 },
+  trending_up: { volMin: 0.003, volMax: 0.006, driftMin: 0.0010, driftMax: 0.0020, wickMultMin: 0.4, wickMultMax: 2.0, volumeMult: 1.2 },
+  trending_down: { volMin: 0.003, volMax: 0.006, driftMin: -0.0020, driftMax: -0.0010, wickMultMin: 0.4, wickMultMax: 2.0, volumeMult: 1.2 },
+  volatile: { volMin: 0.010, volMax: 0.020, driftMin: -0.0010, driftMax: 0.0010, wickMultMin: 1.0, wickMultMax: 4.0, volumeMult: 2.5 },
+};
+
+function getBasePrice(symbol: string | null | undefined, fallback: number): number {
+  if (symbol && BASE_PRICES[symbol]) return BASE_PRICES[symbol];
+  return fallback > 0 ? fallback : 1;
+}
+
+function rand(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function gauss(): number {
+  const u = Math.max(1e-9, Math.random());
+  const v = Math.max(1e-9, Math.random());
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function pickRegime(prev?: Regime): Regime {
+  const weights: Record<Regime, number> = {
+    sideways: 0.40,
+    trending_up: 0.25,
+    trending_down: 0.25,
+    volatile: 0.10,
+  };
+  if (prev) weights[prev] *= 0.3;
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [k, w] of Object.entries(weights)) {
+    r -= w;
+    if (r <= 0) return k as Regime;
+  }
+  return "sideways";
+}
+
+function maybeTransition(state: RegimeState, anchorPrice: number): RegimeState {
+  const p = 0.02 + Math.min(state.ticksInRegime * 0.001, 0.13);
+  if (Math.random() < p) {
+    const next = pickRegime(state.regime);
+    return {
+      regime: next,
+      ticksInRegime: 0,
+      momentum: 0,
+      vol: rand(REGIME_PARAMS[next].volMin, REGIME_PARAMS[next].volMax),
+      anchor: anchorPrice,
+    };
+  }
+  return { ...state, anchor: state.anchor ?? anchorPrice };
+}
+
+function generateRegimeCandle(
+  prevClose: number,
+  state: RegimeState,
+): { candle: GeneratedCandle; nextState: RegimeState } {
+  const params = REGIME_PARAMS[state.regime];
+  let drift = rand(params.driftMin, params.driftMax);
+
+  if (state.anchor && state.anchor > 0) {
+    const dev = (prevClose - state.anchor) / state.anchor;
+    const pull = state.regime === "sideways" ? 0.30 : state.regime === "volatile" ? 0.08 : 0.05;
+    drift -= dev * pull;
+  }
+
+  const momentumDecay = state.regime === "sideways" ? 0.4 : state.regime === "volatile" ? 0.5 : 0.85;
+  const newMomentum = state.momentum * momentumDecay + drift * 0.5;
+  const open = prevClose;
+  let close = Math.max(0.0001, open * (1 + newMomentum + gauss() * state.vol));
+
+  if (state.regime === "sideways" && state.anchor) {
+    const upper = state.anchor * 1.005;
+    const lower = state.anchor * 0.995;
+    if (close > upper) close = upper - Math.random() * (upper - state.anchor) * 0.3;
+    if (close < lower) close = lower + Math.random() * (state.anchor - lower) * 0.3;
+  }
+
+  if (state.anchor && state.anchor > 0) {
+    const hardMax = state.anchor * 2.0;
+    const hardMin = state.anchor * 0.5;
+    if (close > hardMax) close = hardMax - Math.random() * (hardMax - state.anchor) * 0.2;
+    if (close < hardMin) close = hardMin + Math.random() * (state.anchor - hardMin) * 0.2;
+  }
+
+  const bodyPct = Math.abs(close - open) / Math.max(open, 1e-9);
+  const baseWick = Math.max(bodyPct, state.vol * 0.5);
+  const high = Math.max(open, close) * (1 + baseWick * rand(params.wickMultMin, params.wickMultMax) * 0.5);
+  const low = Math.min(open, close) * (1 - baseWick * rand(params.wickMultMin, params.wickMultMax) * 0.5);
+  const baseVol = 2000 * params.volumeMult;
+  const volume = Math.round(baseVol * 0.4 + baseVol * Math.max(bodyPct / 0.004, 0.3) * (0.5 + Math.random() * 1.5) + Math.random() * 800);
+  const targetVol = rand(params.volMin, params.volMax);
+
+  return {
+    candle: { open, high, low, close, volume },
+    nextState: {
+      regime: state.regime,
+      ticksInRegime: state.ticksInRegime + 1,
+      momentum: Math.max(-0.05, Math.min(0.05, newMomentum)),
+      vol: state.vol * 0.9 + targetVol * 0.1,
+      anchor: state.anchor,
+    },
+  };
+}
+
+function initialRegimeState(anchorPrice: number, regime?: Regime): RegimeState {
+  const r = regime ?? pickRegime();
+  return {
+    regime: r,
+    ticksInRegime: 0,
+    momentum: 0,
+    vol: rand(REGIME_PARAMS[r].volMin, REGIME_PARAMS[r].volMax),
+    anchor: anchorPrice,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
