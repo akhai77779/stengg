@@ -69,6 +69,7 @@ export function DashboardUsers() {
   const [roles, setRoles] = useState<Record<string, AppRole>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'frozen' | 'trade_frozen'>('all');
   const { toast } = useToast();
 
   // Detail dialog
