@@ -38,7 +38,22 @@ Deno.serve(async (req) => {
     let text: string;
 
     if (type === "notification") {
-      // System notification from DB trigger - no auth required
+      // System notification from DB trigger / cron - require shared secret.
+      // The endpoint is publicly reachable so without this check anyone could
+      // POST arbitrary text and flood the admin Telegram channel.
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      const cronSecret = Deno.env.get("CRON_SECRET");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const allowed =
+        (cronSecret && token === cronSecret) ||
+        (serviceKey && token === serviceKey);
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { title, message, notification_type, user_email } = body;
       if (!title || !message) {
         return new Response(JSON.stringify({ error: "Missing title or message" }), {
