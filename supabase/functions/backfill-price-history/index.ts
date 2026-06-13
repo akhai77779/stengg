@@ -15,9 +15,49 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Admin-only: this function rewrites historical candles for every product.
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // Allow direct service-role/cron callers, otherwise require admin user.
+  const isServiceRole = authHeader === `Bearer ${SERVICE_KEY}`;
+  if (!isServiceRole) {
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const adminClient = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+    const { data: isAdmin, error: roleErr } = await adminClient.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (roleErr || isAdmin !== true) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    SUPABASE_URL,
+    SERVICE_KEY,
     { auth: { persistSession: false } },
   );
 
