@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { CHAT_ATTACHMENT_TTL } from "@/lib/storageUrls";
 
 export interface LiveChatMessage {
   id: string;
@@ -273,14 +274,20 @@ export function useLiveChatMessages(
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Bucket is private — generate a short-lived signed URL for immediate
+      // display. The path is what we persist on the message so that any
+      // consumer can re-sign it later via signUploadsUrl().
+      const { data: signed, error: signError } = await supabase.storage
         .from("uploads")
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, CHAT_ATTACHMENT_TTL);
+      if (signError) throw signError;
 
       const isImage = file.type.startsWith("image/");
 
       return {
-        url: urlData.publicUrl,
+        // Persist the storage PATH (not the time-limited signed URL) so that
+        // historical messages can always be re-signed on display.
+        url: filePath,
         type: isImage ? "image" : "file",
         name: file.name,
       };
