@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,11 @@ export default function News() {
 
   return (
     <Layout>
+      <PageSeo
+        title="News & Announcements — ST Engineering"
+        description="Latest news, press releases, and announcements from ST Engineering across Aerospace, Defence, Smart City and Digital."
+        path="/news"
+      />
       <div className="container mx-auto px-3 md:px-4 py-6 md:py-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
