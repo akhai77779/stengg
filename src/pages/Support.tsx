@@ -18,6 +18,48 @@ import {
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import stLogo from "@/assets/st-logo.png";
+import { useSignedUploadUrl } from "@/hooks/useSignedUploadUrl";
+
+function SupportAttachment({
+  url,
+  name,
+  type,
+  isOwn,
+}: {
+  url: string;
+  name: string | null;
+  type: "image" | "file" | null;
+  isOwn: boolean;
+}) {
+  const signed = useSignedUploadUrl(url);
+  if (!signed) return null;
+  return (
+    <div className="mt-2">
+      {type === "image" ? (
+        <a href={signed} target="_blank" rel="noopener noreferrer">
+          <img
+            src={signed}
+            alt={name || ""}
+            className="max-h-48 max-w-full rounded-lg object-cover"
+          />
+        </a>
+      ) : (
+        <a
+          href={signed}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs",
+            isOwn ? "bg-white/10 hover:bg-white/20" : "bg-white hover:bg-slate-50"
+          )}
+        >
+          <FileText className="h-4 w-4" />
+          <span className="truncate">{name || "File"}</span>
+        </a>
+      )}
+    </div>
+  );
+}
 
 const SUGGESTED_QUESTIONS = [
   "ST Engineering có những mảng kinh doanh chính nào?",
@@ -418,30 +460,12 @@ function MessageRow({ message, currentUserId }: { message: LiveChatMessage; curr
             <p className="whitespace-pre-wrap break-words">{message.message}</p>
           )}
           {message.attachment_url && (
-            <div className="mt-2">
-              {message.attachment_type === "image" ? (
-                <a href={message.attachment_url} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={message.attachment_url}
-                    alt={message.attachment_name || ""}
-                    className="max-h-48 max-w-full rounded-lg object-cover"
-                  />
-                </a>
-              ) : (
-                <a
-                  href={message.attachment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs",
-                    isOwn ? "bg-white/10 hover:bg-white/20" : "bg-white hover:bg-slate-50"
-                  )}
-                >
-                  <FileText className="h-4 w-4" />
-                  <span className="truncate">{message.attachment_name || "File"}</span>
-                </a>
-              )}
-            </div>
+            <SupportAttachment
+              url={message.attachment_url}
+              name={message.attachment_name}
+              type={message.attachment_type}
+              isOwn={isOwn}
+            />
           )}
         </div>
         <p className="mt-1 text-[10px] text-slate-400">
