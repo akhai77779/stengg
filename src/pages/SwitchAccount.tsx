@@ -29,11 +29,22 @@ import { z } from 'zod';
 interface SavedAccount {
   email: string;
   lastLogin: string;
-  // Stored Supabase session so we can restore it without re-login.
-  // Optional for backwards-compat with previously saved entries.
+  // Tokens are ONLY kept for the currently-active account so that an XSS
+  // attack cannot harvest sessions for every saved account. Switching to
+  // another saved account requires re-login.
   accessToken?: string;
   refreshToken?: string;
   userId?: string;
+}
+
+// Strip tokens from any entry that is not the currently-active email.
+// Limits XSS blast radius to the active session only.
+function sanitizeAccounts(list: SavedAccount[], activeEmail: string | null): SavedAccount[] {
+  return list.map(a =>
+    a.email === activeEmail
+      ? a
+      : { email: a.email, lastLogin: a.lastLogin, userId: a.userId },
+  );
 }
 
 export default function SwitchAccount() {
@@ -61,12 +72,19 @@ export default function SwitchAccount() {
     const saved = localStorage.getItem('savedAccounts');
     if (saved) {
       try {
-        setSavedAccounts(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as SavedAccount[];
+        // Defensive: purge any stale tokens for non-active accounts that may
+        // exist from older versions of the app.
+        const cleaned = sanitizeAccounts(parsed, user?.email ?? null);
+        if (JSON.stringify(cleaned) !== JSON.stringify(parsed)) {
+          localStorage.setItem('savedAccounts', JSON.stringify(cleaned));
+        }
+        setSavedAccounts(cleaned);
       } catch (e) {
         console.error('Error parsing saved accounts:', e);
       }
     }
-  }, []);
+  }, [user?.email]);
 
   // Fetch last login time for current user
   useEffect(() => {
@@ -101,7 +119,7 @@ export default function SwitchAccount() {
         // Only update if tokens are missing or have changed
         if (existing?.refreshToken === session.refresh_token) return;
         const filtered = list.filter(a => a.email !== session.user!.email);
-        const updated: SavedAccount[] = [
+        const updated: SavedAccount[] = sanitizeAccounts([
           {
             email: session.user.email,
             lastLogin: new Date().toISOString(),
@@ -110,7 +128,7 @@ export default function SwitchAccount() {
             userId: session.user.id,
           },
           ...filtered,
-        ];
+        ], session.user.email);
         localStorage.setItem('savedAccounts', JSON.stringify(updated));
         setSavedAccounts(updated);
       } catch (e) {
@@ -137,8 +155,10 @@ export default function SwitchAccount() {
   };
 
   const persistAccounts = (list: SavedAccount[]) => {
-    setSavedAccounts(list);
-    localStorage.setItem('savedAccounts', JSON.stringify(list));
+    // Always strip tokens from inactive accounts before persisting.
+    const cleaned = sanitizeAccounts(list, user?.email ?? list[0]?.email ?? null);
+    setSavedAccounts(cleaned);
+    localStorage.setItem('savedAccounts', JSON.stringify(cleaned));
   };
 
   const readAccounts = (): SavedAccount[] => {
@@ -168,7 +188,9 @@ export default function SwitchAccount() {
       refreshToken: session.refresh_token,
       userId: session.user.id,
     };
-    persistAccounts([entry, ...filtered]);
+    // sanitizeAccounts (called inside persistAccounts) will strip tokens
+    // from every entry except the current `session.user.email`.
+    persistAccounts(sanitizeAccounts([entry, ...filtered], session.user.email));
   };
 
   const removeAccountFromStorage = (email: string) => {
@@ -217,7 +239,7 @@ export default function SwitchAccount() {
         // Refresh stored tokens (Supabase may rotate the refresh token).
         const refreshed = data.session;
         const accounts = readAccounts().filter(a => a.email !== account.email);
-        persistAccounts([
+        persistAccounts(sanitizeAccounts([
           {
             email: account.email,
             lastLogin: new Date().toISOString(),
@@ -226,7 +248,7 @@ export default function SwitchAccount() {
             userId: refreshed.user.id,
           },
           ...accounts,
-        ]);
+        ], account.email));
 
         toast({
           title: t('switchAccount.switched') || 'Đã chuyển tài khoản',
