@@ -187,13 +187,36 @@ export function DashboardUsers() {
     setIsLoading(false);
   };
 
-  const filteredProfiles = profiles.filter(
-    (p) =>
-      p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.user_code?.toString().includes(searchQuery)
+  const filteredProfiles = profiles
+    .filter((p) => {
+      if (statusFilter === 'frozen' && !p.is_frozen) return false;
+      if (statusFilter === 'trade_frozen' && !p.is_trade_frozen) return false;
+      if (statusFilter === 'active' && (p.is_frozen || p.is_trade_frozen)) return false;
+      return true;
+    })
+    .filter(
+      (p) =>
+        p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.user_code?.toString().includes(searchQuery),
+    )
+    .sort((a, b) => {
+      // Đưa các tài khoản bị đóng băng lên đầu để admin dễ thấy
+      const aFrozen = (a.is_frozen ? 2 : 0) + (a.is_trade_frozen ? 1 : 0);
+      const bFrozen = (b.is_frozen ? 2 : 0) + (b.is_trade_frozen ? 1 : 0);
+      if (aFrozen !== bFrozen) return bFrozen - aFrozen;
+      return 0;
+    });
+
+  const frozenStats = profiles.reduce(
+    (acc, p) => {
+      if (p.is_frozen) acc.frozen += 1;
+      if (p.is_trade_frozen) acc.tradeFrozen += 1;
+      return acc;
+    },
+    { frozen: 0, tradeFrozen: 0 },
   );
 
   const getInitials = (name: string | null) => {
