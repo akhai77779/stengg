@@ -16,6 +16,13 @@ Deno.serve(async (req) => {
   try {
     const { phone, fullName } = await req.json();
 
+    // Capture caller IP (best-effort) for IP-level rate limiting.
+    const ipAddress =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-real-ip") ||
+      (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+      null;
+
     if (!phone || typeof phone !== "string" || phone.length < 8) {
       return new Response(
         JSON.stringify({ error: "Invalid phone number" }),
@@ -54,6 +61,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // IP-level rate limit: max 10 OTP requests per IP per hour to mitigate SMS bombing.
+    if (ipAddress) {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count: ipCount } = await supabase
+        .from("phone_otps")
+        .select("*", { count: "exact", head: true })
+        .eq("ip_address", ipAddress)
+        .gte("created_at", oneHourAgo);
+      if ((ipCount ?? 0) >= 10) {
+        return new Response(
+          JSON.stringify({ error: "Too many OTP requests from this network. Please wait." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Generate 6-digit OTP using a CSPRNG
     const _rand = new Uint32Array(1);
     crypto.getRandomValues(_rand);
@@ -66,6 +89,7 @@ Deno.serve(async (req) => {
       code,
       full_name: fullName || null,
       expires_at: expiresAt,
+      ip_address: ipAddress,
     });
 
     if (insertError) {
