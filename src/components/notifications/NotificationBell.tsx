@@ -188,6 +188,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
               className="h-9 w-9 min-h-[36px] min-w-[36px] touch-manipulation active:scale-95"
               onClick={toggleSound}
               title={soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"}
+              aria-label={soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
             >
               {soundEnabled ? (
                 <Volume2 className="h-4 w-4" />
@@ -300,6 +301,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                                   markUserAsRead(notification.id);
                                 }}
                                 title="Đánh dấu đã đọc"
+                                aria-label="Đánh dấu thông báo đã đọc"
                               >
                                 <Check className="h-3 w-3" />
                               </Button>
@@ -313,6 +315,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                                 deleteNotification(notification.id);
                               }}
                               title="Xóa thông báo"
+                              aria-label="Xóa thông báo"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -531,6 +534,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                                 markUserAsRead(notification.id);
                               }}
                               title="Đánh dấu đã đọc"
+                              aria-label="Đánh dấu thông báo đã đọc"
                             >
                               <Check className="h-3.5 w-3.5" />
                             </Button>
@@ -544,6 +548,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                               deleteNotification(notification.id);
                             }}
                             title="Xóa thông báo"
+                            aria-label="Xóa thông báo"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
