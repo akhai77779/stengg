@@ -74,19 +74,11 @@ export function AdminDepositSettings() {
       const fileName = `qr-deposit-${Date.now()}.${fileExt}`;
       const filePath = `deposit/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('uploads')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(filePath);
-
+      const { uploadPublicAsset } = await import('@/lib/storageUrls');
+      const signedUrl = await uploadPublicAsset(filePath, file, { upsert: true });
       setQrForm(prev => ({
         ...((prev ?? currentQrConfig) as QRConfig),
-        qr_image_url: publicUrl,
+        qr_image_url: signedUrl,
       }));
 
       toast.success('Upload QR thành công!');
