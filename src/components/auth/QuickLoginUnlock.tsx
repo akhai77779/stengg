@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuickLogin } from '@/hooks/useQuickLogin';
 import { useToast } from '@/hooks/use-toast';
