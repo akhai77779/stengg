@@ -1,0 +1,19 @@
+# ST Engineering
+
+> ST Engineering harnesses technology and innovation across Defence, Aerospace, Smart City, and Digital businesses to enable a more secure and sustainable world.
+
+ST Engineering is a global technology, defence and engineering group with offices across Asia, Europe, the Middle East and the U.S. This portal hosts company news, product information, business updates and investor-relevant content.
+
+## Pages
+
+- [Home](/): Overview of ST Engineering's businesses and latest highlights.
+- [News](/news): Latest news, announcements, and press releases.
+- [Products](/products): Products and solutions across Aerospace, Smart City, Defence and Digital.
+- [Charity](/charity): Community engagement, charity programs and sustainability initiatives.
+- [About](/about): Company background, leadership and corporate information.
+- [Support](/support): Customer support and AI assistant for ST Engineering products and services.
+
+## Optional
+
+- [Sign in](/login): Account sign-in for registered users.
+- [Register](/register): Create a new account.
