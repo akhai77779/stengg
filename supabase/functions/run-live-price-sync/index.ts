@@ -86,6 +86,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: "missing_config" }), { status: 200 });
     }
 
+    // Auth: cron-only function — require service role or CRON_SECRET bearer
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") || "";
+    const allowed =
+      authHeader === `Bearer ${serviceRoleKey}` ||
+      (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
+    if (!allowed) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
     const cycles = Math.max(1, Math.min(Number(body?.cycles ?? DEFAULT_CYCLES), DEFAULT_CYCLES));
     const supabase = createClient(supabaseUrl, serviceRoleKey);

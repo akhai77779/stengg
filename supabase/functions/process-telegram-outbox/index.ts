@@ -23,6 +23,19 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Auth: cron-only function — require service role or CRON_SECRET bearer
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") || "";
+    const allowed =
+      authHeader === `Bearer ${SERVICE_KEY}` ||
+      (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY || !TELEGRAM_CHAT_ID) {
       return new Response(
         JSON.stringify({ ok: false, error: "Telegram secrets not configured" }),
