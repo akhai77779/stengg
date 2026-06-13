@@ -245,6 +245,20 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  // Auth: only allow service-role or cron-secret callers (this is a cron-only function).
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const authHeader = req.headers.get('Authorization') || '';
+  const allowed =
+    authHeader === `Bearer ${key}` ||
+    (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
+  if (!allowed) {
+    return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
   try {
