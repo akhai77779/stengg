@@ -812,6 +812,43 @@ export function DashboardUsers() {
               </div>
             </div>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Lọc trạng thái:</span>
+            <Button
+              size="sm"
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              className="h-7 text-xs"
+              onClick={() => setStatusFilter('all')}
+            >
+              Tất cả ({profiles.length})
+            </Button>
+            <Button
+              size="sm"
+              variant={statusFilter === 'active' ? 'default' : 'outline'}
+              className="h-7 text-xs"
+              onClick={() => setStatusFilter('active')}
+            >
+              Hoạt động
+            </Button>
+            <Button
+              size="sm"
+              variant={statusFilter === 'trade_frozen' ? 'default' : 'outline'}
+              className="h-7 text-xs border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+              onClick={() => setStatusFilter('trade_frozen')}
+            >
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Đóng băng GD ({frozenStats.tradeFrozen})
+            </Button>
+            <Button
+              size="sm"
+              variant={statusFilter === 'frozen' ? 'destructive' : 'outline'}
+              className="h-7 text-xs"
+              onClick={() => setStatusFilter('frozen')}
+            >
+              <Ban className="w-3 h-3 mr-1" />
+              Đã khóa ({frozenStats.frozen})
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
