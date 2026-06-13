@@ -377,6 +377,7 @@ export default function Register() {
               <button 
                 onClick={() => setShowOtpStep(false)}
                 className="inline-flex items-center gap-2 text-gray-300 hover:text-white"
+                aria-label="Quay lại bước trước"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
@@ -470,6 +471,7 @@ export default function Register() {
             <button 
               onClick={() => navigate(-1)}
               className="inline-flex items-center gap-2 text-gray-300 hover:text-white"
+              aria-label="Quay lại trang trước"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>

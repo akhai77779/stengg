@@ -122,7 +122,7 @@ export function Header() {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full" aria-label="Mở menu tài khoản người dùng">
                       <Avatar className="h-10 w-10 border-2 border-primary/50">
                         <AvatarImage src="" />
                         <AvatarFallback className="bg-muted text-foreground">

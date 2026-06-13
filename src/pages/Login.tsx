@@ -182,6 +182,7 @@ export default function Login() {
                 onClick={openChat}
                 className="group relative p-2 -m-2 text-red-500 hover:text-red-400 transition-all duration-300 hover:scale-110" 
                 title="Support"
+                aria-label="Mở hỗ trợ trực tuyến"
               >
                 <span className="absolute inset-0 rounded-full bg-red-500/0 group-hover:bg-red-500/10 transition-all duration-300 group-hover:scale-125" />
                 <Headphones className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:animate-[wiggle_0.5s_ease-in-out]" />
@@ -194,6 +195,7 @@ export default function Login() {
           <button
             onClick={() => navigate(-1)}
             className="mt-6 inline-flex items-center gap-2 text-gray-300 hover:text-white"
+            aria-label="Quay lại trang trước"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -280,6 +282,7 @@ export default function Login() {
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
                 className="text-gray-400 hover:text-white"
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
