@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -231,6 +232,11 @@ export default function Charity() {
 
   return (
     <Layout>
+      <PageSeo
+        title="Charity & Savings Programs — ST Engineering"
+        description="Support community initiatives and explore savings programs offered through ST Engineering."
+        path="/charity"
+      />
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-3xl">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">

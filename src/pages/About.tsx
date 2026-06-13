@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { PageSeo } from '@/components/seo/PageSeo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLiveChat } from '@/contexts/LiveChatContext';
 import { ChevronLeft, Mail, Phone, Globe, MessageCircle, MapPin } from 'lucide-react';
@@ -15,6 +16,11 @@ export default function About() {
   const supportPhone = '+65 6722 1234';
   const website = 'https://stengg.it.com';
   return <Layout hideFooter>
+      <PageSeo
+        title="About ST Engineering"
+        description="Learn about ST Engineering — a global technology, defence and engineering group powering Aerospace, Smart City, Defence and Digital."
+        path="/about"
+      />
       <div className="min-h-screen pb-20 md:pb-8">
         <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-lg">
           {/* Header */}
