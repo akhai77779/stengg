@@ -23,8 +23,46 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { LiveChatMessage } from "@/hooks/useLiveChatMessages";
+import { useSignedUploadUrl } from "@/hooks/useSignedUploadUrl";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+
+function MessageAttachment({
+  url,
+  name,
+  type,
+}: {
+  url: string;
+  name: string | null;
+  type: "image" | "file" | null;
+}) {
+  const signed = useSignedUploadUrl(url);
+  if (!signed) return null;
+  return (
+    <div className="mt-2">
+      {type === "image" ? (
+        <a href={signed} target="_blank" rel="noopener noreferrer">
+          <img
+            src={signed}
+            alt={name || "Image"}
+            className="max-w-full rounded-lg max-h-48 object-cover"
+          />
+        </a>
+      ) : (
+        <a
+          href={signed}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors"
+        >
+          <FileText className="h-4 w-4" />
+          <span className="text-sm truncate">{name || "File"}</span>
+          <Download className="h-4 w-4 ml-auto" />
+        </a>
+      )}
+    </div>
+  );
+}
 
 interface MessageListProps {
   messages: LiveChatMessage[];
@@ -320,34 +358,11 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
 
                     {/* Attachment */}
                     {message.attachment_url && (
-                      <div className="mt-2">
-                        {message.attachment_type === "image" ? (
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <img
-                              src={message.attachment_url}
-                              alt={message.attachment_name || "Image"}
-                              className="max-w-full rounded-lg max-h-48 object-cover"
-                            />
-                          </a>
-                        ) : (
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="text-sm truncate">
-                              {message.attachment_name || "File"}
-                            </span>
-                            <Download className="h-4 w-4 ml-auto" />
-                          </a>
-                        )}
-                      </div>
+                      <MessageAttachment
+                        url={message.attachment_url}
+                        name={message.attachment_name}
+                        type={message.attachment_type}
+                      />
                     )}
 
                     <p className="text-[10px] opacity-50 mt-1 text-right">

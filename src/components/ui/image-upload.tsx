@@ -2,8 +2,8 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { uploadPublicAsset } from '@/lib/storageUrls';
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
 
 interface ImageUploadProps {
@@ -48,17 +48,8 @@ export function ImageUpload({ value, onChange, folder = 'images' }: ImageUploadP
       const fileExt = file.name.split('.').pop();
       const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('uploads')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrl } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(fileName);
-
-      onChange(publicUrl.publicUrl);
+      const signedUrl = await uploadPublicAsset(fileName, file);
+      onChange(signedUrl);
 
       toast({
         title: 'Thành công',
