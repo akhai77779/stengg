@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuickLogin } from '@/hooks/useQuickLogin';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp';
-import { Fingerprint, KeyRound, Loader2, X, User } from 'lucide-react';
+import { KeyRound, Loader2, X, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface QuickLoginUnlockProps {
@@ -33,19 +33,12 @@ export function QuickLoginUnlock({
 }: QuickLoginUnlockProps) {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { method, email, unlockWithPin, unlockWithBiometric, clearQuickLogin, isBiometricSupported } = useQuickLogin();
+  const { method, email, unlockWithPin, clearQuickLogin } = useQuickLogin();
   
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const MAX_ATTEMPTS = 5;
-
-  // Auto-trigger biometric on open
-  useEffect(() => {
-    if (open && method === 'biometric' && isBiometricSupported) {
-      handleBiometricUnlock();
-    }
-  }, [open, method, isBiometricSupported]);
 
   const handlePinUnlock = async () => {
     if (pin.length !== 6) return;
@@ -80,23 +73,6 @@ export function QuickLoginUnlock({
           description: t('quickLogin.attemptsRemaining', { count: MAX_ATTEMPTS - newAttempts }),
         });
       }
-    }
-  };
-
-  const handleBiometricUnlock = async () => {
-    setIsLoading(true);
-    const credentials = await unlockWithBiometric();
-    setIsLoading(false);
-
-    if (credentials) {
-      onUnlock(credentials.email, credentials.password);
-      onOpenChange(false);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: t('quickLogin.biometricFailed'),
-        description: t('quickLogin.biometricFailedDesc'),
-      });
     }
   };
 
@@ -167,23 +143,6 @@ export function QuickLoginUnlock({
                   t('quickLogin.unlock')
                 )}
               </Button>
-            </div>
-          )}
-
-          {method === 'biometric' && (
-            <div className="flex flex-col items-center gap-6">
-              <button
-                onClick={handleBiometricUnlock}
-                disabled={isLoading}
-                className="h-20 w-20 rounded-full bg-green-500/20 flex items-center justify-center hover:bg-green-500/30 transition-colors disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-10 w-10 text-green-400 animate-spin" />
-                ) : (
-                  <Fingerprint className="h-10 w-10 text-green-400" />
-                )}
-              </button>
-              <p className="text-sm text-gray-400">{t('quickLogin.tapToUnlock')}</p>
             </div>
           )}
 
