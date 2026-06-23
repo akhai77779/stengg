@@ -53,6 +53,11 @@ export default function GuestHome() {
             src="https://images.unsplash.com/photo-1655582590501-3da761e09ae9?auto=format&fit=crop&w=1400&q=80"
             alt="Digital Innovation"
             className="w-full h-full object-cover opacity-60"
+            width={1400}
+            height={900}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
           />
           <div className="absolute inset-0 hero-overlay"></div>
         </div>
@@ -60,7 +65,7 @@ export default function GuestHome() {
           <h1 className="text-5xl md:text-7xl lg:text-8xl mb-4 font-light tracking-tight">
             {t('guest.heroTitle')}
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 font-light">
+          <p className="text-xl md:text-2xl text-gray-100 mb-8 font-light">
             {t('guest.heroSubtitle')}
           </p>
           <Link
