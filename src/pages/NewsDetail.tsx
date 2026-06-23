@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Calendar, ArrowLeft, Loader2 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
+import { PageSeo } from '@/components/seo/PageSeo';
 
 type NewsCategory = Database['public']['Enums']['news_category'];
 
@@ -130,6 +131,11 @@ export default function NewsDetail() {
 
   return (
     <Layout>
+      <PageSeo
+        title={`${news.title} | ST Engineering`}
+        description={news.summary || news.content.slice(0, 155)}
+        path={`/news/${news.id}`}
+      />
       <article className="container mx-auto px-4 py-8 max-w-4xl">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/news" className="flex items-center gap-2">
