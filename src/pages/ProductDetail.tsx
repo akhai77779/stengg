@@ -17,6 +17,7 @@ import { TransactionHistorySheet } from "@/components/product/TransactionHistory
 import { RealtimeStatusIndicator } from "@/components/charts/RealtimeStatusIndicator";
 import { useUserTradesRealtime } from "@/hooks/useProductRealtime";
 import { useSharedProductRealtime, isValidProductId } from "@/hooks/useSharedProductRealtime";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 // Throttle intervals based on timeframe (faster timeframes need faster updates)
 const THROTTLE_MS: Record<string, number> = {
@@ -156,6 +157,11 @@ const ProductDetail = () => {
 
   return (
     <Layout hideFooter>
+      <PageSeo
+        title={`${product.symbol || product.name} | ST Engineering`}
+        description={`${product.name} — giá thời gian thực, biểu đồ nến và giao dịch options trên ST Engineering.`}
+        path={`/product/${product.id}`}
+      />
       <div className="space-y-3 pb-24 bg-background min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between sticky top-0 z-20 bg-background/95 backdrop-blur-sm py-2 px-1 -mx-1">
