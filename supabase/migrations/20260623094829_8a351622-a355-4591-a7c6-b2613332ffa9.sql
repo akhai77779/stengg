@@ -1,0 +1,1 @@
+UPDATE public.news SET image_url = NULL WHERE image_url LIKE '%avqutkamqeblqirtckir%';
