@@ -26,3 +26,6 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.process-telegram-outbox]
     verify_jwt = false
+
+  [functions.phone-register]
+    verify_jwt = false
