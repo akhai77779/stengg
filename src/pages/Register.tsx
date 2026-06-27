@@ -158,36 +158,25 @@ export default function Register() {
           return;
         }
 
-        // Create account directly without OTP
+        // Create account via edge function so it's auto-confirmed (phone is the identity).
         const phoneEmail = `${normalizedPhone.replace(/\+/g, '')}@phone.local`;
-        
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: phoneEmail,
-          password: registerPassword,
-          options: {
-            data: {
-              full_name: registerName,
-              phone: normalizedPhone,
-            },
+
+        const { data: regData, error: regError } = await supabase.functions.invoke('phone-register', {
+          body: {
+            phone: normalizedPhone,
+            password: registerPassword,
+            fullName: registerName,
           },
         });
 
-        if (signUpError) {
+        if (regError || (regData && regData.error)) {
           setIsLoading(false);
           toast({
             variant: 'destructive',
             title: language === 'vi' ? 'Đăng ký thất bại' : 'Registration failed',
-            description: translateAuthError(signUpError.message, language, 'phone'),
+            description: translateAuthError(regError?.message || regData?.error || 'Registration failed', language, 'phone'),
           });
           return;
-        }
-
-        // Update phone in profile
-        if (signUpData.user) {
-          await supabase
-            .from('profiles')
-            .update({ phone: normalizedPhone })
-            .eq('id', signUpData.user.id);
         }
 
         // Auto sign in
