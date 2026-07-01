@@ -73,6 +73,9 @@ async function authorize(req: Request): Promise<
   const token = auth.replace(/^Bearer\s+/i, "").trim();
   if (!token) return { ok: false, status: 401, error: "Missing authorization" };
 
+  // Cron/internal callers use the service-role JWT directly.
+  if (token === SERVICE_ROLE) return { ok: true };
+
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
   const { data: userData, error: userErr } = await admin.auth.getUser(token);
   if (userErr || !userData?.user) {
