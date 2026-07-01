@@ -29,3 +29,12 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.phone-register]
     verify_jwt = false
+
+  [functions.run-live-price-sync]
+    verify_jwt = false
+
+  [functions.sync-price-history]
+    verify_jwt = false
+
+  [functions.settle-expired-trades]
+    verify_jwt = false
