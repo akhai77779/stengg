@@ -1,28 +1,45 @@
-## Vấn đề
+## Mục tiêu
+Kiểm chứng bằng Playwright rằng policy UPDATE trên bucket `uploads` đã bị gỡ **không** phá vỡ luồng "thay ảnh", và mỗi lần upload sinh **file mới** thay vì ghi đè file cũ.
 
-Cột `image_url` của bảng `news` đang lưu URL trỏ về project Lovable Cloud cũ `avqutkamqeblqirtckir.supabase.co`. Project hiện tại là `nptiddcelyxfbyvslotv`, nên các file ảnh không tồn tại → trả về 404 → trên trang chủ chỉ thấy alt text ("Defence", "Aerospace"…) cùng badge danh mục, không có ảnh.
+## Phạm vi kiểm thử
+1. **Upload avatar** (trang `/profile`) — user thường
+2. **Upload ảnh sản phẩm** (trang `/admin/products`) — admin, qua `ImageUpload` component
 
-Tất cả 4 bản ghi news đang gặp lỗi này (Defence, Aerospace, Ascending new horizons with AI, Smart City).
+## Các bước Playwright (script `/tmp/browser/upload-overwrite/`)
 
-## Phương án xử lý
+### Setup
+- Restore Supabase session từ `LOVABLE_BROWSER_SUPABASE_*` env vars
+- Chuẩn bị 2 file ảnh test tạm (`img1.png`, `img2.png`) với nội dung khác nhau (đổi 1 pixel để khác hash)
 
-Bạn chọn 1 trong các hướng sau, mình sẽ làm:
+### Test 1 — Avatar
+1. Navigate `/profile`, screenshot trạng thái ban đầu
+2. Upload `img1.png` qua input file → chờ toast "thành công" → screenshot
+3. Đọc `src` avatar hiện tại (URL A) và bóc `path` từ signed URL
+4. Upload `img2.png` (thao tác "thay đổi") → chờ toast → screenshot
+5. Đọc `src` mới (URL B) và bóc `path`
+6. **Assert**: `path A ≠ path B` (filename có `Date.now()` khác nhau) → chứng minh INSERT mới, không cần UPDATE
+7. `fetch(URL_A)` phải vẫn 200 → file cũ còn nguyên, không bị overwrite
+8. `fetch(URL_B)` phải 200 → file mới xem được
 
-### Phương án A — Upload lại ảnh thủ công (khuyến nghị nếu muốn giữ ảnh gốc)
-- Bạn vào `/dashboard` → Quản lý Tin tức → Sửa từng tin → upload lại ảnh.
-- Mình không cần làm gì code.
+### Test 2 — Ảnh sản phẩm (admin)
+1. Navigate `/admin/products`, mở dialog thêm/sửa 1 sản phẩm
+2. Lặp bước 2–8 như trên với `ImageUpload` component
+3. Kiểm tra thêm: `supabase.storage.from('uploads').list('products')` (qua console API) trả về **2 file** khác tên sau 2 lần upload cùng slot
 
-### Phương án B — Tự động dọn URL hỏng + dùng ảnh placeholder
-- Migration SQL: `UPDATE news SET image_url = NULL WHERE image_url LIKE '%avqutkamqeblqirtckir%';`
-- Component `LatestNews` đã có fallback `unsplash` khi `image_url` null → ảnh placeholder hiển thị ngay.
-- Bạn upload ảnh thật dần qua trang Quản lý Tin tức.
+### Test 3 — Thử ép overwrite (negative)
+- Gọi trực tiếp `supabase.storage.from('uploads').update(pathA, img2)` từ console page
+- **Assert**: nhận lỗi RLS / "new row violates row-level security" → xác nhận policy UPDATE đã bị chặn
 
-### Phương án C — Thử rewrite domain
-- Đổi domain `avqutkamqeblqirtckir.supabase.co` → `nptiddcelyxfbyvslotv.supabase.co` trong DB.
-- **Rủi ro**: file vật lý gần như chắc chắn không có trong bucket mới → vẫn 404. Chỉ làm nếu bạn xác nhận đã copy file storage sang project mới.
+## Kết quả kỳ vọng
+- 2 lần upload sinh 2 path khác nhau → luồng UI hoạt động (INSERT mới).
+- File cũ vẫn accessible qua signed URL đã cấp (không bị overwrite).
+- API `.update()` bị RLS chặn → khớp cấu hình bảo mật.
 
-## Khuyến nghị
+## Báo cáo
+- Screenshot: `1_profile_before.png`, `2_avatar_upload1.png`, `3_avatar_upload2.png`, `4_admin_products.png`, `5_product_upload1.png`, `6_product_upload2.png`.
+- Bảng: `slot | path_1 | path_2 | fetch(pathA) status | update() error`.
+- Nếu bất kỳ assert nào fail → liệt kê file/policy cần điều chỉnh (không tự sửa trong lần chạy này, sẽ đề xuất plan tiếp theo).
 
-Phương án **B** trước (1 phút, loại ảnh vỡ ngay), rồi upload ảnh thật dần. Nếu bạn có folder ảnh gốc, mình có thể giúp script upload hàng loạt.
-
-Bạn muốn đi theo phương án nào?
+## Ghi chú
+- Không sửa code trong kế hoạch này — chỉ chạy kiểm thử.
+- Dùng account admin đã đăng nhập sẵn trong preview (session inject). Với Test 1 cần user thường: nếu session hiện tại là admin, vẫn hợp lệ vì avatar cá nhân độc lập với role.
