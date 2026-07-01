@@ -1652,10 +1652,10 @@ export type Database = {
           _direction: string
           _duration_seconds: number
           _entry_price?: number
-          _fee_rate: number
+          _fee_rate?: number
           _loss_rate?: number
           _product_id: string
-          _profit_rate: number
+          _profit_rate?: number
           _user_id: string
         }
         Returns: Json
