@@ -38,3 +38,6 @@ project_id = "nptiddcelyxfbyvslotv"
 
   [functions.settle-expired-trades]
     verify_jwt = false
+
+  [functions.cleanup-orphan-uploads]
+    verify_jwt = false
