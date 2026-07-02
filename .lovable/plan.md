@@ -1,45 +1,27 @@
-## Mục tiêu
-Kiểm chứng bằng Playwright rằng policy UPDATE trên bucket `uploads` đã bị gỡ **không** phá vỡ luồng "thay ảnh", và mỗi lần upload sinh **file mới** thay vì ghi đè file cũ.
+# Sửa lỗi Publish thất bại (không liên quan thanh toán)
 
-## Phạm vi kiểm thử
-1. **Upload avatar** (trang `/profile`) — user thường
-2. **Upload ảnh sản phẩm** (trang `/admin/products`) — admin, qua `ImageUpload` component
+## Chẩn đoán
+- Publish fail KHÔNG phải do chưa thanh toán — gói nào cũng publish được lên URL lovable.app.
+- Nguyên nhân: Live đang kẹt migration ở version `20260620080105`, còn Test đã ở `20260702002754`. Khi publish, hệ thống cố apply 9 migration còn thiếu lên Live và bị crash ở một trong số đó → báo "internal error".
+- Còn 4 migration CHƯA được gia cố chống lỗi:
+  - `20260623094829` — cập nhật ảnh tin tức (ít rủi ro)
+  - `20260701164743` — UPDATE ảnh sản phẩm + thao tác cron
+  - `20260701212559` — xóa/tạo lại cron jobs
+  - `20260702002754` — tạo lại cron jobs với Authorization header
+- 3 migration cuối đều gọi `cron.schedule` / `cron.unschedule`, có nguy cơ bị từ chối quyền trên Live → nghi phạm chính gây crash.
 
-## Các bước Playwright (script `/tmp/browser/upload-overwrite/`)
+## Việc sẽ làm
 
-### Setup
-- Restore Supabase session từ `LOVABLE_BROWSER_SUPABASE_*` env vars
-- Chuẩn bị 2 file ảnh test tạm (`img1.png`, `img2.png`) với nội dung khác nhau (đổi 1 pixel để khác hash)
+1. **Gia cố 4 migration còn lại**: bọc toàn bộ lệnh cron và UPDATE trong khối `DO ... EXCEPTION` — nếu Live không cho phép, migration bỏ qua và ghi notice thay vì crash, để publish đi tiếp.
+2. **Rà lại 5 migration đã gia cố trước đó** để chắc chắn không còn lệnh nào có thể crash trên Live.
+3. **Publish lại** và theo dõi kết quả.
+4. **Xác minh sau publish**:
+   - Version migration trên Live phải nhảy lên `20260702002754`.
+   - Cron nến trên Live trỏ đúng backend hiện tại (hết lỗi 401).
+   - Site Live phục vụ bundle mới.
+5. **Phương án dự phòng**: nếu Live vẫn không apply được cron qua migration, tôi sẽ đưa bạn đoạn SQL để chạy thủ công trong Cloud View → Run SQL (chọn Live) — cách này chắc chắn kích hoạt lại cron nến.
 
-### Test 1 — Avatar
-1. Navigate `/profile`, screenshot trạng thái ban đầu
-2. Upload `img1.png` qua input file → chờ toast "thành công" → screenshot
-3. Đọc `src` avatar hiện tại (URL A) và bóc `path` từ signed URL
-4. Upload `img2.png` (thao tác "thay đổi") → chờ toast → screenshot
-5. Đọc `src` mới (URL B) và bóc `path`
-6. **Assert**: `path A ≠ path B` (filename có `Date.now()` khác nhau) → chứng minh INSERT mới, không cần UPDATE
-7. `fetch(URL_A)` phải vẫn 200 → file cũ còn nguyên, không bị overwrite
-8. `fetch(URL_B)` phải 200 → file mới xem được
-
-### Test 2 — Ảnh sản phẩm (admin)
-1. Navigate `/admin/products`, mở dialog thêm/sửa 1 sản phẩm
-2. Lặp bước 2–8 như trên với `ImageUpload` component
-3. Kiểm tra thêm: `supabase.storage.from('uploads').list('products')` (qua console API) trả về **2 file** khác tên sau 2 lần upload cùng slot
-
-### Test 3 — Thử ép overwrite (negative)
-- Gọi trực tiếp `supabase.storage.from('uploads').update(pathA, img2)` từ console page
-- **Assert**: nhận lỗi RLS / "new row violates row-level security" → xác nhận policy UPDATE đã bị chặn
-
-## Kết quả kỳ vọng
-- 2 lần upload sinh 2 path khác nhau → luồng UI hoạt động (INSERT mới).
-- File cũ vẫn accessible qua signed URL đã cấp (không bị overwrite).
-- API `.update()` bị RLS chặn → khớp cấu hình bảo mật.
-
-## Báo cáo
-- Screenshot: `1_profile_before.png`, `2_avatar_upload1.png`, `3_avatar_upload2.png`, `4_admin_products.png`, `5_product_upload1.png`, `6_product_upload2.png`.
-- Bảng: `slot | path_1 | path_2 | fetch(pathA) status | update() error`.
-- Nếu bất kỳ assert nào fail → liệt kê file/policy cần điều chỉnh (không tự sửa trong lần chạy này, sẽ đề xuất plan tiếp theo).
-
-## Ghi chú
-- Không sửa code trong kế hoạch này — chỉ chạy kiểm thử.
-- Dùng account admin đã đăng nhập sẵn trong preview (session inject). Với Test 1 cần user thường: nếu session hiện tại là admin, vẫn hợp lệ vì avatar cá nhân độc lập với role.
+## Chi tiết kỹ thuật
+- Mẫu gia cố: `DO $$ BEGIN <lệnh>; EXCEPTION WHEN insufficient_privilege OR undefined_function THEN RAISE NOTICE '...'; END $$;`
+- Các migration đã chạy trên Test nên việc sửa file chỉ ảnh hưởng lúc apply lên Live — an toàn, không đổi schema Test.
+- Không có security finding nào đang chặn publish (đã kiểm tra scan mới nhất 02/07).

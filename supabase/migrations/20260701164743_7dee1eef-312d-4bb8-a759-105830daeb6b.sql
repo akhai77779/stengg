@@ -1,24 +1,32 @@
+DO $mig$
+BEGIN
+  UPDATE public.products SET image_url = NULL WHERE image_url LIKE '%avqutkamqeblqirtckir%';
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipping product image cleanup: %', SQLERRM;
+END $mig$;
 
-UPDATE public.products
-SET image_url = NULL
-WHERE image_url LIKE '%avqutkamqeblqirtckir%';
-
-DO $$
+DO $mig$
 BEGIN
   PERFORM cron.unschedule(jobid) FROM cron.job WHERE jobname IN ('sync-price-history-every-minute','settle-expired-option-trades');
-END $$;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipping cron unschedule: %', SQLERRM;
+END $mig$;
 
-SELECT cron.schedule(
-  'sync-price-history-every-minute',
-  '* * * * *',
-  $$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$$
-);
-
-SELECT cron.schedule(
-  'settle-expired-option-trades',
-  '* * * * *',
-  $$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/settle-expired-trades', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$$
-);
+DO $mig$
+BEGIN
+  PERFORM cron.schedule(
+    'sync-price-history-every-minute',
+    '* * * * *',
+    $CRON$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$CRON$
+  );
+  PERFORM cron.schedule(
+    'settle-expired-option-trades',
+    '* * * * *',
+    $CRON$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/settle-expired-trades', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$CRON$
+  );
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipping cron schedule: %', SQLERRM;
+END $mig$;
 
 CREATE OR REPLACE FUNCTION public.run_live_price_sync_loop()
 RETURNS void
