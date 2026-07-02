@@ -174,7 +174,7 @@ export function Header() {
                 </DropdownMenu>
               ) : (
                 <Button asChild className="bg-gradient-primary hover:opacity-90">
-                  <Link to="/auth">{t('nav.login')}</Link>
+                  <Link to="/login">{t('nav.login')}</Link>
                 </Button>
               )}
             </div>
