@@ -127,5 +127,10 @@ DROP POLICY IF EXISTS "Users can create own option trades" ON public.option_trad
 
 -- 3) uploads_bucket_any_authenticated_overwrite
 --    Drop UPDATE policies on uploads bucket — files are write-once.
-DROP POLICY IF EXISTS "Authenticated users update own folder" ON storage.objects;
-DROP POLICY IF EXISTS "Allow anonymous updates for live-chat" ON storage.objects;
+DO $do$
+BEGIN
+  DROP POLICY IF EXISTS "Authenticated users update own folder" ON storage.objects;
+  DROP POLICY IF EXISTS "Allow anonymous updates for live-chat" ON storage.objects;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'Skipped storage policy drop: %', SQLERRM;
+END $do$;
