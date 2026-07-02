@@ -1,5 +1,5 @@
--- Unschedule any leftover jobs pointing to the old backend
-DO $$
+-- Unschedule any leftover jobs pointing to the old backend (fault-tolerant)
+DO $mig$
 DECLARE j record;
 BEGIN
   FOR j IN SELECT jobid, jobname FROM cron.job
@@ -8,35 +8,28 @@ BEGIN
   LOOP
     PERFORM cron.unschedule(j.jobid);
   END LOOP;
-END $$;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipping cron cleanup: %', SQLERRM;
+END $mig$;
 
--- Reschedule market sync jobs on current backend
-SELECT cron.schedule(
-  'sync-price-history-every-minute',
-  '* * * * *',
-  $$SELECT net.http_post(
-    url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history',
-    headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
-  );$$
-);
-
-SELECT cron.schedule(
-  'settle-expired-option-trades',
-  '* * * * *',
-  $$SELECT net.http_post(
-    url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/settle-expired-trades',
-    headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
-  );$$
-);
-
-SELECT cron.schedule(
-  'run-live-price-sync',
-  '* * * * *',
-  $$SELECT net.http_post(
-    url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/run-live-price-sync',
-    headers := jsonb_build_object('Content-Type','application/json'),
-    body := jsonb_build_object('time', now())
-  );$$
-);
+-- Reschedule market sync jobs on current backend (fault-tolerant)
+DO $mig$
+BEGIN
+  PERFORM cron.schedule(
+    'sync-price-history-every-minute',
+    '* * * * *',
+    $CRON$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$CRON$
+  );
+  PERFORM cron.schedule(
+    'settle-expired-option-trades',
+    '* * * * *',
+    $CRON$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/settle-expired-trades', headers := '{"Content-Type": "application/json"}'::jsonb, body := '{}'::jsonb);$CRON$
+  );
+  PERFORM cron.schedule(
+    'run-live-price-sync',
+    '* * * * *',
+    $CRON$SELECT net.http_post(url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/run-live-price-sync', headers := jsonb_build_object('Content-Type','application/json'), body := jsonb_build_object('time', now()));$CRON$
+  );
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipping cron schedule: %', SQLERRM;
+END $mig$;
