@@ -67,7 +67,7 @@ export default function News() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate('/login');
     }
   }, [user, authLoading, navigate]);
 

@@ -186,7 +186,7 @@ export default function Charity() {
   }, [selected?.id]);
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/auth');
+    if (!authLoading && !user) navigate('/login');
   }, [user, authLoading, navigate]);
 
   useEffect(() => {

@@ -49,7 +49,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        navigate('/auth');
+        navigate('/login');
       } else if (!isAdmin) {
         navigate('/');
       }
