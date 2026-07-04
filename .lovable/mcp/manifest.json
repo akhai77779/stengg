@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "stengg-mcp",
+      "version": "0.1.0",
+      "title": "ST Engineering MCP"
+    },
+    "tools": [
+      {
+        "name": "list_products",
+        "title": "List trading products",
+        "description": "List ST Engineering trading products with current market price, category, and 24h change.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of products to return (default 20)."
+            },
+            "category": {
+              "type": "string",
+              "description": "Filter by category, e.g. Defense, Aerospace, Smart City, Digital."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product_price",
+        "title": "Get product price",
+        "description": "Return the current market price and 24h change for a single ST Engineering trading product, looked up by id or symbol.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "idOrSymbol": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Product id (e.g. 'agil') or trading symbol (e.g. 'AGIL/USDT')."
+            }
+          },
+          "required": [
+            "idOrSymbol"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_news",
+        "title": "List latest news",
+        "description": "List the most recent published news articles from ST Engineering (title, slug, category, published date).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum number of articles to return (default 10)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
