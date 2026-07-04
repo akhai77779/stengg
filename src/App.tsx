@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { LiveChatProvider } from "@/contexts/LiveChatContext";
 import { AdminRouteGuard } from "@/components/auth/AdminRouteGuard";
+import { isAdminHost } from "@/lib/hostMode";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -72,6 +73,35 @@ const App = () => (
             <LiveChatProvider>
               <AuthProvider>
                 <AdminNotificationsProvider>
+                  {isAdminHost() ? (
+                  <Routes>
+                  <Route path="/" element={<Navigate to="/admin" replace />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/switch-account" element={<SwitchAccount />} />
+                  <Route path="/security" element={<SecuritySettings />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/admin" element={<AdminRouteGuard><AdminLayout /></AdminRouteGuard>}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<AdminOverview />} />
+                    <Route path="banners" element={<AdminBanners />} />
+                    <Route path="news" element={<AdminNews />} />
+                    <Route path="products" element={<AdminProducts />} />
+                    <Route path="products-monitor" element={<AdminProductsMonitor />} />
+                    <Route path="shock-events" element={<AdminShockEvents />} />
+                    <Route path="data-health" element={<AdminDataHealth />} />
+                    <Route path="option-trades" element={<AdminOptionTrades />} />
+                    <Route path="charity" element={<AdminCharity />} />
+                    <Route path="charity-donations" element={<AdminCharityDonations />} />
+                    <Route path="transactions" element={<AdminTransactions />} />
+                    <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
+                    <Route path="audit-logs" element={<AdminAuditLogs />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="settings" element={<AdminSettings />} />
+                    <Route path="live-chat" element={<AdminLiveChat />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
+                  </Routes>
+                  ) : (
                   <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
@@ -117,6 +147,7 @@ const App = () => (
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                   </Routes>
+                  )}
                 </AdminNotificationsProvider>
               </AuthProvider>
             </LiveChatProvider>
