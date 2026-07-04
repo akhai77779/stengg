@@ -24,7 +24,7 @@ export default defineTool({
     );
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, symbol, category, current_price, price_change_24h, updated_at")
+      .select("id, name, symbol, category, price, price_change, high_24h, low_24h, volume, updated_at")
       .or(`id.eq.${idOrSymbol},symbol.eq.${idOrSymbol}`)
       .maybeSingle();
     if (error) {

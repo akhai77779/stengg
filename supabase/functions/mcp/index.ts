@@ -84,7 +84,7 @@ var get_product_price_default = defineTool3({
       process.env.SUPABASE_PUBLISHABLE_KEY,
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
-    const { data, error } = await supabase.from("products").select("id, name, symbol, category, current_price, price_change_24h, updated_at").or(`id.eq.${idOrSymbol},symbol.eq.${idOrSymbol}`).maybeSingle();
+    const { data, error } = await supabase.from("products").select("id, name, symbol, category, price, price_change, high_24h, low_24h, volume, updated_at").or(`id.eq.${idOrSymbol},symbol.eq.${idOrSymbol}`).maybeSingle();
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
