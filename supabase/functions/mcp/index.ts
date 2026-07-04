@@ -55,7 +55,7 @@ var list_news_default = defineTool2({
       process.env.SUPABASE_PUBLISHABLE_KEY,
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
-    const { data, error } = await supabase.from("news").select("id, title, slug, category, excerpt, published_at, is_published").eq("is_published", true).order("published_at", { ascending: false }).limit(limit ?? 10);
+    const { data, error } = await supabase.from("news").select("id, title, summary, category, is_featured, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 10);
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
