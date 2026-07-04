@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { isPublicProdHost, adminHostUrl } from "@/lib/hostMode";
 
 interface AdminRouteGuardProps {
   children: ReactNode;
@@ -11,6 +12,17 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const { user, session, isLoading, isAdmin, isAdminLoading } = useAuth();
   const location = useLocation();
   const [serverAllowed, setServerAllowed] = useState<boolean | null>(null);
+
+  // On the production public host, redirect any /admin access to the
+  // dedicated admin subdomain so the admin surface only lives there.
+  useEffect(() => {
+    if (isPublicProdHost()) {
+      window.location.replace(adminHostUrl(location.pathname));
+    }
+  }, [location.pathname]);
+
+  if (isPublicProdHost()) return null;
+
 
   useEffect(() => {
     let cancelled = false;
