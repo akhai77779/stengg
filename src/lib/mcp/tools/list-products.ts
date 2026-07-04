@@ -31,8 +31,8 @@ export default defineTool({
     );
     let query = supabase
       .from("products")
-      .select("id, name, symbol, category, current_price, price_change_24h, updated_at")
-      .order("current_price", { ascending: false })
+      .select("id, name, symbol, category, price, price_change, volume, updated_at")
+      .order("price", { ascending: false })
       .limit(limit ?? 20);
     if (category) query = query.eq("category", category);
     const { data, error } = await query;
