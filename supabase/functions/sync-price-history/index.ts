@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
 
     // Service-role bypass (used by scheduled cron jobs)
     const bearer = authHeader.slice("Bearer ".length).trim();
-    if (bearer === SUPABASE_SERVICE_ROLE_KEY) {
+    if (isServiceRoleJwt(bearer, SUPABASE_SERVICE_ROLE_KEY)) {
       console.log("[Auth] Service-role invocation (cron)");
       return await runSync(req, corsHeaders, stats, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     }
