@@ -73,6 +73,21 @@ interface SyncStats {
 }
 
 // Fetch with exponential backoff retry
+function isServiceRoleJwt(token: string, envKey: string | undefined): boolean {
+  if (!token) return false;
+  if (envKey && token === envKey) return true;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadB64 + "=".repeat((4 - (payloadB64.length % 4)) % 4);
+    const json = JSON.parse(atob(padded));
+    return json?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
