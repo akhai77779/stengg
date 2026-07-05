@@ -1591,6 +1591,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_functions_base_url: { Args: never; Returns: string }
       get_ohlc_aggregated: {
         Args: {
           p_bucket_seconds: number

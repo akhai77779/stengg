@@ -73,6 +73,21 @@ interface SyncStats {
 }
 
 // Fetch with exponential backoff retry
+function isServiceRoleJwt(token: string, envKey: string | undefined): boolean {
+  if (!token) return false;
+  if (envKey && token === envKey) return true;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadB64 + "=".repeat((4 - (payloadB64.length % 4)) % 4);
+    const json = JSON.parse(atob(padded));
+    return json?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
@@ -267,6 +282,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Service-role bypass (used by scheduled cron jobs)
+    const bearer = authHeader.slice("Bearer ".length).trim();
+    if (isServiceRoleJwt(bearer, SUPABASE_SERVICE_ROLE_KEY)) {
+      console.log("[Auth] Service-role invocation (cron)");
+      return await runSync(req, corsHeaders, stats, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    }
+
     // Create auth client to verify user
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
@@ -299,6 +321,41 @@ Deno.serve(async (req) => {
 
     console.log(`[Auth] Admin user ${user.id} initiated price sync`);
 
+    return await runSync(req, corsHeaders, stats, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  } catch (e) {
+    stats.endTime = Date.now();
+    const duration = stats.endTime - stats.startTime;
+    const errMsg = e instanceof Error ? e.message : String(e);
+
+    console.error(`[Fatal Error] After ${duration}ms:`, errMsg);
+
+    return new Response(JSON.stringify({
+      error: "Unexpected error",
+      message: errMsg,
+      stats: {
+        duration: `${duration}ms`,
+        products: {
+          total: stats.productsTotal,
+          synced: stats.productsSynced,
+          errored: stats.productsErrored,
+        },
+      },
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+
+async function runSync(
+  req: Request,
+  corsHeaders: Record<string, string>,
+  stats: SyncStats,
+  SUPABASE_URL: string,
+  SUPABASE_SERVICE_ROLE_KEY: string,
+): Promise<Response> {
+  try {
     // Parse optional request body
     let targetProductId: string | null = null;
     try {
@@ -469,4 +526,4 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
