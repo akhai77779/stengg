@@ -1,42 +1,35 @@
-## Mục tiêu
-Tải toàn bộ dữ liệu database Live về máy nhanh nhất, sau đó có thể up lên nơi khác.
+# Kiểm tra nến trong LIVE — Kết quả & Kế hoạch sửa
 
-## 2 cách khả thi
+## Chẩn đoán
 
-### Cách 1 — Cloud Export data (khuyến nghị, nhanh & đầy đủ nhất)
-Lovable Cloud có sẵn nút export full database (schema + data).
+Nến trong LIVE **KHÔNG hoạt động**. Bảng `price_history` trong Live không có bản ghi mới nào trong 24h qua — cây nến cuối cùng là **2026-06-11 10:53** (đã dừng gần 24 ngày).
 
-Các bước bạn tự làm (không tốn credit, không cần AI chạy):
-1. Mở **Cloud** (nút "View Backend" hoặc từ panel More → Cloud)
-2. Vào **Advanced settings** → **Export data**
-3. Chọn môi trường **Live (Production)**
-4. Bấm **Export** → Cloud sẽ chuẩn bị file dump (schema + data đầy đủ) và cho link tải về
+Nguyên nhân: hai cron job trong Live đang gọi URL của project **Test (dev)** thay vì URL của Live:
 
-→ Ra 1 file duy nhất, restore lại được nguyên vẹn (kể cả RLS, function, trigger).
-→ Không phải tải từng bảng.
+| Cron job | Đang gọi | Đúng ra phải gọi |
+|---|---|---|
+| `sync-price-history-every-minute` | `https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history` | URL project Live |
+| `run_live_price_sync_loop()` (gọi bởi `sync-live-price-loop`) | `https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/run-live-price-sync` | URL project Live |
 
-### Cách 2 — AI export CSV theo từng bảng (nếu Cách 1 không dùng được)
-Nếu bạn không muốn dùng Export data của Cloud, mình có thể:
-- Query Live database (read-only, an toàn)
-- Xuất từng bảng ra file CSV vào `/mnt/documents/live-export/`
-- Đóng gói kèm link tải cho từng file
+Kết quả: cron báo "succeeded" mỗi phút vì HTTP request được gửi đi thành công, nhưng request lại rơi vào backend Test, nên edge function của Live không bao giờ chạy → không có bản ghi mới vào `price_history` của Live. Log edge function `sync-price-history` và `run-live-price-sync` trong Live rỗng, xác nhận điều này.
 
-Danh sách bảng có data (theo screenshot bạn gửi):
-```text
-audit_logs (55,117)    price_history (20,930)   live_chat_messages (2,360)
-telegram_outbox (300)  live_chat_typing (265)   option_trades (264)
-user_notifications (190)  live_chat_rooms (180)  email_send_log (74)
-transactions (67)      profiles (35)            user_roles (36)
-bank_accounts (26)     identity_verifications (25)  email_unsubscribe_tokens (18)
-quick_reply_templates (16)  products (10)       product_price_controls (10)
-news (10)   app_settings (9)   hero_banners (5)   charity_programs (4)
-deposit_settings (3)   rate_limits (2)   admin_user_notes (1)
-agent_presence (1)   email_send_state (1)   live_chat_notes (1)
-```
+`products.price` trong Live vẫn được cập nhật gần đây (vd 02/07) vì được ghi bởi trình duyệt admin qua `useEngineSyncToDb`, chứ không phải cron. Nhưng lịch sử nến (`price_history`) hoàn toàn không được bồi.
 
-**Hạn chế của Cách 2:** CSV không giữ được schema/RLS/function/trigger — chỉ có data thô. Muốn restore đầy đủ vẫn phải dùng Cách 1.
+## Kế hoạch sửa
 
-## Đề xuất
-Dùng **Cách 1** — nhanh nhất, đầy đủ nhất, 1 file duy nhất, không tốn credit AI.
+Chỉ can thiệp phía backend trong LIVE, không đụng UI, không đụng logic engine.
 
-Nếu bạn xác nhận muốn Cách 2 (CSV theo bảng), mình sẽ chuyển sang build mode và xuất ngay toàn bộ vào `/mnt/documents/live-export/` để bạn tải về.
+1. **Cập nhật cron `sync-price-history-every-minute`** — thay `net.http_post` URL từ dev ref sang project ref của Live (tự đọc bằng biến, không hard-code).
+2. **Cập nhật function `public.run_live_price_sync_loop()`** — thay URL trong `PERFORM net.http_post(...)` sang project ref của Live.
+3. **Bồi lấp khoảng trống 11/06 → 05/07 (tuỳ chọn)** — chạy edge function `backfill-price-history` cho 10 sản phẩm sau khi cron đã hoạt động lại, hoặc chấp nhận để nến tiếp tục từ hiện tại (đề nghị hỏi bạn).
+4. **Xác minh** — sau 1–2 phút, chạy `SELECT MAX(recorded_at) FROM price_history` trong Live để đảm bảo có bản ghi mới, và mở log của `sync-price-history` trong Live để thấy các lần chạy.
+
+## Chi tiết kỹ thuật
+
+- Migration sẽ chạy `cron.unschedule` + `cron.schedule` lại cho `sync-price-history-every-minute` với URL đúng, và `CREATE OR REPLACE FUNCTION public.run_live_price_sync_loop()` với URL đúng.
+- Vì migration Lovable chạy vào Test trước rồi mới sync sang Live khi publish, sẽ cần **publish** để fix có hiệu lực trên Live. Sau publish, cron cũ trong Live sẽ được thay thế.
+- Không thay đổi edge function code, không thay đổi schema bảng.
+
+## Câu hỏi cần bạn xác nhận trước khi triển khai
+
+- Có cần **backfill** dữ liệu nến từ 11/06 đến hiện tại không, hay chỉ cần cho nến chạy tiếp từ bây giờ?
