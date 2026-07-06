@@ -1,43 +1,38 @@
-# Plan: Chuyển nến LIVE sang engine nội bộ
+## Tình hình
 
-Bỏ hoàn toàn phụ thuộc vào API `admin.stenggg.com` (đã chết). Nến 1 phút sẽ được sinh nội bộ từ `products.price` (giá do market engine hiện có đang cập nhật) và ghi thẳng vào `price_history`.
+- Publish qua nút "Publish" đang báo `Publishing failed due to an internal error` — đây là lỗi hạ tầng build pipeline của Lovable, không phải lỗi code.
+- Security scan đã chạy sạch (0 findings), nên không có gì chặn.
+- Backend (edge functions + cron migration) **đã deploy tự động** ngay khi lưu, không phụ thuộc vào publish. LIVE candle engine đang chạy bình thường.
+- Phần publish chỉ còn nhiệm vụ đẩy **frontend** (React build) lên `stengg.it.com`.
 
-## Mục tiêu
-- Nến 1M trong Live tự động chạy trở lại, không cần bên thứ 3.
-- Giữ nguyên schema `price_history` và mọi UI đang đọc từ nó (không đổi frontend).
-- Tương thích với `run-live-price-sync` (loop 5s) và cron `sync-price-history-every-minute`.
+## Về câu hỏi "publish thủ công"
 
-## Thay đổi
+Lovable **không có API/tool publish thủ công** nào khác ngoài nút Publish (tool `preview_ui--publish` mà tôi đang dùng gọi đúng cùng pipeline đó). Không có cách bypass build server của Lovable từ phía agent.
 
-### 1. `supabase/functions/sync-price-history/index.ts`
-- Bỏ toàn bộ đoạn fetch tới `admin.stenggg.com/api/app/option/getKline` và logic retry DNS.
-- Thay bằng logic sinh candle nội bộ cho từng product:
-  - Lấy `products.price` hiện tại (P).
-  - Xác định "phút hiện tại" = `date_trunc('minute', now())`.
-  - Đọc candle gần nhất của product trong `price_history` cho khung 1M.
-  - Nếu candle của phút hiện tại **chưa tồn tại**: tạo mới với `open = close phút trước (hoặc P nếu chưa có)`, `high = low = close = P`.
-  - Nếu **đã tồn tại**: update `close = P`, `high = max(high, P)`, `low = min(low, P)`, giữ `open` cũ.
-  - `volume`: cộng thêm một lượng nhỏ ngẫu nhiên (vd. 1000–5000) để chart trông sinh động; hoặc để 0 nếu UI không dùng.
-- Giữ nguyên phần auth (service-role JWT), CORS, log format `[Sync] …` đã hoàn thiện ở lượt trước.
-- Trả về JSON `{ ok, updated: N, inserted: M }`.
+Tuy nhiên có 3 hướng workaround thực tế:
 
-### 2. `supabase/functions/run-live-price-sync/index.ts` (nếu cần)
-- Function này chạy loop 5s x 12 vòng. Hiện tại đang tick giá vào `products.price`. Kiểm tra và đảm bảo mỗi tick nó cũng gọi cùng logic upsert candle như trên (hoặc gọi nội bộ `sync-price-history` mỗi vòng).
-- Nếu đã có sẵn logic tick giá → chỉ cần append đoạn upsert candle 1M cùng transaction.
+### Hướng A — Retry + trigger commit mới (khuyên dùng trước)
+Đôi khi pipeline kẹt ở một commit. Tạo một thay đổi nhỏ vô hại (ví dụ chỉnh 1 comment trong file, hoặc bump version trong `.lovable/plan.md`) để tạo commit mới, rồi Publish lại. Commit mới thường "unstuck" pipeline.
 
-### 3. Không đổi database schema
-- Không cần migration mới cho bảng. Chỉ dùng lại `price_history` hiện có.
+### Hướng B — Publish qua GitHub + hosting bên ngoài (bypass hoàn toàn Lovable hosting)
+1. Kết nối GitHub từ menu `+ → GitHub` trong editor.
+2. Deploy repo lên Vercel/Netlify/Cloudflare Pages (build command `npm run build`, output `dist`).
+3. Trỏ domain `stengg.it.com` sang hosting mới.
+- Ưu: không phụ thuộc build server Lovable.
+- Nhược: mất tính năng "Edit with Lovable badge", DNS phải chỉnh lại, backend Cloud vẫn dùng bình thường qua anon key.
 
-### 4. Không backfill dữ liệu 11/06 → nay
-- Theo mặc định KHÔNG backfill (nến gap là dữ liệu mock cũ, không quan trọng). Nếu sau này muốn, sẽ làm ở bước riêng.
+### Hướng C — Báo Lovable Support
+Nếu retry 2–3 lần vẫn fail, đây chắc chắn là lỗi phía Lovable. Cần gửi ticket kèm:
+- Project URL: `https://stengg.it.com`
+- Timestamp các lần publish fail
+- Message lỗi "internal error"
+Chỉ team Lovable đọc được build log server-side.
 
-## Kiểm thử
-1. Deploy `sync-price-history` (auto).
-2. Gọi thủ công 1 lần → xác nhận log `[Sync] inserted/updated N candles`.
-3. Query `SELECT product_id, max(timestamp) FROM price_history GROUP BY product_id` → thấy timestamp là phút hiện tại.
-4. Đợi 1–2 phút → thấy candle mới sinh tiếp.
-5. Mở `/products` trong preview → chart 1M có nến chạy realtime.
+## Đề xuất thực hiện
 
-## Ghi chú kỹ thuật
-- Vì bản fix cron/auth ở lượt trước chưa publish lên Live, sau khi merge plan này người dùng cần **Publish** để cả 2 thay đổi (cron auth + engine nội bộ) cùng ra Live.
-- Engine nội bộ = mock, không phải giá thị trường thật — phù hợp với bản chất "professional trading demo platform" của dự án.
+Tôi đề xuất chạy **Hướng A** trước (rẻ nhất, 1 phút):
+1. Thêm 1 dòng comment nhỏ vào `.lovable/plan.md` để tạo commit mới.
+2. Gọi lại `preview_ui--publish`.
+3. Nếu vẫn fail → chuyển sang Hướng C (báo Support), song song hướng dẫn bạn setup Hướng B nếu muốn chủ động.
+
+Bạn duyệt kế hoạch này để tôi bắt đầu Hướng A nhé?
