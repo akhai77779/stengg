@@ -1703,10 +1703,12 @@ export type Database = {
         Args: { _exit_price: number; _trade_id: string }
         Returns: Json
       }
-      sync_price_history_tick: {
-        Args: { _max_extra?: number; _min_vol?: number }
-        Returns: number
-      }
+      sync_price_history_tick:
+        | { Args: { _max_extra?: number; _min_vol?: number }; Returns: number }
+        | {
+            Args: { _max_extra?: number; _min_vol?: number; _vol_pct?: number }
+            Returns: number
+          }
       verify_guest_session: { Args: { _customer_id: string }; Returns: boolean }
     }
     Enums: {
