@@ -91,9 +91,10 @@ Deno.serve(async (req) => {
 
     const cronSecret = Deno.env.get("CRON_SECRET");
     const authHeader = req.headers.get("Authorization") || "";
+    const cronHeader = req.headers.get("x-cron-secret") || "";
     const allowed =
       authHeader === `Bearer ${serviceRoleKey}` ||
-      (!!cronSecret && authHeader === `Bearer ${cronSecret}`);
+      (!!cronSecret && (authHeader === `Bearer ${cronSecret}` || cronHeader === cronSecret));
     if (!allowed) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
         status: 401,

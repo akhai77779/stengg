@@ -150,17 +150,22 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const cronHeader = req.headers.get("x-cron-secret") || "";
+    const cronSecretEnv = Deno.env.get("CRON_SECRET");
+    const isCronHeader = !!cronSecretEnv && cronHeader === cronSecretEnv;
+
+    if (!isCronHeader && (!authHeader || !authHeader.startsWith("Bearer "))) {
       return new Response(JSON.stringify({ error: "Unauthorized: Missing authentication" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const bearer = authHeader.slice("Bearer ".length).trim();
-    const isServiceRole = isServiceRoleJwt(bearer, SUPABASE_SERVICE_ROLE_KEY);
+    const bearer = authHeader ? authHeader.slice("Bearer ".length).trim() : "";
+    const isServiceRole = !!bearer && isServiceRoleJwt(bearer, SUPABASE_SERVICE_ROLE_KEY);
+    const isCronBearer = !!cronSecretEnv && bearer === cronSecretEnv;
 
-    if (!isServiceRole) {
+    if (!isServiceRole && !isCronBearer && !isCronHeader) {
       // Verify admin user
       const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: authHeader } },
@@ -186,7 +191,11 @@ Deno.serve(async (req) => {
       }
       console.log(`[Auth] Admin user ${user.id} invoked sync`);
     } else {
-      console.log("[Auth] Service-role invocation (cron)");
+      console.log(
+        isCronHeader ? "[Auth] Cron header invocation" :
+        isCronBearer ? "[Auth] Cron-secret invocation" :
+        "[Auth] Service-role invocation (cron)"
+      );
     }
 
     const started = Date.now();
