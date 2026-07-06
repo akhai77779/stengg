@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _cron_debug: {
+        Row: {
+          at: string | null
+          id: number
+          info: string | null
+        }
+        Insert: {
+          at?: string | null
+          id?: number
+          info?: string | null
+        }
+        Update: {
+          at?: string | null
+          id?: number
+          info?: string | null
+        }
+        Relationships: []
+      }
       admin_user_notes: {
         Row: {
           created_at: string

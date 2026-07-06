@@ -26,9 +26,11 @@ Deno.serve(async (req) => {
     // explicit CRON_SECRET may invoke this function. Any other JWT is rejected.
     const cronSecret = Deno.env.get("CRON_SECRET");
     const authHeader = req.headers.get("Authorization") || "";
+    const cronHeader = req.headers.get("x-cron-secret") || "";
     const serviceRoleAuth = `Bearer ${supabaseServiceKey}`;
     const cronAuth = cronSecret ? `Bearer ${cronSecret}` : null;
-    if (authHeader !== serviceRoleAuth && (!cronAuth || authHeader !== cronAuth)) {
+    const cronHeaderOk = !!cronSecret && cronHeader === cronSecret;
+    if (authHeader !== serviceRoleAuth && (!cronAuth || authHeader !== cronAuth) && !cronHeaderOk) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
