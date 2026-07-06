@@ -1696,11 +1696,16 @@ export type Database = {
           read_ct: number
         }[]
       }
+      run_live_price_sync_db_loop: { Args: never; Returns: undefined }
       run_live_price_sync_loop: { Args: never; Returns: undefined }
       settle_matured_savings_deposits: { Args: never; Returns: Json }
       settle_option_trade: {
         Args: { _exit_price: number; _trade_id: string }
         Returns: Json
+      }
+      sync_price_history_tick: {
+        Args: { _max_extra?: number; _min_vol?: number }
+        Returns: number
       }
       verify_guest_session: { Args: { _customer_id: string }; Returns: boolean }
     }
