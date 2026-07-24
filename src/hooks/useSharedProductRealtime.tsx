@@ -368,6 +368,16 @@ export function useSharedProductRealtime({
       if (!isPriceSane(close, reference)) {
         return;
       }
+      // Drift warning: log when a real DB row disagrees with our client anchor >5%
+      // (still within sanity band). Helps diagnose stale client vs DB.
+      if (isFinitePositive(reference) && isFinitePositive(close)) {
+        const delta = Math.abs(close - reference) / reference;
+        if (delta > 0.05) {
+          console.warn(
+            `[SharedProductRealtime] Drift >5% for ${row.product_id || activeProductIdRef.current}: client=${reference.toFixed(6)} db=${close.toFixed(6)} Δ=${(delta * 100).toFixed(2)}%`,
+          );
+        }
+      }
       anchorPriceRef.current = close;
       latestRealRowAtRef.current = row.recorded_at;
     } else {
