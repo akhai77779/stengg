@@ -1,78 +1,53 @@
-## Chẩn đoán
+## Mục tiêu
+Đối chiếu nến giữa **DB `price_history`** (nguồn thật, do cron DB tick) và **client engine** (`useMarketEngine` chạy trong `/admin/products-monitor`) để phát hiện khi client bị lệch giá / lệch phút / lệch OHLC so với server, và cảnh báo ngay trên UI admin.
 
-Đã điều tra Live database:
+Ngoài admin engine, mình cũng thêm một cảnh báo nhẹ ở luồng public (`useSharedProductRealtime`): nếu `anchorPrice` client giữ lệch quá nhiều so với nến DB mới về thì log + soft-reset về giá DB (đã có logic `isPriceSane` ±50%, sẽ hạ ngưỡng và log rõ khi lệch).
 
-- **4 cron job đều active** (jobid 3, 4, 10, 11).
-- **Nến dừng từ 11/06/2026 10:53 UTC** – không có row mới nào trong `price_history` 30 phút qua.
-- **Trong 2 giờ qua có 1677 response HTTP status_code = 401** từ `pg_net` khi các cron gọi Edge Function.
-- **Vault secret `email_queue_service_role_key` không tồn tại** (query `vault.secrets` trả về rỗng).
+## Phạm vi
+- Không đổi cron/DB. Chỉ dùng dữ liệu `price_history` + `products` đã có.
+- Không đụng UI người dùng cuối; công cụ đối chiếu nằm trong `/admin/products-monitor` (đã có `MarketEngineProvider` scope tại đây).
+- Reuse script `scripts/reconcile-price-history.ts` sẵn có cho kiểm tra offline sâu hơn.
 
-## Nguyên nhân (2 lỗi song song)
+## Việc sẽ làm
 
-1. **Job 4 – `sync-live-price-loop`** gọi hàm `run_live_price_sync_loop()`. Hàm này đọc service role key từ vault; vì secret không tồn tại, hàm log warning `Service role key not found in vault` và **return sớm không gọi function nào**.
-2. **Job 10 – `sync-price-history-every-minute`** và **Job 11 – `settle-expired-option-trades`** dùng `net.http_post` **không kèm header `Authorization`**. Cả hai edge function này bắt buộc Bearer token → luôn trả 401.
+### 1. Hook `useEngineDbReconciler`
+`src/hooks/useEngineDbReconciler.tsx`
+- Đầu vào: `engines: Record<productId, EngineState>` từ `useMarketEngine`, `mappings` (localId ↔ dbId) từ `useEngineSyncToDb`.
+- Mỗi 15s: fetch 30 nến 1M gần nhất từ `price_history` cho từng dbId (1 câu `select` gom `in(product_id, [...])`).
+- Với mỗi product, so sánh khớp theo `recorded_at` (giây làm tròn phút) với `engine.candles`:
+  - **priceDriftPct** = |engineClose − dbClose| / dbClose ở nến 1M mới nhất chung.
+  - **minuteLag** = số phút chênh giữa nến mới nhất DB và engine.
+  - **ohlcMismatch** trên N nến overlap (đếm số nến |Δclose|>0.5%).
+  - **missingInEngine / missingInDb**: phút DB có nhưng engine thiếu và ngược lại.
+- Trả `ReconcileReport[]` + tổng trạng thái `ok | warn | drift`.
 
-Kết quả: không có nguồn nào ghi nến vào `price_history` suốt 24 ngày → live/publish pipeline im lặng.
+### 2. Panel `EngineDbReconcilePanel`
+`src/components/admin/EngineDbReconcilePanel.tsx`, mount trong `AdminProductsMonitor.tsx`:
+- Bảng: Symbol | DB last | Engine last | Δclose % | Minute lag | Mismatch/30 | Trạng thái
+- Badge màu: xanh <0.3%, vàng 0.3–1%, đỏ >1% hoặc `minuteLag ≥ 2`.
+- Nút **"Sync engine ← DB"**: gọi hàm mới trên `MarketEngineProvider` (bước 3) để reset engine của các product bị lệch bằng dữ liệu DB.
+- Nút **"Chạy đối chiếu ngay"** (bỏ qua interval).
 
-Ghi chú: `preview_ui--publish` fail có thể là vấn đề riêng của hạ tầng Lovable (đã publish thành công trước đó bằng cách đẩy commit rỗng). Plan này tập trung khôi phục cron/live-sync. Sau khi cron chạy lại, ta thử publish lại; nếu vẫn fail sẽ mở ticket Support riêng.
+### 3. Mở rộng `MarketEngineProvider`
+`src/hooks/useMarketEngine.ts`:
+- Thêm `resyncFromDb(productIds: string[]): Promise<void>` — với mỗi product: fetch tối đa 1440 nến 1M từ `price_history` theo dbId map, chuyển sang `Candle[]`, ghi đè `engineState.candles`, reset `momentum=0`, `consecutiveTicks=0`, `lastUpdatedAt=Date.now()`. Persist snapshot như flow hiện tại.
+- Không thay đổi vòng tick, không đụng shock events.
 
-## Kế hoạch sửa
+### 4. Nhấn mạnh cảnh báo drift ở luồng public
+`src/hooks/useSharedProductRealtime.tsx`:
+- Khi nhận row `price_history` real từ realtime, so `close_price` với `anchorPriceRef`. Nếu lệch >5% trong khi cả hai đều "sane" → `console.warn` với productId + Δ (log để debug, không đổi logic hiển thị).
+- Không thay đổi UI / không đổi cơ chế throttle.
 
-### Bước 1 – Nạp service role key vào Vault
-Tạo secret `email_queue_service_role_key` trong `vault.secrets` bằng SUPABASE_SERVICE_ROLE_KEY thật. Việc này chạy bằng `supabase--insert` (không phải migration) vì chứa giá trị nhạy cảm, đúng chuẩn "schedule-jobs-supabase-edge-functions".
+### 5. Ghi chú tài liệu
+- `docs/SECURITY.md` không đổi.
+- Thêm mục ngắn trong `README.md` "Đối chiếu engine ↔ DB" hướng dẫn dùng panel admin và script offline.
 
-```sql
-select vault.create_secret('<SERVICE_ROLE_KEY>', 'email_queue_service_role_key');
-```
+## Cách đo "đúng"
+- Sau khi mount panel: với 10 sản phẩm, ở trạng thái bình thường, `Δclose%` phải ≤ 0.3% và `minuteLag = 0` sau ~15s.
+- Bấm **Sync engine ← DB** thì tất cả các dòng đỏ chuyển xanh ngay lần đối chiếu kế tiếp.
+- Script `deno run scripts/reconcile-price-history.ts --hours 1` chạy không lỗi (chỉ để verify DB tự thân, không phần của UI).
 
-Sau đó xác minh:
-```sql
-select name from vault.secrets where name = 'email_queue_service_role_key';
-```
-
-### Bước 2 – Sửa cron Job 10 & Job 11 để đính kèm Authorization
-Bọc 2 job trong cùng pattern dùng vault key: unschedule → reschedule bằng lệnh có header Bearer. Chạy trong Live SQL editor (không phải migration).
-
-```sql
--- Job 10: sync-price-history-every-minute
-select cron.unschedule('sync-price-history-every-minute');
-select cron.schedule(
-  'sync-price-history-every-minute',
-  '* * * * *',
-  $$
-  select net.http_post(
-    url := 'https://nptiddcelyxfbyvslotv.supabase.co/functions/v1/sync-price-history',
-    headers := jsonb_build_object(
-      'Content-Type','application/json',
-      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name='email_queue_service_role_key')
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-
--- Job 11: settle-expired-option-trades (áp dụng cùng cách)
-```
-
-### Bước 3 – Verify live sync đã chạy lại
-- Đợi 60–90 giây.
-- Chạy: `SELECT MAX(recorded_at), COUNT(*) FROM price_history WHERE recorded_at > now() - interval '5 minutes';`
-- Kiểm tra logs `run-live-price-sync` và `sync-price-history` phải hết 401.
-- Nếu vẫn 401 → kiểm tra lại giá trị SERVICE_ROLE_KEY trong vault (có thể đã rotate).
-
-### Bước 4 – Không đụng chảo replay
-Plan này **không** gap-fill/replay nến từ 11/06 → hiện tại. Sau khi cron chạy lại, các nến mới sẽ nối tiếp từ giá hiện tại của bảng `products`. Nếu bạn muốn replay khoảng trống 24 ngày, chúng ta xử lý ở plan riêng (theo cuộc trao đổi trước).
-
-### Bước 5 – Thử publish lại
-Sau khi cron xanh, thử `preview_ui--publish` lần nữa. Nếu vẫn "internal error", đó là sự cố hạ tầng Lovable độc lập – sẽ báo Support và dùng workaround commit-rỗng như lần trước.
-
-## Cần bạn cung cấp
-
-**SERVICE_ROLE_KEY** hiện tại của backend để nạp vào vault. Trên Lovable Cloud key này không truy cập được từ agent, nên cần bạn dán vào (mình sẽ dùng ngay, không log). Nếu bạn không có sẵn, phương án thay thế là lưu key qua công cụ `add_secret` (Edge Function secret) rồi mình viết edge function nhỏ để mirror sang vault – kém trực tiếp hơn nhưng khả thi.
-
-## Chi tiết kỹ thuật
-
-- Job 4 sẽ tự chạy lại đúng ngay khi vault có secret (không cần reschedule).
-- Job 10/11 phải reschedule vì command đã được lưu tĩnh trong `cron.job.command` – không đọc lại vault động nếu ta không sửa command.
-- Không thay đổi mã Edge Function; chỉ config cron + vault.
-- Không có DB schema change → không cần migration.
+## Ngoài phạm vi (không làm)
+- Không thay đổi cron DB, không đụng `sync_price_history_tick`.
+- Không tự động resync định kỳ — chỉ thủ công qua nút, để tránh ghi đè state khi admin đang test scenario.
+- Không thêm route mới ngoài admin.
