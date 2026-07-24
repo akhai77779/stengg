@@ -18,6 +18,7 @@ import { CandlestickChart } from '@/components/charts/CandlestickChart';
 import { TechnicalIndicatorsPanel } from '@/components/charts/TechnicalIndicatorsPanel';
 import { TimeIntervalSelector } from '@/components/charts/TimeIntervalSelector';
 import { ShareButton } from '@/components/charts/ShareButton';
+import { EngineDbReconcilePanel } from '@/components/admin/EngineDbReconcilePanel';
 
 import { calculateSMA, calculateRSI, calculateMACD } from '@/lib/chartUtils';
 import { TimeInterval, TechnicalIndicators } from '@/types/trading';
@@ -313,6 +314,7 @@ export default function AdminProductsMonitor() {
                 {technicalIndicators && (
                   <TechnicalIndicatorsPanel indicators={technicalIndicators} />
                 )}
+                <EngineDbReconcilePanel />
               </div>
             </>
           ) : (
