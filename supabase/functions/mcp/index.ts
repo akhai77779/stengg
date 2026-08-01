@@ -3,7 +3,7 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineMcp, auth } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/tools/list-products.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.90.1";
@@ -102,10 +102,17 @@ var get_product_price_default = defineTool3({
 });
 
 // src/lib/mcp/index.ts
+var SUPABASE_URL = "https://nptiddcelyxfbyvslotv.supabase.co";
 var mcp_default = defineMcp({
   name: "stengg-mcp",
   title: "ST Engineering MCP",
   version: "0.1.0",
+  auth: auth.oauth.issuer({
+    issuer: `${SUPABASE_URL}/auth/v1`,
+    resource: `${SUPABASE_URL}/functions/v1/mcp`,
+    acceptedAudiences: ["authenticated"],
+    resourceName: "ST Engineering MCP"
+  }),
   instructions: "Read-only tools for the ST Engineering trading platform. Use `list_products` to browse products, `get_product_price` to fetch a specific product's current price and 24h change, and `list_news` for the latest published articles.",
   tools: [list_products_default, get_product_price_default, list_news_default]
 });
